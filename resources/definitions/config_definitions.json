@@ -4403,6 +4403,17 @@
                 "value": "nullable|regex:/^[.a-zA-Z0-9]*$/"
             }
         },
+        "graphs.renderer": {
+            "default": "rrd",
+            "type": "select",
+            "options": {
+                "rrd": "RRD (default)",
+                "echarts": "ECharts (experimental)"
+            },
+            "group": "graphs",
+            "section": "rendering",
+            "order": 10
+        },
         "graphs.mini.normal": {
             "default": {
                 "day": "24 Hours",

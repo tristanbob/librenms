@@ -91,3 +91,6 @@ Alpine.data("remoteDropdown", remoteDropdown);
 
 window.Alpine = Alpine;
 Alpine.start();
+
+import { mountEChartsGraphs } from './graphs/mountEChartsGraphs.js';
+document.addEventListener('DOMContentLoaded', mountEChartsGraphs);
