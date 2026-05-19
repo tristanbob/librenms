@@ -288,6 +288,34 @@ function get_graph_by_service(Request $request)
     return check_device_permission($device_id, fn () => api_get_graph($request, $vars));
 }
 
+function get_device_graph_data(Request $request)
+{
+    $hostname   = $request->route('hostname');
+    $graph_type = $request->route('graph_type');
+    $device_id  = ctype_digit($hostname) ? $hostname : getidbyname($hostname);
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $graph_type) {
+        $device = device_by_id_cache($device_id);
+        $from   = (int) $request->input('from',  time() - 86400);
+        $to     = (int) $request->input('to',    time());
+        $width  = (int) $request->input('width', 1200);
+
+        $query    = \LibreNMS\Graph\GraphQuery::fromRequest($graph_type, ['device_id' => $device['device_id']], $from, $to, $width);
+        $provider = new \LibreNMS\Graph\RrdGraphDataProvider();
+
+        try {
+            $result = $provider->query($query, $device);
+
+            return response()->json($result->toArray());
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => $e->getMessage(),
+            ], 404);
+        }
+    });
+}
+
 function list_locations()
 {
     $locations = dbFetchRows('SELECT `locations`.* FROM `locations` WHERE `locations`.`location` IS NOT NULL');

@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * GraphDataResult.php
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * @link       https://www.librenms.org
+ *
+ * @copyright  2024 LibreNMS Contributors
+ */
+
+namespace LibreNMS\Graph;
+
+class GraphDataResult
+{
+    /** @var GraphSeries[] */
+    private array  $series     = [];
+    private array  $markers    = [];
+    private array  $thresholds = [];
+    private string $source     = 'rrd';
+    private bool   $fallback   = false;
+
+    public function __construct(
+        public readonly string $id,
+        public readonly string $type,
+        public readonly string $title,
+        public readonly string $subtitle,
+        public readonly string $unit,
+        public readonly int    $from,
+        public readonly int    $to,
+        public readonly int    $step,
+        public readonly string $timezone = 'UTC',
+    ) {}
+
+    public function addSeries(GraphSeries $series): void { $this->series[] = $series; }
+    public function addMarker(array $marker): void       { $this->markers[] = $marker; }
+    public function setSource(string $source): void      { $this->source = $source; }
+    public function setFallback(bool $fb): void          { $this->fallback = $fb; }
+
+    public function toArray(): array
+    {
+        return [
+            'status' => 'ok',
+            'graph'  => [
+                'id'       => $this->id,
+                'type'     => $this->type,
+                'title'    => $this->title,
+                'subtitle' => $this->subtitle,
+                'unit'     => $this->unit,
+                'from'     => $this->from,
+                'to'       => $this->to,
+                'step'     => $this->step,
+                'timezone' => $this->timezone,
+                'display'  => [
+                    'renderer' => 'timeseries',
+                    'kind'     => 'line',
+                    'stacked'  => false,
+                    'area'     => true,
+                    'legend'   => true,
+                    'tooltip'  => true,
+                ],
+                'x_axis'     => ['type' => 'time'],
+                'y_axis'     => ['unit' => $this->unit, 'scale' => 'linear', 'min' => null, 'max' => null],
+                'series'     => array_map(fn ($s) => $s->toArray(), $this->series),
+                'markers'    => $this->markers,
+                'thresholds' => $this->thresholds,
+                'meta'       => [
+                    'source'        => $this->source,
+                    'fallback_used' => $this->fallback,
+                    'generated_at'  => time(),
+                ],
+            ],
+        ];
+    }
+}
