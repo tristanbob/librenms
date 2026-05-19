@@ -19,11 +19,20 @@
     "file": "assets/glyphicons-halflings-regular-DzqM6ju8.woff2",
     "src": "html/fonts/glyphicons-halflings-regular.woff2"
   },
+  "node_modules/echarts/index.js": {
+    "file": "assets/index-DXW7qb_O.js",
+    "name": "index",
+    "src": "node_modules/echarts/index.js",
+    "isDynamicEntry": true
+  },
   "resources/js/app.js": {
     "file": "assets/app-BQuS2XRd.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/echarts/index.js"
+    ],
     "css": [
       "assets/app-C_U75-Tg.css"
     ],
