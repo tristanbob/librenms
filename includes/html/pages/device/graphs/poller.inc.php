@@ -13,13 +13,34 @@ foreach ($graph_enable as $graph => $entry) {
 
     if ($graph === 'poller_perf' && $renderer === 'echarts') {
         $hostname = e($device['hostname']);
-        $data_url = "/api/v0/devices/$hostname/graphs/device_poller_perf/data";
-        echo '<div'
-            . ' class="lnms-echart"'
-            . ' style="width: 100%; height: 300px;"'
-            . ' data-graph-url="' . $data_url . '"'
-            . ' data-refresh="300"'
-            . '></div>';
+        $periods = session('widescreen')
+            ? LibrenmsConfig::get('graphs.mini.widescreen')
+            : LibrenmsConfig::get('graphs.mini.normal');
+
+        echo '<div class="row">';
+        foreach ($periods as $period => $period_text) {
+            $from = LibrenmsConfig::get("time.$period");
+            $to = time();
+            $data_url = "/ajax/devices/$hostname/graphs/device_poller_perf/data?from=$from&to=$to";
+            $detail_url = \LibreNMS\Util\Url::generate([
+                'page'   => 'graphs',
+                'device' => $device['device_id'],
+                'type'   => 'device_' . $graph,
+                'from'   => $from,
+            ]);
+
+            echo '<div class="col-md-3 col-sm-6 col-xs-12">';
+            echo '<div'
+                . ' class="lnms-echart"'
+                . ' style="width: 100%; height: 150px;"'
+                . ' data-graph-url="' . $data_url . '"'
+                . ' data-link-url="' . e($detail_url) . '"'
+                . ' data-refresh="300"'
+                . ' data-hide-datazoom="true"'
+                . '></div>';
+            echo '</div>';
+        }
+        echo '</div>';
     } else {
         $graph_array = [
             'device' => $device['device_id'],

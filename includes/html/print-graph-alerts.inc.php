@@ -104,7 +104,9 @@ foreach ($groups as $group) {
         zoomMax: <?php
         $first_date = reset($data);
         $last_date = end($data);
-        $milisec_diff = abs(strtotime((string) $first_date['x']) - strtotime((string) $last_date['x'])) * 1000;
+        $milisec_diff = ($first_date && $last_date)
+            ? abs(strtotime((string) $first_date['x']) - strtotime((string) $last_date['x'])) * 1000
+            : 86400 * 1000;
         echo $milisec_diff;
         ?>,
         orientation:'top'

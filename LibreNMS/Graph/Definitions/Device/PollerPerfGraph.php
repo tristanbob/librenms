@@ -29,7 +29,7 @@ class PollerPerfGraph
 
     public function title(array $device): string
     {
-        return 'Poller Performance';
+        return 'Poller Time';
     }
 
     public function unit(): string

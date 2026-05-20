@@ -54,11 +54,14 @@ class RrdGraphDataProvider
             step:     $query->step,
         );
 
+        $palette = 'rainbow_stats_purple';
+
         $series = new GraphSeries(
-            name: $def->seriesName(),
-            key:  'poller_time',
-            unit: $def->unit(),
-            area: true,
+            name:  $def->seriesName(),
+            key:   'poller_time',
+            unit:  $def->unit(),
+            area:  true,
+            color: LibrenmsConfig::get("graph_colours.$palette.0"),
         );
 
         $rrdFile = $def->rrdFile($device);
@@ -70,12 +73,105 @@ class RrdGraphDataProvider
                     $series->addPoint($ts * 1000, round($value, 4));
                 }
             }
+            $result->addSeries($series);
+
+            // Fetch average series only if primary fetch succeeded
+            $timeDiff = $query->to - $query->from;
+
+            // 1 Hour Average
+            $series1h = new GraphSeries(
+                name:  '1 hour avg',
+                key:   'poller_time_1h',
+                unit:  $def->unit(),
+                area:  false,
+                color: LibrenmsConfig::get("graph_colours.$palette.4"),
+            );
+            try {
+                $query1h = new GraphQuery(
+                    graphType: $query->graphType,
+                    from:      $query->from,
+                    to:        $query->to,
+                    step:      3600,
+                    width:     $query->width,
+                    entities:  $query->entities,
+                );
+                $rows1h = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1h);
+                foreach ($rows1h as [$ts, $value]) {
+                    if ($value !== null && is_finite($value)) {
+                        $series1h->addPoint($ts * 1000, round($value, 4));
+                    }
+                }
+                $result->addSeries($series1h);
+            } catch (\RuntimeException $e) {
+                // Ignore hourly fetch errors
+            }
+
+            // 1 Day Average (timeDiff >= 129600)
+            if ($timeDiff >= 129600) {
+                $series1d = new GraphSeries(
+                    name:  '1 day avg',
+                    key:   'poller_time_1d',
+                    unit:  $def->unit(),
+                    area:  false,
+                    color: LibrenmsConfig::get("graph_colours.$palette.5"),
+                );
+                try {
+                    $query1d = new GraphQuery(
+                        graphType: $query->graphType,
+                        from:      $query->from,
+                        to:        $query->to,
+                        step:      86400,
+                        width:     $query->width,
+                        entities:  $query->entities,
+                    );
+                    $rows1d = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1d);
+                    foreach ($rows1d as [$ts, $value]) {
+                        if ($value !== null && is_finite($value)) {
+                            $series1d->addPoint($ts * 1000, round($value, 4));
+                        }
+                    }
+                    $result->addSeries($series1d);
+                } catch (\RuntimeException $e) {
+                    // Ignore daily fetch errors
+                }
+            }
+
+            // 1 Week Average (timeDiff >= 691200)
+            if ($timeDiff >= 691200) {
+                $series1w = new GraphSeries(
+                    name:  '1 week avg',
+                    key:   'poller_time_1w',
+                    unit:  $def->unit(),
+                    area:  false,
+                    color: LibrenmsConfig::get("graph_colours.$palette.6"),
+                );
+                try {
+                    $query1w = new GraphQuery(
+                        graphType: $query->graphType,
+                        from:      $query->from,
+                        to:        $query->to,
+                        step:      604800,
+                        width:     $query->width,
+                        entities:  $query->entities,
+                    );
+                    $rows1w = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1w);
+                    foreach ($rows1w as [$ts, $value]) {
+                        if ($value !== null && is_finite($value)) {
+                            $series1w->addPoint($ts * 1000, round($value, 4));
+                        }
+                    }
+                    $result->addSeries($series1w);
+                } catch (\RuntimeException $e) {
+                    // Ignore weekly fetch errors
+                }
+            }
+
         } catch (\RuntimeException $e) {
             // RRD file missing or fetch failed — return empty series
             $result->setFallback(true);
+            $result->addSeries($series);
         }
 
-        $result->addSeries($series);
         $result->setSource('rrd');
 
         return $result;

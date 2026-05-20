@@ -208,5 +208,7 @@ EOH, $this->device->hostname, $os_group ? " ($os_group)" : '', $this->device->de
         ], [
             'poller' => $this->device->last_polled_timetaken,
         ]);
+
+        $this->os->enableGraph('poller_perf');
     }
 }

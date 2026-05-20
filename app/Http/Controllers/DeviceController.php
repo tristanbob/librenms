@@ -80,7 +80,6 @@ class DeviceController
         extract($data); // set preloaded data into variables
         include "includes/html/pages/device/$tab.inc.php";
         $output = ob_get_clean();
-        ob_end_clean();
 
         return $output;
     }
