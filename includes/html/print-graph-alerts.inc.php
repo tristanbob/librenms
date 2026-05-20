@@ -102,10 +102,12 @@ foreach ($groups as $group) {
         },
         zoomMin: 86400, //24hrs
         zoomMax: <?php
-        $firstDate = reset($data)['x'] ?? null;
-        $lastDate = end($data)['x'] ?? null;
-        $millisecondDiff = ($firstDate && $lastDate) ? abs(strtotime((string) $firstDate) - strtotime((string) $lastDate)) * 1000 : 0;
-        echo $millisecondDiff;
+        $first_date = reset($data);
+        $last_date = end($data);
+        $milisec_diff = ($first_date && $last_date)
+            ? abs(strtotime((string) $first_date['x']) - strtotime((string) $last_date['x'])) * 1000
+            : 86400 * 1000;
+        echo $milisec_diff;
         ?>,
         orientation:'top'
     };

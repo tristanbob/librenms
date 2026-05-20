@@ -430,6 +430,7 @@ class Rrd extends BaseDatastore
             $output = $this->async_process->sendCommand(implode(' ', $cmd));
         } else {
             Log::error('rrdtool could not start');
+            $output = [null, null];
         }
 
         if (Debug::isVerbose()) {

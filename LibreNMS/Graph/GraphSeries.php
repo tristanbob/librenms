@@ -38,6 +38,7 @@ class GraphSeries
         public readonly string  $type  = 'line',
         public readonly bool    $area  = false,
         public readonly ?string $stack = null,
+        public readonly ?string $color = null,
     ) {}
 
     public function addPoint(int $timestampMs, float $value): void
@@ -69,7 +70,7 @@ class GraphSeries
             'type'  => $this->type,
             'unit'  => $this->unit,
             'data'  => $this->data,
-            'style' => ['area' => $this->area, 'stack' => $this->stack],
+            'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color],
             'stats' => $this->stats(),
         ];
     }
