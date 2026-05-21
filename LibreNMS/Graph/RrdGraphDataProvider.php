@@ -43,10 +43,10 @@ class RrdGraphDataProvider implements DataProvider
         $def = $this->resolveDefinition($query->graphType);
 
         $result = new GraphDataResult(
-            id:       $query->graphType . ':' . $device['device_id'],
+            id:       $def->id($device, $query),
             type:     $query->graphType,
             title:    $def->title($device),
-            subtitle: $device['hostname'],
+            subtitle: $def->subtitle($device, $query),
             unit:     $def->unit(),
             from:     $query->from,
             to:       $query->to,
@@ -61,7 +61,7 @@ class RrdGraphDataProvider implements DataProvider
             $groups[$key][] = [$seriesDef, $step];
         }
 
-        $fallback = false;
+        $emptyReasons = [];
         foreach ($groups as $entries) {
             /** @var SeriesDefinition $firstDef */
             [$firstDef, $step] = $entries[0];
@@ -94,10 +94,11 @@ class RrdGraphDataProvider implements DataProvider
 
                     $result->addSeries($series);
                 }
-            } catch (\RuntimeException) {
+            } catch (\RuntimeException $e) {
                 // RRD file missing or fetch failed — add empty series so the frontend
                 // still receives the correct series names and can show a "no data" state.
-                $fallback = true;
+                \Log::debug('RRD graph data fetch failed: ' . $e->getMessage());
+                $emptyReasons[] = 'rrd_fetch_failed';
                 foreach ($entries as [$seriesDef]) {
                     $result->addSeries(new GraphSeries(
                         name:  $seriesDef->name,
@@ -112,7 +113,10 @@ class RrdGraphDataProvider implements DataProvider
         }
 
         $result->setSource('rrd');
-        $result->setFallback($fallback);
+        if ($emptyReasons !== []) {
+            $result->setEmptyReason('rrd_fetch_failed');
+            $result->addWarning('One or more RRD files could not be read; empty series returned.');
+        }
 
         return $result;
     }

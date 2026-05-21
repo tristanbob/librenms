@@ -62,11 +62,16 @@ class GraphDataTest extends DBTestCase
                 'id', 'type', 'title', 'subtitle', 'unit',
                 'from', 'to', 'step',
                 'series',
-                'meta' => ['source', 'fallback_used', 'generated_at'],
+                'meta' => ['source', 'fallback_used', 'empty_reason', 'warnings', 'generated_at'],
             ],
         ])
         ->assertJson(['status' => 'ok'])
-        ->assertJson(['graph' => ['type' => 'device_poller_perf']]);
+        ->assertJson([
+            'graph' => [
+                'type' => 'device_poller_perf',
+                'meta' => ['source' => 'rrd', 'fallback_used' => false],
+            ],
+        ]);
     }
 
     public function testGraphDataEndpointRequiresAuth(): void

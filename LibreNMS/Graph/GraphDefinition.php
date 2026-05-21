@@ -25,7 +25,11 @@ namespace LibreNMS\Graph;
 
 interface GraphDefinition
 {
+    public function id(array $device, GraphQuery $query): string;
+
     public function title(array $device): string;
+
+    public function subtitle(array $device, GraphQuery $query): string;
 
     public function unit(): string;
 
