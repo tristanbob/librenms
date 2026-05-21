@@ -24,6 +24,32 @@ export const DEFAULT_COLORS = [
 
 const MONO = '"Courier New", Courier, monospace';
 
+const DAYS_SHORT   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// ECharts auto-selects tick density and level (hour/day/month/year) based on chart
+// width and data range. We only define the label format for each level.
+function buildXAxis(t) {
+    return {
+        type:      'time',
+        splitLine: { show: true, lineStyle: { color: t.grid, type: 'solid' } },
+        axisLine:  { lineStyle: { color: t.frame } },
+        axisTick:  { lineStyle: { color: t.frame } },
+        axisLabel: {
+            color: t.font, fontFamily: MONO, fontSize: 10,
+            formatter: {
+                year:   v => { const d = new Date(v); return `${MONTHS_SHORT[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`; },
+                month:  v => { const d = new Date(v); return `${MONTHS_SHORT[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`; },
+                day:    v => { const d = new Date(v); return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; },
+                hour:   v => { const d = new Date(v); return `${DAYS_SHORT[d.getDay()]} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; },
+                minute: v => { const d = new Date(v); return `${DAYS_SHORT[d.getDay()]} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; },
+            },
+        },
+    };
+}
+
 export function toEChartsOptions(payload, options = {}) {
     const graph = payload.graph;
     const t     = THEME[options.dark ? 'dark' : 'light'];
@@ -76,13 +102,7 @@ export function toEChartsOptions(payload, options = {}) {
             right:        '3%',
             containLabel: true,
         },
-        xAxis: {
-            type:      'time',
-            splitLine: { show: true, lineStyle: { color: t.grid, type: 'solid' } },
-            axisLine:  { lineStyle: { color: t.frame } },
-            axisTick:  { lineStyle: { color: t.frame } },
-            axisLabel: { color: t.font, fontFamily: MONO, fontSize: 10 },
-        },
+        xAxis: buildXAxis(t),
         yAxis: {
             type:         'value',
             name:         graph.unit.charAt(0).toUpperCase() + graph.unit.slice(1),
