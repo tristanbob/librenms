@@ -23,9 +23,16 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
-class PollerPerfGraph
+use LibreNMS\Config as LibrenmsConfig;
+use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\SeriesDefinition;
+
+class PollerPerfGraph implements GraphDefinition
 {
     public const GRAPH_TYPE = 'device_poller_perf';
+
+    private const PALETTE = 'rainbow_stats_purple';
 
     public function title(array $device): string
     {
@@ -37,18 +44,55 @@ class PollerPerfGraph
         return 'seconds';
     }
 
-    public function rrdFile(array $device): string
+    public function series(array $device, GraphQuery $query): array
     {
-        return app(\LibreNMS\Data\Store\Rrd::class)->name($device['hostname'], 'poller-perf');
-    }
+        $rrdFile  = app(\LibreNMS\Data\Store\Rrd::class)->name($device['hostname'], 'poller-perf');
+        $timeDiff = $query->to - $query->from;
+        $p        = self::PALETTE;
 
-    public function dataSource(): string
-    {
-        return 'poller';
-    }
+        $series = [
+            new SeriesDefinition(
+                name:    'Poller time',
+                key:     'poller_time',
+                rrdFile: $rrdFile,
+                ds:      'poller',
+                color:   LibrenmsConfig::get("graph_colours.$p.0"),
+                area:    true,
+            ),
+            new SeriesDefinition(
+                name:    '1 hour avg',
+                key:     'poller_time_1h',
+                rrdFile: $rrdFile,
+                ds:      'poller',
+                color:   LibrenmsConfig::get("graph_colours.$p.4"),
+                step:    3600,
+            ),
+        ];
 
-    public function seriesName(): string
-    {
-        return 'Poller time';
+        // Mirrors generic_stats.inc.php: daily line only shown for windows > ~36 hours
+        if ($timeDiff >= 129600) {
+            $series[] = new SeriesDefinition(
+                name:    '1 day avg',
+                key:     'poller_time_1d',
+                rrdFile: $rrdFile,
+                ds:      'poller',
+                color:   LibrenmsConfig::get("graph_colours.$p.5"),
+                step:    86400,
+            );
+        }
+
+        // Weekly line only shown for windows > 8 days
+        if ($timeDiff >= 691200) {
+            $series[] = new SeriesDefinition(
+                name:    '1 week avg',
+                key:     'poller_time_1w',
+                rrdFile: $rrdFile,
+                ds:      'poller',
+                color:   LibrenmsConfig::get("graph_colours.$p.6"),
+                step:    604800,
+            );
+        }
+
+        return $series;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Api;
+namespace LibreNMS\Tests\Feature\Api;
 
 use App\Facades\LibrenmsConfig;
 use LibreNMS\Tests\DBTestCase;
