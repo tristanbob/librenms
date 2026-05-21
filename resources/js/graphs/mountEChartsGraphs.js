@@ -26,6 +26,13 @@ export function mountEChartsGraphs() {
         let lastPayload = null;  // cached for redraws on theme change
 
         function applyHeight() {
+            if (el.dataset.sparkline === 'true') return;
+            if (el.dataset.fillViewport === 'true') {
+                const legendHeight = legendEl ? legendEl.offsetHeight : 0;
+                const available    = window.innerHeight - el.getBoundingClientRect().top - legendHeight - 20;
+                el.style.height    = `${Math.max(200, available)}px`;
+                return;
+            }
             const chartPx   = Math.round(el.offsetWidth / 2.15);
             el.style.height = `${chartPx}px`;
         }
@@ -38,6 +45,7 @@ export function mountEChartsGraphs() {
                 dark,
                 hideDataZoom: el.dataset.hideDatazoom === 'true',
                 hideTooltip:  el.dataset.hideTooltip  === 'true',
+                sparkline:    el.dataset.sparkline     === 'true',
             }), true);
             if (legendEl) {
                 legendEl.innerHTML = hideLegend ? '' : buildHtmlLegend(lastPayload.graph, dark);
@@ -69,6 +77,12 @@ export function mountEChartsGraphs() {
                 chart.resize();
                 redraw();
 
+                // Second pass: legend is now populated, so fill-viewport height is exact.
+                if (el.dataset.fillViewport === 'true') {
+                    applyHeight();
+                    chart.resize();
+                }
+
                 if (el.dataset.linkUrl && !el.dataset.linkHandlerAttached) {
                     el.dataset.linkHandlerAttached = 'true';
                     el.style.cursor = 'pointer';
@@ -96,6 +110,14 @@ export function mountEChartsGraphs() {
             chart.resize();
         });
         ro.observe(el);
+
+        if (el.dataset.fillViewport === 'true') {
+            window.addEventListener('resize', () => {
+                if (!chart) return;
+                applyHeight();
+                chart.resize();
+            }, { passive: true });
+        }
     });
 
     // applySiteStyle() in librenms.js toggles `dark` on <html class> with no custom event.

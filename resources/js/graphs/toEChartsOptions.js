@@ -99,27 +99,26 @@ export function toEChartsOptions(payload, options = {}) {
             },
         },
         legend: { show: false },
-        grid: {
-            top:          '5%',
-            bottom:       '5%',
-            left:         '7%',
-            right:        '3%',
-            containLabel: true,
-        },
-        xAxis: buildXAxis(t),
-        yAxis: {
-            type:         'value',
-            name:         graph.unit.charAt(0).toUpperCase() + graph.unit.slice(1),
-            nameRotate:   90,
-            nameLocation: 'middle',
-            nameGap:      40,
-            nameTextStyle: { color: t.font, fontFamily: MONO, fontSize: 10 },
-            splitLine:    { show: true, lineStyle: { color: t.grid, type: 'solid' } },
-            axisLine:     { show: true, lineStyle: { color: t.frame } },
-            axisTick:     { lineStyle: { color: t.frame } },
-            // Ticks: number + SI prefix only — unit text lives on the axis name label
-            axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
-        },
+        grid: options.sparkline
+            ? { top: 2, bottom: 2, left: 2, right: 2, containLabel: false }
+            : { top: '5%', bottom: '5%', left: '7%', right: '3%', containLabel: true },
+        xAxis: options.sparkline
+            ? { type: 'time', show: false }
+            : buildXAxis(t),
+        yAxis: options.sparkline
+            ? { type: 'value', show: false }
+            : {
+                type:         'value',
+                name:         graph.unit.charAt(0).toUpperCase() + graph.unit.slice(1),
+                nameRotate:   90,
+                nameLocation: 'middle',
+                nameGap:      40,
+                nameTextStyle: { color: t.font, fontFamily: MONO, fontSize: 10 },
+                splitLine:    { show: true, lineStyle: { color: t.grid, type: 'solid' } },
+                axisLine:     { show: true, lineStyle: { color: t.frame } },
+                axisTick:     { lineStyle: { color: t.frame } },
+                axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
+            },
         dataZoom: options.hideDataZoom ? [] : [{ type: 'inside' }],
         series,
     };

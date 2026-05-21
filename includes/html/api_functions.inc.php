@@ -291,7 +291,7 @@ function get_graph_by_service(Request $request)
 
 function get_device_graph_data(Request $request)
 {
-    $hostname   = $request->route('hostname');
+    $hostname   = $request->route('hostname') ?? $request->route('device_id');
     $graph_type = $request->route('graph_type');
     $device_id  = ctype_digit($hostname) ? $hostname : getidbyname($hostname);
 
