@@ -51,6 +51,18 @@ if (! $auth) {
         $title .= ' :: ' . \LibreNMS\Util\StringHelpers::niceCase($subtype);
     }
 
+    // Determine if this graph type has an ECharts data endpoint
+    $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
+    $echart_data_url = null;
+    if ($renderer === 'echarts') {
+        if ($vars['type'] === 'port_bits' && $id) {
+            $echart_data_url = '/graph-data/ports/' . (int) $id . '/graphs/port_bits';
+        } elseif ($vars['type'] === 'device_poller_perf' && isset($device)) {
+            $echart_data_url = '/graph-data/devices/' . (int) $device['device_id'] . '/graphs/device_poller_perf';
+        }
+    }
+    $use_echarts = $echart_data_url !== null;
+
     $graph_array = $vars;
     $graph_array['height'] = '60';
     $graph_array['width'] = $thumb_width;
@@ -82,30 +94,56 @@ if (! $auth) {
 
     print_optionbar_end();
 
-    $show_command = isset($vars['showcommand']) && $vars['showcommand'] == 'yes';
+    $show_command = ! $use_echarts && isset($vars['showcommand']) && $vars['showcommand'] == 'yes';
     if (! $show_command) {
         $thumb_array = LibrenmsConfig::get('graphs.row.normal');
 
-        echo '<table width=100% class="thumbnail_graph_table"><tr>';
+        if ($use_echarts) {
+            echo '<table width="100%" class="thumbnail_graph_table"><tr>';
+            foreach ($thumb_array as $period => $text) {
+                $from    = LibrenmsConfig::get("time.$period");
+                $to      = time();
+                $dataUrl = $echart_data_url . "?from=$from&to=$to";
+                $linkUrl = \LibreNMS\Util\Url::generate(array_merge($vars, ['page' => 'graphs', 'from' => $from, 'to' => $to]));
 
-        foreach ($thumb_array as $period => $text) {
-            $graph_array['from'] = LibrenmsConfig::get("time.$period");
+                echo '<td style="padding: 0 1px; text-align: center;">';
+                echo '<b>' . e($text) . '</b><br>';
+                echo '<div'
+                    . ' class="lnms-echart"'
+                    . ' style="width: 100%; height: 60px;"'
+                    . ' data-graph-url="' . e($dataUrl) . '"'
+                    . ' data-link-url="' . e($linkUrl) . '"'
+                    . ' data-hide-datazoom="true"'
+                    . ' data-hide-legend="true"'
+                    . ' data-hide-tooltip="true"'
+                    . ' data-sparkline="true"'
+                    . '></div>';
+                echo '</td>';
+            }
+            echo '</tr></table>';
+        } else {
+            echo '<table width=100% class="thumbnail_graph_table"><tr>';
 
-            $link_array = $vars;
-            $link_array['from'] = $graph_array['from'];
-            $link_array['to'] = $graph_array['to'];
-            $link_array['page'] = 'graphs';
-            $link = \LibreNMS\Util\Url::generate($link_array);
+            foreach ($thumb_array as $period => $text) {
+                $graph_array['from'] = LibrenmsConfig::get("time.$period");
 
-            echo '<td style="text-align: center;">';
-            echo '<b>' . $text . '</b>';
-            echo '<a href="' . $link . '">';
-            echo \LibreNMS\Util\Url::lazyGraphTag($graph_array);
-            echo '</a>';
-            echo '</td>';
+                $link_array = $vars;
+                $link_array['from'] = $graph_array['from'];
+                $link_array['to'] = $graph_array['to'];
+                $link_array['page'] = 'graphs';
+                $link = \LibreNMS\Util\Url::generate($link_array);
+
+                echo '<td style="text-align: center;">';
+                echo '<b>' . $text . '</b>';
+                echo '<a href="' . $link . '">';
+                echo \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+                echo '</a>';
+                echo '</td>';
+            }
+
+            echo '</tr></table>';
         }
 
-        echo '</tr></table>';
         echo '<hr />';
     }
 
@@ -133,56 +171,65 @@ if (! $auth) {
 
     echo '<div style="padding-top: 5px";></div>';
     echo '<center>';
-    if (isset($vars['legend']) && $vars['legend'] == 'no') {
-        echo generate_link('Show Legend', $vars, ['page' => 'graphs', 'legend' => null]);
-    } else {
-        echo generate_link('Hide Legend', $vars, ['page' => 'graphs', 'legend' => 'no']);
-    }
 
-    // FIXME : do this properly
-    //  if ($type == "port" && $subtype == "bits")
-    //  {
-    echo ' | ';
-    if (isset($vars['previous']) && $vars['previous'] == 'yes') {
-        echo generate_link('Hide Previous', $vars, ['page' => 'graphs', 'previous' => null]);
-    } else {
-        echo generate_link('Show Previous', $vars, ['page' => 'graphs', 'previous' => 'yes']);
-    }
-    //  }
-
-    echo ' | ';
-    if ($show_command) {
-        echo generate_link('Hide RRD Command', $vars, ['page' => 'graphs', 'showcommand' => null]);
-    } else {
-        echo generate_link('Show RRD Command', $vars, ['page' => 'graphs', 'showcommand' => 'yes']);
-    }
-
-    if ($vars['type'] == 'port_bits') {
-        echo ' | ';
-        if ($vars['port_speed_zoom'] ?? LibrenmsConfig::get('graphs.port_speed_zoom')) {
-            echo generate_link('Zoom to Traffic', $vars, ['page' => 'graphs', 'port_speed_zoom' => 0]);
+    if (! $use_echarts) {
+        if (isset($vars['legend']) && $vars['legend'] == 'no') {
+            echo generate_link('Show Legend', $vars, ['page' => 'graphs', 'legend' => null]);
         } else {
-            echo generate_link('Zoom to Port Speed', $vars, ['page' => 'graphs', 'port_speed_zoom' => 1]);
+            echo generate_link('Hide Legend', $vars, ['page' => 'graphs', 'legend' => 'no']);
         }
-        echo ' | To show trend, set to future date';
-    }
 
-    if (str_contains((string) $vars['type'], 'sensor_')) {
-        echo ' | To show trend, set to future date';
+        echo ' | ';
+        if (isset($vars['previous']) && $vars['previous'] == 'yes') {
+            echo generate_link('Hide Previous', $vars, ['page' => 'graphs', 'previous' => null]);
+        } else {
+            echo generate_link('Show Previous', $vars, ['page' => 'graphs', 'previous' => 'yes']);
+        }
+
+        echo ' | ';
+        if ($show_command) {
+            echo generate_link('Hide RRD Command', $vars, ['page' => 'graphs', 'showcommand' => null]);
+        } else {
+            echo generate_link('Show RRD Command', $vars, ['page' => 'graphs', 'showcommand' => 'yes']);
+        }
+
+        if ($vars['type'] == 'port_bits') {
+            echo ' | ';
+            if ($vars['port_speed_zoom'] ?? LibrenmsConfig::get('graphs.port_speed_zoom')) {
+                echo generate_link('Zoom to Traffic', $vars, ['page' => 'graphs', 'port_speed_zoom' => 0]);
+            } else {
+                echo generate_link('Zoom to Port Speed', $vars, ['page' => 'graphs', 'port_speed_zoom' => 1]);
+            }
+            echo ' | To show trend, set to future date';
+        }
+
+        if (str_contains((string) $vars['type'], 'sensor_')) {
+            echo ' | To show trend, set to future date';
+        }
     }
 
     echo '</center>';
 
-    echo generate_graph_js_state($graph_array);
-
-    echo '<div style="width: ' . $graph_array['width'] . '; margin: auto;"><center>';
-    if (LibrenmsConfig::get('webui.dynamic_graphs', false) === true) {
-        echo generate_dynamic_graph_js($graph_array);
-        echo generate_dynamic_graph_tag($graph_array);
+    if ($use_echarts) {
+        $dataUrl = $echart_data_url . '?from=' . $vars['from'] . '&to=' . $vars['to'];
+        echo '<div'
+            . ' class="lnms-echart"'
+            . ' style="width: 100%;"'
+            . ' data-graph-url="' . e($dataUrl) . '"'
+            . ' data-fill-viewport="true"'
+            . '></div>';
     } else {
-        echo \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        echo generate_graph_js_state($graph_array);
+
+        echo '<div style="width: ' . $graph_array['width'] . '; margin: auto;"><center>';
+        if (LibrenmsConfig::get('webui.dynamic_graphs', false) === true) {
+            echo generate_dynamic_graph_js($graph_array);
+            echo generate_dynamic_graph_tag($graph_array);
+        } else {
+            echo \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        }
+        echo '</center></div>';
     }
-    echo '</center></div>';
 
     if (LibrenmsConfig::has('graph_descr.' . $vars['type'])) {
         print_optionbar_start();
