@@ -301,7 +301,7 @@ function get_device_graph_data(Request $request)
         $width  = (int) $request->input('width', 1200);
 
         $query    = \LibreNMS\Graph\GraphQuery::fromRequest($graph_type, ['device_id' => $device['device_id']], $from, $to, $width);
-        $provider = new \LibreNMS\Graph\RrdGraphDataProvider();
+        $provider = app(\LibreNMS\Graph\DataProvider::class);
 
         try {
             $result = $provider->query($query, $device);

@@ -27,25 +27,24 @@ use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use Symfony\Component\Process\Process;
 
-class RrdGraphDataProvider
+class RrdGraphDataProvider implements DataProvider
 {
-    /** @throws \RuntimeException if graph type unsupported */
+    /**
+     * Registry of supported graph types.
+     * Add an entry here and create the matching GraphDefinition class to support a new graph.
+     */
+    private static array $definitions = [
+        PollerPerfGraph::GRAPH_TYPE => PollerPerfGraph::class,
+    ];
+
+    /** @throws \RuntimeException if the graph type is not registered */
     public function query(GraphQuery $query, array $device): GraphDataResult
     {
-        return match ($query->graphType) {
-            PollerPerfGraph::GRAPH_TYPE => $this->queryPollerPerf($query, $device),
-            default => throw new \RuntimeException(
-                "Graph type '{$query->graphType}' is not yet supported by the JSON graph data API."
-            ),
-        };
-    }
+        $def = $this->resolveDefinition($query->graphType);
 
-    private function queryPollerPerf(GraphQuery $query, array $device): GraphDataResult
-    {
-        $def    = new PollerPerfGraph();
         $result = new GraphDataResult(
-            id:       PollerPerfGraph::GRAPH_TYPE . ':' . $device['device_id'],
-            type:     PollerPerfGraph::GRAPH_TYPE,
+            id:       $query->graphType . ':' . $device['device_id'],
+            type:     $query->graphType,
             title:    $def->title($device),
             subtitle: $device['hostname'],
             unit:     $def->unit(),
@@ -54,146 +53,102 @@ class RrdGraphDataProvider
             step:     $query->step,
         );
 
-        $palette = 'rainbow_stats_purple';
+        // Group series by (rrdFile, step) so each unique combination costs one rrdtool call.
+        $groups = [];
+        foreach ($def->series($device, $query) as $seriesDef) {
+            $step = $seriesDef->step ?? $query->step;
+            $key  = $seriesDef->rrdFile . ':' . $step;
+            $groups[$key][] = [$seriesDef, $step];
+        }
 
-        $series = new GraphSeries(
-            name:  $def->seriesName(),
-            key:   'poller_time',
-            unit:  $def->unit(),
-            area:  true,
-            color: LibrenmsConfig::get("graph_colours.$palette.0"),
-        );
+        $fallback = false;
+        foreach ($groups as $entries) {
+            /** @var SeriesDefinition $firstDef */
+            [$firstDef, $step] = $entries[0];
 
-        $rrdFile = $def->rrdFile($device);
+            $stepQuery = $step !== $query->step
+                ? new GraphQuery($query->graphType, $query->from, $query->to, $step, $query->width, $query->entities)
+                : $query;
 
-        try {
-            $rows = $this->fetchRrdData($rrdFile, $def->dataSource(), $query);
-            foreach ($rows as [$ts, $value]) {
-                if ($value !== null && is_finite($value)) {
-                    $series->addPoint($ts * 1000, round($value, 4));
-                }
-            }
-            $result->addSeries($series);
-
-            // Fetch average series only if primary fetch succeeded
-            $timeDiff = $query->to - $query->from;
-
-            // 1 Hour Average
-            $series1h = new GraphSeries(
-                name:  '1 hour avg',
-                key:   'poller_time_1h',
-                unit:  $def->unit(),
-                area:  false,
-                color: LibrenmsConfig::get("graph_colours.$palette.4"),
-            );
             try {
-                $query1h = new GraphQuery(
-                    graphType: $query->graphType,
-                    from:      $query->from,
-                    to:        $query->to,
-                    step:      3600,
-                    width:     $query->width,
-                    entities:  $query->entities,
-                );
-                $rows1h = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1h);
-                foreach ($rows1h as [$ts, $value]) {
-                    if ($value !== null && is_finite($value)) {
-                        $series1h->addPoint($ts * 1000, round($value, 4));
-                    }
-                }
-                $result->addSeries($series1h);
-            } catch (\RuntimeException $e) {
-                // Ignore hourly fetch errors
-            }
+                $allData = $this->fetchRrdData($firstDef->rrdFile, $stepQuery);
 
-            // 1 Day Average (timeDiff >= 129600)
-            if ($timeDiff >= 129600) {
-                $series1d = new GraphSeries(
-                    name:  '1 day avg',
-                    key:   'poller_time_1d',
-                    unit:  $def->unit(),
-                    area:  false,
-                    color: LibrenmsConfig::get("graph_colours.$palette.5"),
-                );
-                try {
-                    $query1d = new GraphQuery(
-                        graphType: $query->graphType,
-                        from:      $query->from,
-                        to:        $query->to,
-                        step:      86400,
-                        width:     $query->width,
-                        entities:  $query->entities,
+                foreach ($entries as [$seriesDef]) {
+                    $series = new GraphSeries(
+                        name:  $seriesDef->name,
+                        key:   $seriesDef->key,
+                        unit:  $def->unit(),
+                        area:  $seriesDef->area,
+                        stack: $seriesDef->stack,
+                        color: $seriesDef->color,
                     );
-                    $rows1d = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1d);
-                    foreach ($rows1d as [$ts, $value]) {
+
+                    foreach ($allData[$seriesDef->ds] ?? [] as [$tsMs, $value]) {
                         if ($value !== null && is_finite($value)) {
-                            $series1d->addPoint($ts * 1000, round($value, 4));
+                            if ($seriesDef->transform !== null) {
+                                $value = ($seriesDef->transform)($value);
+                            }
+                            $series->addPoint($tsMs, round($value, 4));
                         }
                     }
-                    $result->addSeries($series1d);
-                } catch (\RuntimeException $e) {
-                    // Ignore daily fetch errors
+
+                    $result->addSeries($series);
+                }
+            } catch (\RuntimeException) {
+                // RRD file missing or fetch failed — add empty series so the frontend
+                // still receives the correct series names and can show a "no data" state.
+                $fallback = true;
+                foreach ($entries as [$seriesDef]) {
+                    $result->addSeries(new GraphSeries(
+                        name:  $seriesDef->name,
+                        key:   $seriesDef->key,
+                        unit:  $def->unit(),
+                        area:  $seriesDef->area,
+                        stack: $seriesDef->stack,
+                        color: $seriesDef->color,
+                    ));
                 }
             }
-
-            // 1 Week Average (timeDiff >= 691200)
-            if ($timeDiff >= 691200) {
-                $series1w = new GraphSeries(
-                    name:  '1 week avg',
-                    key:   'poller_time_1w',
-                    unit:  $def->unit(),
-                    area:  false,
-                    color: LibrenmsConfig::get("graph_colours.$palette.6"),
-                );
-                try {
-                    $query1w = new GraphQuery(
-                        graphType: $query->graphType,
-                        from:      $query->from,
-                        to:        $query->to,
-                        step:      604800,
-                        width:     $query->width,
-                        entities:  $query->entities,
-                    );
-                    $rows1w = $this->fetchRrdData($rrdFile, $def->dataSource(), $query1w);
-                    foreach ($rows1w as [$ts, $value]) {
-                        if ($value !== null && is_finite($value)) {
-                            $series1w->addPoint($ts * 1000, round($value, 4));
-                        }
-                    }
-                    $result->addSeries($series1w);
-                } catch (\RuntimeException $e) {
-                    // Ignore weekly fetch errors
-                }
-            }
-
-        } catch (\RuntimeException $e) {
-            // RRD file missing or fetch failed — return empty series
-            $result->setFallback(true);
-            $result->addSeries($series);
         }
 
         $result->setSource('rrd');
+        $result->setFallback($fallback);
 
         return $result;
     }
 
+    private function resolveDefinition(string $graphType): GraphDefinition
+    {
+        $class = self::$definitions[$graphType] ?? null;
+        if ($class === null) {
+            throw new \RuntimeException(
+                "Graph type '{$graphType}' is not yet supported by the JSON graph data API."
+            );
+        }
+
+        return new $class();
+    }
+
     /**
-     * Runs: rrdtool fetch <file> AVERAGE --start <from> --end <to> --resolution <step>
-     * Returns array of [unix_timestamp, float|null].
+     * Fetch all data sources from one RRD file for the given time range.
+     *
+     * Returns an array keyed by DS name; each value is a list of [timestamp_ms, float|null].
+     *
+     * @return array<string, list<array{int, float|null}>>
      */
-    private function fetchRrdData(string $rrdFile, string $ds, GraphQuery $query): array
+    private function fetchRrdData(string $rrdFile, GraphQuery $query): array
     {
         $rrd     = app(\LibreNMS\Data\Store\Rrd::class);
         $command = $rrd->buildCommand('fetch', $rrdFile, [
             'AVERAGE',
-            '--start', (string) $query->from,
-            '--end',   (string) $query->to,
+            '--start',      (string) $query->from,
+            '--end',        (string) $query->to,
             '--resolution', (string) $query->step,
         ]);
 
         $rawOutput = $this->executeRrdFetch($command);
 
-        return $this->parseRrdFetchOutput($rawOutput, $ds);
+        return $this->parseRrdFetchOutput($rawOutput);
     }
 
     private function executeRrdFetch(array $command): string
@@ -211,32 +166,44 @@ class RrdGraphDataProvider
         return $proc->getOutput();
     }
 
-    private function parseRrdFetchOutput(string $output, string $targetDs): array
+    /**
+     * Parse rrdtool fetch output into per-DS data arrays.
+     *
+     * rrdtool fetch prints:
+     *   ds1     ds2
+     *
+     *   1234567890: 1.23e+00 4.56e+00
+     *   ...
+     *
+     * @return array<string, list<array{int, float|null}>>
+     */
+    private function parseRrdFetchOutput(string $output): array
     {
-        $lines  = explode("\n", trim($output));
-        $header = array_shift($lines);
-        array_shift($lines); // blank line
+        $lines   = explode("\n", trim($output));
+        $header  = array_shift($lines);
+        array_shift($lines); // blank line between header and data
 
         $dsNames = preg_split('/\s+/', trim($header));
-        $dsIndex = array_search($targetDs, $dsNames);
-        if ($dsIndex === false) {
-            return [];
-        }
+        $result  = array_fill_keys($dsNames, []);
 
-        $rows = [];
         foreach ($lines as $line) {
             if (trim($line) === '') {
                 continue;
             }
+
             [$tsRaw, $valuesRaw] = explode(':', $line, 2);
             $values = preg_split('/\s+/', trim($valuesRaw));
-            $val    = $values[$dsIndex] ?? null;
-            $rows[] = [
-                (int) trim($tsRaw),
-                ($val === null || strtolower($val) === 'nan') ? null : (float) $val,
-            ];
+            $tsMs   = (int) trim($tsRaw) * 1000;
+
+            foreach ($dsNames as $i => $ds) {
+                $val          = $values[$i] ?? null;
+                $result[$ds][] = [
+                    $tsMs,
+                    ($val === null || strtolower($val) === 'nan') ? null : (float) $val,
+                ];
+            }
         }
 
-        return $rows;
+        return $result;
     }
 }
