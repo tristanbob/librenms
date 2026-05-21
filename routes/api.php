@@ -150,6 +150,9 @@ Route::prefix('v0')->group(function (): void {
     });
 
     Route::prefix('ports')->group(function (): void {
+        Route::get('{port_id}/graphs/{graph_type}/data', [App\Api\Controllers\LegacyApiController::class, 'get_port_graph_data'])
+            ->name('get_port_graph_data')
+            ->where('port_id', '[0-9]+');
         Route::get('{portid}', [App\Api\Controllers\LegacyApiController::class, 'get_port_info'])->name('get_port_info');
         Route::get('{portid}/fdb', [App\Api\Controllers\LegacyApiController::class, 'get_port_fdb'])->name('get_port_fdb');
         Route::get('{portid}/ip', [App\Api\Controllers\LegacyApiController::class, 'get_port_ip_addresses'])->name('get_port_ip_info');

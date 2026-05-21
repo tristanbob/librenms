@@ -317,6 +317,37 @@ function get_device_graph_data(Request $request)
     });
 }
 
+function get_port_graph_data(Request $request)
+{
+    $port_id    = (int) $request->route('port_id');
+    $graph_type = $request->route('graph_type');
+
+    $port = \App\Models\Port::findOrFail($port_id);
+    $device_id = $port->device_id;
+
+    return check_port_permission($port_id, $device_id, function () use ($request, $port_id, $graph_type, $device_id) {
+        $device = device_by_id_cache($device_id);
+        $from   = (int) $request->input('from',  time() - 86400);
+        $to     = (int) $request->input('to',    time());
+        $width  = (int) $request->input('width', 1200);
+
+        $query    = \LibreNMS\Graph\GraphQuery::fromRequest(
+            $graph_type,
+            ['device_id' => $device['device_id'], 'port_id' => $port_id],
+            $from, $to, $width
+        );
+        $provider = app(\LibreNMS\Graph\DataProvider::class);
+
+        try {
+            $result = $provider->query($query, $device);
+
+            return response()->json($result->toArray());
+        } catch (\RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
+        }
+    });
+}
+
 function list_locations()
 {
     $locations = dbFetchRows('SELECT `locations`.* FROM `locations` WHERE `locations`.`location` IS NOT NULL');
