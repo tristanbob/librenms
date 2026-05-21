@@ -25,6 +25,7 @@ namespace LibreNMS\Graph;
 
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
+use LibreNMS\Graph\Definitions\Port\BitsGraph;
 use Symfony\Component\Process\Process;
 
 class RrdGraphDataProvider implements DataProvider
@@ -35,6 +36,7 @@ class RrdGraphDataProvider implements DataProvider
      */
     private static array $definitions = [
         PollerPerfGraph::GRAPH_TYPE => PollerPerfGraph::class,
+        BitsGraph::GRAPH_TYPE       => BitsGraph::class,
     ];
 
     /** @throws \RuntimeException if the graph type is not registered */

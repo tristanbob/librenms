@@ -3,14 +3,40 @@
 use App\Facades\LibrenmsConfig;
 
 if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_id']))) {
+    $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
+
     echo '<div class="panel panel-default">
             <div class="panel-heading">
                 <h3 class="panel-title">Interface Traffic</h3>
             </div>';
-    $graph_type = 'port_bits';
 
     echo '<div class="panel-body">';
-    include 'includes/html/print-interface-graphs.inc.php';
+    if ($renderer === 'echarts') {
+        $periods = session('widescreen')
+            ? LibrenmsConfig::get('graphs.mini.widescreen')
+            : LibrenmsConfig::get('graphs.mini.normal');
+
+        echo '<div class="row">';
+        foreach ($periods as $period => $period_text) {
+            $from     = LibrenmsConfig::get("time.$period");
+            $to       = time();
+            $portId   = (int) $port['port_id'];
+            $dataUrl  = "/api/v0/ports/$portId/graphs/port_bits/data?from=$from&to=$to";
+
+            echo '<div class="col-md-3 col-sm-6 col-xs-12">';
+            echo '<div'
+                . ' class="lnms-echart"'
+                . ' style="width: 100%; height: 200px;"'
+                . ' data-graph-url="' . $dataUrl . '"'
+                . ' data-refresh="300"'
+                . '></div>';
+            echo '</div>';
+        }
+        echo '</div>';
+    } else {
+        $graph_type = 'port_bits';
+        include 'includes/html/print-interface-graphs.inc.php';
+    }
     echo '</div></div>';
 
     echo '<div class="panel panel-default">
