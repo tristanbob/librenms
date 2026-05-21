@@ -34,9 +34,19 @@ class PollerPerfGraph implements GraphDefinition
 
     private const PALETTE = 'rainbow_stats_purple';
 
+    public function id(array $device, GraphQuery $query): string
+    {
+        return self::GRAPH_TYPE . ':' . $device['device_id'];
+    }
+
     public function title(array $device): string
     {
         return 'Poller Time';
+    }
+
+    public function subtitle(array $device, GraphQuery $query): string
+    {
+        return $device['hostname'];
     }
 
     public function unit(): string
