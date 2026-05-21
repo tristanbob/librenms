@@ -1,6 +1,7 @@
 <?php
 
 use App\Facades\LibrenmsConfig;
+use LibreNMS\Util\Url;
 
 if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_id']))) {
     $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
@@ -16,19 +17,21 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
             ? LibrenmsConfig::get('graphs.mini.widescreen')
             : LibrenmsConfig::get('graphs.mini.normal');
 
+        $portId = (int) $port['port_id'];
         echo '<div class="row">';
         foreach ($periods as $period => $period_text) {
-            $from     = LibrenmsConfig::get("time.$period");
-            $to       = time();
-            $portId   = (int) $port['port_id'];
-            $dataUrl  = "/api/v0/ports/$portId/graphs/port_bits/data?from=$from&to=$to";
+            $from    = LibrenmsConfig::get("time.$period");
+            $to      = time();
+            $dataUrl = "/graph-data/ports/$portId/graphs/port_bits?from=$from&to=$to";
+            $linkUrl = Url::generate(['page' => 'graphs', 'type' => 'port_bits', 'id' => $portId, 'from' => $from, 'to' => $to]);
 
             echo '<div class="col-md-3 col-sm-6 col-xs-12">';
             echo '<div'
                 . ' class="lnms-echart"'
                 . ' style="width: 100%; height: 200px;"'
-                . ' data-graph-url="' . $dataUrl . '"'
-                . ' data-refresh="300"'
+                . ' data-graph-url="' . e($dataUrl) . '"'
+                . ' data-link-url="' . e($linkUrl) . '"'
+                . ' data-hide-datazoom="true"'
                 . '></div>';
             echo '</div>';
         }

@@ -37,6 +37,7 @@ export function mountEChartsGraphs() {
             chart.setOption(toEChartsOptions(lastPayload, {
                 dark,
                 hideDataZoom: el.dataset.hideDatazoom === 'true',
+                hideTooltip:  el.dataset.hideTooltip  === 'true',
             }), true);
             if (legendEl) {
                 legendEl.innerHTML = hideLegend ? '' : buildHtmlLegend(lastPayload.graph, dark);

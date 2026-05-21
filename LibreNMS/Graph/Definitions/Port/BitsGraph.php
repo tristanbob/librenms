@@ -66,7 +66,8 @@ class BitsGraph implements GraphDefinition
                 key: 'bits_in',
                 rrdFile: $rrdFile,
                 ds: 'INOCTETS',
-                color: '006600',
+                color: '90B040',
+                lineColor: '608720',
                 area: true,
                 transform: $toBits,
             ),
@@ -75,9 +76,11 @@ class BitsGraph implements GraphDefinition
                 key: 'bits_out',
                 rrdFile: $rrdFile,
                 ds: 'OUTOCTETS',
-                color: '000099',
+                color: '8080C0',
+                lineColor: '606090',
                 area: true,
                 transform: $toBits,
+                negate: true,
             ),
         ];
     }

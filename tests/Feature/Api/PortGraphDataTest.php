@@ -74,8 +74,8 @@ class PortGraphDataTest extends DBTestCase
                     );
                     $result->setSource('rrd');
 
-                    $seriesIn  = new GraphSeries(name: 'In',  key: 'bits_in',  unit: 'bps', area: true,  stack: null, color: '006600');
-                    $seriesOut = new GraphSeries(name: 'Out', key: 'bits_out', unit: 'bps', area: true,  stack: null, color: '000099');
+                    $seriesIn  = new GraphSeries(name: 'In',  key: 'bits_in',  unit: 'bps', area: true, stack: null, color: '006600');
+                    $seriesOut = new GraphSeries(name: 'Out', key: 'bits_out', unit: 'bps', area: true, stack: null, color: '000099', negate: true);
                     $ts = $query->from * 1000;
                     $seriesIn->addPoint($ts, 1000.0);
                     $seriesOut->addPoint($ts, 2000.0);

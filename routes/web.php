@@ -440,6 +440,14 @@ Route::prefix('install')->group(function (): void {
     Route::any('{path?}', [Install\InstallationController::class, 'invalid'])->where('path', '.*'); // 404
 });
 
+// Graph data routes (session-authenticated, used by ECharts UI renderer)
+Route::middleware('auth')->prefix('graph-data')->group(function (): void {
+    Route::get('ports/{port_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_port_graph_data'])
+        ->where('port_id', '[0-9]+');
+    Route::get('devices/{device_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_device_graph_data'])
+        ->where('device_id', '[0-9]+');
+});
+
 // Legacy routes
 Route::any('/dummy_legacy_auth/{path?}', [LegacyController::class, 'dummy'])->middleware('auth');
 Route::any('/dummy_legacy_unauth/{path?}', [LegacyController::class, 'dummy']);

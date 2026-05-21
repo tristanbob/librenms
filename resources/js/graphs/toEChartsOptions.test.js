@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { toEChartsOptions } from './toEChartsOptions.js';
 import { formatValue, formatNumber } from './formatUnits.js';
 
+
 const FIXTURE = {
     status: 'ok',
     graph: {
@@ -21,7 +22,7 @@ const FIXTURE = {
             type:  'line',
             unit:  'seconds',
             data:  [[1000000000, 12.5]],
-            style: { area: true, stack: null },
+            style: { area: true, stack: null, color: '663399', areaOpacity: 0.2 },
             stats: { min: 10, max: 15, avg: 12.5, last: 12.5 },
         }],
         markers:    [],
@@ -80,7 +81,7 @@ describe('toEChartsOptions', () => {
         expect(toEChartsOptions(FIXTURE).legend.show).toBe(false);
     });
 
-    test('area opacity matches RRD colourAalpha hex 33 (~20%)', () => {
+    test('area opacity comes from style.areaOpacity', () => {
         const opts = toEChartsOptions(FIXTURE);
         expect(opts.series[0].areaStyle.opacity).toBe(0.2);
     });
@@ -117,6 +118,80 @@ describe('formatNumber', () => {
 
     test('null returns N/A', () => {
         expect(formatNumber(null)).toBe('N/A');
+    });
+});
+
+describe('toEChartsOptions — two-series (port_bits)', () => {
+    const TWO_SERIES = {
+        status: 'ok',
+        graph: {
+            ...FIXTURE.graph,
+            type:  'port_bits',
+            unit:  'bps',
+            series: [
+                {
+                    name: 'In',  key: 'bits_in',  type: 'line', unit: 'bps',
+                    data: [[1000000000, 100000.0]],
+                    style: { area: true, stack: null, color: '90B040', lineColor: '608720', areaOpacity: 1.0 },
+                    stats: { min: 80000, max: 120000, avg: 100000, last: 100000 },
+                },
+                {
+                    name: 'Out', key: 'bits_out', type: 'line', unit: 'bps',
+                    data: [[1000000000, 50000.0]],
+                    style: { area: true, stack: null, color: '8080C0', lineColor: '606090', areaOpacity: 1.0, negate: true },
+                    stats: { min: 40000, max: 60000, avg: 50000, last: 50000 },
+                },
+            ],
+            markers: [],
+        },
+    };
+
+    test('produces two series for In and Out', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        expect(opts.series).toHaveLength(2);
+        expect(opts.series[0].name).toBe('In');
+        expect(opts.series[1].name).toBe('Out');
+    });
+
+    test('uses lineColor for line and color for area fill', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        expect(opts.series[0].lineStyle.color).toBe('#608720');
+        expect(opts.series[0].itemStyle.color).toBe('#90B040');
+        expect(opts.series[1].lineStyle.color).toBe('#606090');
+        expect(opts.series[1].itemStyle.color).toBe('#8080C0');
+    });
+
+    test('area opacity comes from style.areaOpacity per series', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        expect(opts.series[0].areaStyle.opacity).toBe(1.0);
+        expect(opts.series[1].areaStyle.opacity).toBe(1.0);
+    });
+
+    test('tooltip formatter lists both series names', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        const fakeParams = [
+            { value: [1000000000, 100000], seriesName: 'In' },
+            { value: [1000000000, -50000], seriesName: 'Out' },
+        ];
+        const html = opts.tooltip.formatter(fakeParams);
+        expect(html).toContain('In');
+        expect(html).toContain('Out');
+    });
+
+    test('Out series data is negated when style.negate is true', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        expect(opts.series[1].data[0][1]).toBe(-50000.0);
+        expect(opts.series[0].data[0][1]).toBe(100000.0);
+    });
+
+    test('tooltip shows absolute value for negated Out series', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        const fakeParams = [
+            { value: [1000000000, 100000], seriesName: 'In' },
+            { value: [1000000000, -50000], seriesName: 'Out' },
+        ];
+        const html = opts.tooltip.formatter(fakeParams);
+        expect(html).not.toContain('-50');
     });
 });
 

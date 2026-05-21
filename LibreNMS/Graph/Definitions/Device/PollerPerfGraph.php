@@ -62,12 +62,13 @@ class PollerPerfGraph implements GraphDefinition
 
         $series = [
             new SeriesDefinition(
-                name:    'Poller time',
-                key:     'poller_time',
-                rrdFile: $rrdFile,
-                ds:      'poller',
-                color:   LibrenmsConfig::get("graph_colours.$p.0"),
-                area:    true,
+                name:        'Poller time',
+                key:         'poller_time',
+                rrdFile:     $rrdFile,
+                ds:          'poller',
+                color:       LibrenmsConfig::get("graph_colours.$p.0"),
+                area:        true,
+                areaOpacity: 0.2,
             ),
             new SeriesDefinition(
                 name:    '1 hour avg',

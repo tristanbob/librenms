@@ -50,10 +50,13 @@ class SeriesDefinition
         public readonly string   $key,
         public readonly string   $rrdFile,
         public readonly string   $ds,
-        public readonly string   $color     = '663399',
-        public readonly bool     $area      = false,
-        public readonly ?string  $stack     = null,
-        public readonly ?int     $step      = null,
-        public readonly mixed    $transform = null,
+        public readonly string   $color       = '663399',
+        public readonly ?string  $lineColor   = null,
+        public readonly bool     $area        = false,
+        public readonly float    $areaOpacity = 1.0,
+        public readonly ?string  $stack       = null,
+        public readonly ?int     $step        = null,
+        public readonly mixed    $transform   = null,
+        public readonly bool     $negate      = false,
     ) {}
 }

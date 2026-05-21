@@ -35,10 +35,13 @@ class GraphSeries
         public readonly string  $name,
         public readonly string  $key,
         public readonly string  $unit,
-        public readonly string  $type  = 'line',
-        public readonly bool    $area  = false,
-        public readonly ?string $stack = null,
-        public readonly ?string $color = null,
+        public readonly string  $type        = 'line',
+        public readonly bool    $area        = false,
+        public readonly ?string $stack       = null,
+        public readonly string  $color       = '663399',
+        public readonly ?string $lineColor   = null,
+        public readonly float   $areaOpacity = 1.0,
+        public readonly bool    $negate      = false,
     ) {}
 
     public function addPoint(int $timestampMs, float $value): void
@@ -70,7 +73,7 @@ class GraphSeries
             'type'  => $this->type,
             'unit'  => $this->unit,
             'data'  => $this->data,
-            'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color],
+            'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color, 'lineColor' => $this->lineColor, 'areaOpacity' => $this->areaOpacity, 'negate' => $this->negate],
             'stats' => $this->stats(),
         ];
     }
