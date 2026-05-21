@@ -1,5 +1,5 @@
 import { formatNumber } from './formatUnits.js';
-import { THEME, DEFAULT_COLORS } from './toEChartsOptions.js';
+import { THEME } from './toEChartsOptions.js';
 
 function seriesStats(s) {
     if (s.stats) return s.stats;
@@ -38,7 +38,7 @@ export function buildHtmlLegend(graph, dark) {
     </tr>`;
 
     const dataRows = graph.series.map((s, idx) => {
-        const color  = s.style.color ? `#${s.style.color}` : DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
+        const color  = `#${s.style.color}`;
         const st     = seriesStats(s);
         // Swatch: solid border (the line) with semi-transparent fill (the area) — matches LINE+AREA rendering.
         const swatch = `<span style="display:inline-block;width:14px;height:10px;`

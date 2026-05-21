@@ -4,23 +4,20 @@ import { formatValue, formatNumber } from './formatUnits.js';
 export const THEME = {
     dark: {
         background: '#2e3338',
+        tooltip:    '#2e3338',
         grid:       '#292929',
         frame:      '#5e5e5e',
         font:       '#f8f9f9',
     },
     light: {
-        background: 'transparent',
-        grid:       '#a5a5a5',
-        frame:      '#5e5e5e',
-        font:       '#000000',
+        background:  'transparent',
+        tooltip:     '#ffffff',
+        grid:        '#a5a5a5',
+        frame:       '#5e5e5e',
+        font:        '#000000',
     },
 };
 
-// Exact order from graph_colours.rainbow_stats_purple in config_definitions.json
-export const DEFAULT_COLORS = [
-    '#663399', '#22CCBB', '#00BBCC', '#0099CC', '#3366BB',
-    '#AA3355', '#881177', '#CC6666', '#EEDD00', '#44DD88', '#99DD55',
-];
 
 const MONO = '"Courier New", Courier, monospace';
 
@@ -55,18 +52,21 @@ export function toEChartsOptions(payload, options = {}) {
     const t     = THEME[options.dark ? 'dark' : 'light'];
 
     const series = graph.series.map((s, idx) => {
-        const color = s.style.color ? `#${s.style.color}` : DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
+        const fillColor = `#${s.style.color}`;
+        const lineColor = s.style.lineColor ? `#${s.style.lineColor}` : fillColor;
+        const data      = s.style.negate
+            ? s.data.map(([t, v]) => [t, v != null ? -v : null])
+            : s.data;
         return {
             name:      s.name,
             type:      'line',
             smooth:    false,
             symbol:    'none',
-            lineStyle: { color, width: 1.25 },
-            itemStyle: { color },
-            // area alpha 0x33 == 20% — matches RRD colourAalpha default
-            areaStyle: s.style.area ? { color, opacity: 0.2 } : null,
+            lineStyle: { color: lineColor, width: 1.25 },
+            itemStyle: { color: fillColor },
+            areaStyle: s.style.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : null,
             stack:     s.style.stack ?? undefined,
-            data:      s.data,
+            data,
         };
     });
 
@@ -83,14 +83,18 @@ export function toEChartsOptions(payload, options = {}) {
         backgroundColor: t.background,
         animation:       false,
         title:           { show: false },
-        tooltip: {
+        tooltip: options.hideTooltip ? { show: false } : {
             trigger:         'axis',
-            backgroundColor: t.background,
+            backgroundColor: t.tooltip,
             borderColor:     t.frame,
             textStyle:       { color: t.font, fontFamily: MONO, fontSize: 11 },
             formatter: (params) => {
-                const ts    = new Date(params[0].value[0]);
-                const lines = params.map(p => `${p.seriesName}: ${formatValue(p.value[1], graph.unit)}`);
+                const ts      = new Date(params[0].value[0]);
+                const negated = new Set(graph.series.filter(s => s.style.negate).map(s => s.name));
+                const lines   = params.map(p => {
+                    const v = negated.has(p.seriesName) ? Math.abs(p.value[1]) : p.value[1];
+                    return `${p.seriesName}: ${formatValue(v, graph.unit)}`;
+                });
                 return `${ts.toLocaleString()}<br>${lines.join('<br>')}`;
             },
         },

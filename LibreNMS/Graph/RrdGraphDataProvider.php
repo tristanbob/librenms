@@ -77,12 +77,15 @@ class RrdGraphDataProvider implements DataProvider
 
                 foreach ($entries as [$seriesDef]) {
                     $series = new GraphSeries(
-                        name:  $seriesDef->name,
-                        key:   $seriesDef->key,
-                        unit:  $def->unit(),
-                        area:  $seriesDef->area,
-                        stack: $seriesDef->stack,
-                        color: $seriesDef->color,
+                        name:        $seriesDef->name,
+                        key:         $seriesDef->key,
+                        unit:        $def->unit(),
+                        area:        $seriesDef->area,
+                        stack:       $seriesDef->stack,
+                        color:       $seriesDef->color,
+                        lineColor:   $seriesDef->lineColor,
+                        areaOpacity: $seriesDef->areaOpacity,
+                        negate:      $seriesDef->negate,
                     );
 
                     foreach ($allData[$seriesDef->ds] ?? [] as [$tsMs, $value]) {
@@ -103,12 +106,15 @@ class RrdGraphDataProvider implements DataProvider
                 $emptyReasons[] = 'rrd_fetch_failed';
                 foreach ($entries as [$seriesDef]) {
                     $result->addSeries(new GraphSeries(
-                        name:  $seriesDef->name,
-                        key:   $seriesDef->key,
-                        unit:  $def->unit(),
-                        area:  $seriesDef->area,
-                        stack: $seriesDef->stack,
-                        color: $seriesDef->color,
+                        name:        $seriesDef->name,
+                        key:         $seriesDef->key,
+                        unit:        $def->unit(),
+                        area:        $seriesDef->area,
+                        stack:       $seriesDef->stack,
+                        color:       $seriesDef->color,
+                        lineColor:   $seriesDef->lineColor,
+                        areaOpacity: $seriesDef->areaOpacity,
+                        negate:      $seriesDef->negate,
                     ));
                 }
             }
