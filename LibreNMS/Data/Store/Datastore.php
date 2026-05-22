@@ -52,6 +52,7 @@ class Datastore implements WriteInterface, DataStorageInterface
             'g' => 'graphite.enable',
             '2' => 'influxdbv2.enable',
             'k' => 'kafka.enable',
+            'v' => 'victoriametrics.enable',
         ];
         foreach ($opts as $opt => $setting) {
             if (isset($options[$opt])) {
