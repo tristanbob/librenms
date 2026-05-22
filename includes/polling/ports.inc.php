@@ -899,6 +899,7 @@ foreach ($ports as $port) {
             }
 
             $tags = [
+                'port_id' => $port['port_id'],
                 'ifName' => $port['ifName'],
                 'ifAlias' => $port['ifAlias'],
                 'ifIndex' => $port['ifIndex'],
