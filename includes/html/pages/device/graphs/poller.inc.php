@@ -1,6 +1,7 @@
 <?php
 
 use App\Facades\LibrenmsConfig;
+use LibreNMS\Graph\GraphDataUrl;
 
 $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
 
@@ -21,7 +22,7 @@ foreach ($graph_enable as $graph => $entry) {
         foreach ($periods as $period => $period_text) {
             $from = LibrenmsConfig::get("time.$period");
             $to = time();
-            $data_url = "/ajax/devices/$hostname/graphs/device_poller_perf/data?from=$from&to=$to";
+            $data_url = GraphDataUrl::device((int) $device['device_id'], 'device_poller_perf', ['from' => $from, 'to' => $to]);
             $detail_url = \LibreNMS\Util\Url::generate([
                 'page'   => 'graphs',
                 'device' => $device['device_id'],
@@ -33,7 +34,7 @@ foreach ($graph_enable as $graph => $entry) {
             echo '<div'
                 . ' class="lnms-echart"'
                 . ' style="width: 100%; height: 150px;"'
-                . ' data-graph-url="' . $data_url . '"'
+                . ' data-graph-url="' . e($data_url) . '"'
                 . ' data-link-url="' . e($detail_url) . '"'
                 . ' data-refresh="300"'
                 . ' data-hide-datazoom="true"'

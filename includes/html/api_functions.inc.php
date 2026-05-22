@@ -296,19 +296,18 @@ function get_device_graph_data(Request $request)
     $device_id  = ctype_digit($hostname) ? $hostname : getidbyname($hostname);
 
     return check_device_permission($device_id, function ($device_id) use ($request, $graph_type) {
-        $device = device_by_id_cache($device_id);
         $from   = (int) $request->input('from',  time() - 86400);
         $to     = (int) $request->input('to',    time());
         $width  = (int) $request->input('width', 1200);
-
-        $query    = \LibreNMS\Graph\GraphQuery::fromRequest($graph_type, ['device_id' => $device['device_id']], $from, $to, $width);
-        $provider = app(\LibreNMS\Graph\DataProvider::class);
+        $height = (int) $request->input('height', 300);
 
         try {
-            $result = $provider->query($query, $device);
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('device', $graph_type, ['device_id' => $device_id], $from, $to, $width, $height);
+            $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
+            $result = $provider->query($query);
 
             return response()->json($result->toArray());
-        } catch (\RuntimeException $e) {
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json([
                 'status'  => 'error',
                 'message' => $e->getMessage(),
@@ -322,27 +321,28 @@ function get_port_graph_data(Request $request)
     $port_id    = (int) $request->route('port_id');
     $graph_type = $request->route('graph_type');
 
-    $port = \App\Models\Port::findOrFail($port_id);
+    $port      = \App\Models\Port::findOrFail($port_id);
     $device_id = $port->device_id;
+    $port_name = $port->ifName ?: $port->ifDescr;
 
-    return check_port_permission($port_id, $device_id, function () use ($request, $port_id, $graph_type, $device_id) {
-        $device = device_by_id_cache($device_id);
+    return check_port_permission($port_id, $device_id, function () use ($request, $port_id, $graph_type, $device_id, $port_name) {
         $from   = (int) $request->input('from',  time() - 86400);
         $to     = (int) $request->input('to',    time());
         $width  = (int) $request->input('width', 1200);
-
-        $query    = \LibreNMS\Graph\GraphQuery::fromRequest(
-            $graph_type,
-            ['device_id' => $device['device_id'], 'port_id' => $port_id],
-            $from, $to, $width
-        );
-        $provider = app(\LibreNMS\Graph\DataProvider::class);
+        $height = (int) $request->input('height', 300);
 
         try {
-            $result = $provider->query($query, $device);
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest(
+                'port',
+                $graph_type,
+                ['device_id' => $device_id, 'port_id' => $port_id, 'port_name' => $port_name],
+                $from, $to, $width, $height
+            );
+            $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
+            $result = $provider->query($query);
 
             return response()->json($result->toArray());
-        } catch (\RuntimeException $e) {
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
         }
     });

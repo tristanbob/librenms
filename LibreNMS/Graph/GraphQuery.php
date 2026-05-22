@@ -18,33 +18,86 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph;
 
 class GraphQuery
 {
+    private const MIN_WIDTH = 1;
+    private const MAX_WIDTH = 5000;
+    private const MIN_HEIGHT = 1;
+    private const MAX_HEIGHT = 3000;
+    private const MIN_STEP = 300;
+    private const MAX_RANGE = 31622400; // 366 days
+    private const MAX_POINTS = 10000;
+
+    public readonly int $step;
+
     public function __construct(
+        public readonly string $scope,
         public readonly string $graphType,
         public readonly int    $from,
         public readonly int    $to,
-        public readonly int    $step,
         public readonly int    $width,
+        public readonly int    $height,
         public readonly array  $entities,
-    ) {}
+        public readonly array  $options = [],
+        ?int $step = null,
+    ) {
+        if ($this->from >= $this->to) {
+            throw new \InvalidArgumentException('Graph query "from" must be earlier than "to".');
+        }
+        if ($this->width < self::MIN_WIDTH || $this->width > self::MAX_WIDTH) {
+            throw new \InvalidArgumentException('Graph query width is outside the supported range.');
+        }
+        if ($this->height < self::MIN_HEIGHT || $this->height > self::MAX_HEIGHT) {
+            throw new \InvalidArgumentException('Graph query height is outside the supported range.');
+        }
+
+        $range = $this->to - $this->from;
+        if ($range > self::MAX_RANGE) {
+            throw new \InvalidArgumentException('Graph query time range is too large.');
+        }
+
+        $this->step = $step ?? max(self::MIN_STEP, (int) ceil($range / $this->width));
+        if ($this->step < 1) {
+            throw new \InvalidArgumentException('Graph query step must be positive.');
+        }
+        if ((int) ceil($range / $this->step) > self::MAX_POINTS) {
+            throw new \InvalidArgumentException('Graph query requests too many data points.');
+        }
+    }
 
     public static function fromRequest(
+        string $scope,
         string $graphType,
         array  $entities,
         int    $from  = 0,
         int    $to    = 0,
         int    $width = 1200,
+        int    $height = 300,
+        array  $options = [],
     ): self {
         $to   = $to   ?: time();
         $from = $from ?: $to - 86400;
-        $step = max(300, (int) ceil(($to - $from) / $width));
 
-        return new self($graphType, $from, $to, $step, $width, $entities);
+        return new self($scope, $graphType, $from, $to, $width, $height, $entities, $options);
+    }
+
+    public function withStep(int $step): self
+    {
+        return new self(
+            $this->scope,
+            $this->graphType,
+            $this->from,
+            $this->to,
+            $this->width,
+            $this->height,
+            $this->entities,
+            $this->options,
+            $step,
+        );
     }
 }

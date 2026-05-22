@@ -1,7 +1,7 @@
 <?php
 
 /**
- * DataProvider.php
+ * GraphDataUrl.php
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,27 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph;
 
-interface DataProvider
+class GraphDataUrl
 {
-    /** @throws \RuntimeException if the graph type is not supported by this provider */
-    public function query(GraphQuery $query, array $device): GraphDataResult;
+    public static function device(int $deviceId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/devices/$deviceId/graphs/$graphType", $query);
+    }
+
+    public static function port(int $portId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/ports/$portId/graphs/$graphType", $query);
+    }
+
+    private static function withQuery(string $path, array $query): string
+    {
+        $query = array_filter($query, fn ($value) => $value !== null);
+
+        return $query === [] ? $path : $path . '?' . http_build_query($query);
+    }
 }

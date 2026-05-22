@@ -20,6 +20,7 @@ export const THEME = {
 
 
 const MONO = '"Courier New", Courier, monospace';
+const DEFAULT_COLOR = '663399';
 
 const DAYS_SHORT   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -50,22 +51,24 @@ function buildXAxis(t) {
 export function toEChartsOptions(payload, options = {}) {
     const graph = payload.graph;
     const t     = THEME[options.dark ? 'dark' : 'light'];
+    const defaultKind = ['line', 'bar'].includes(graph.display?.kind) ? graph.display.kind : 'line';
 
     const series = graph.series.map((s, idx) => {
-        const fillColor = `#${s.style.color}`;
-        const lineColor = s.style.lineColor ? `#${s.style.lineColor}` : fillColor;
-        const data      = s.style.negate
+        const fillColor = `#${s.style?.color ?? DEFAULT_COLOR}`;
+        const lineColor = s.style?.lineColor ? `#${s.style.lineColor}` : fillColor;
+        const seriesType = ['line', 'bar'].includes(s.type) ? s.type : defaultKind;
+        const data      = s.style?.negate
             ? s.data.map(([t, v]) => [t, v != null ? -v : null])
             : s.data;
         return {
             name:      s.name,
-            type:      'line',
+            type:      seriesType,
             smooth:    false,
-            symbol:    'none',
-            lineStyle: { color: lineColor, width: 1.25 },
+            symbol:    seriesType === 'line' ? 'none' : undefined,
+            lineStyle: seriesType === 'line' ? { color: lineColor, width: 1.25 } : undefined,
             itemStyle: { color: fillColor },
-            areaStyle: s.style.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : null,
-            stack:     s.style.stack ?? undefined,
+            areaStyle: seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
+            stack:     s.style?.stack ?? undefined,
             data,
         };
     });
@@ -90,7 +93,7 @@ export function toEChartsOptions(payload, options = {}) {
             textStyle:       { color: t.font, fontFamily: MONO, fontSize: 11 },
             formatter: (params) => {
                 const ts      = new Date(params[0].value[0]);
-                const negated = new Set(graph.series.filter(s => s.style.negate).map(s => s.name));
+                const negated = new Set(graph.series.filter(s => s.style?.negate).map(s => s.name));
                 const lines   = params.map(p => {
                     const v = negated.has(p.seriesName) ? Math.abs(p.value[1]) : p.value[1];
                     return `${p.seriesName}: ${formatValue(v, graph.unit)}`;

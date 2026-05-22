@@ -20,7 +20,7 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Tests\Feature\Api;
@@ -61,6 +61,7 @@ class GraphDataTest extends DBTestCase
             'graph' => [
                 'id', 'type', 'title', 'subtitle', 'unit',
                 'from', 'to', 'step',
+                'display' => ['renderer', 'kind', 'stacked', 'area', 'legend', 'tooltip'],
                 'series',
                 'meta' => ['source', 'fallback_used', 'empty_reason', 'warnings', 'generated_at'],
             ],

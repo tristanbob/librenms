@@ -22,6 +22,7 @@ function escapeHtml(s) {
 }
 
 const fmt = (v) => v == null ? 'N/A' : formatNumber(v, 2);
+const DEFAULT_COLOR = '663399';
 
 // Fixed-width stat cell: right-aligned, matches rrdtool GPRINT column width.
 const STAT = 'text-align:right;padding:0 5px;white-space:nowrap;min-width:52px;';
@@ -38,7 +39,7 @@ export function buildHtmlLegend(graph, dark) {
     </tr>`;
 
     const dataRows = graph.series.map((s, idx) => {
-        const color  = `#${s.style.color}`;
+        const color  = `#${s.style?.color ?? DEFAULT_COLOR}`;
         const st     = seriesStats(s);
         // Swatch: solid border (the line) with semi-transparent fill (the area) — matches LINE+AREA rendering.
         const swatch = `<span style="display:inline-block;width:14px;height:10px;`

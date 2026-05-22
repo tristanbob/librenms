@@ -18,80 +18,90 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph;
 
 use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
-use LibreNMS\Graph\Definitions\Port\BitsGraph;
+use LibreNMS\Data\Store\Rrd;
 use Symfony\Component\Process\Process;
 
-class RrdGraphDataProvider implements DataProvider
+class RrdGraphDataProvider implements GraphDataProvider
 {
-    /**
-     * Registry of supported graph types.
-     * Add an entry here and create the matching GraphDefinition class to support a new graph.
-     */
-    private static array $definitions = [
-        PollerPerfGraph::GRAPH_TYPE => PollerPerfGraph::class,
-        BitsGraph::GRAPH_TYPE       => BitsGraph::class,
-    ];
+    public function __construct(
+        private readonly Rrd $rrd,
+        private readonly GraphDefinitionRegistry $registry,
+    ) {}
 
-    /** @throws \RuntimeException if the graph type is not registered */
-    public function query(GraphQuery $query, array $device): GraphDataResult
+    /** @throws \RuntimeException if the graph type is not registered or device_id is missing */
+    public function query(GraphQuery $query): GraphDataResult
     {
-        $def = $this->resolveDefinition($query->graphType);
+        $deviceId = $query->entities['device_id'] ?? null;
+        if ($deviceId === null) {
+            throw new \RuntimeException(
+                "GraphQuery is missing 'device_id' in entities for graph type '{$query->graphType}'."
+            );
+        }
+
+        $device = device_by_id_cache($deviceId);
+        $def = $this->registry->definitionFor($query->graphType);
 
         $result = new GraphDataResult(
-            id:       $def->id($device, $query),
-            type:     $query->graphType,
-            title:    $def->title($device),
+            id: $def->id($device, $query),
+            type: $query->graphType,
+            title: $def->title($device),
             subtitle: $def->subtitle($device, $query),
-            unit:     $def->unit(),
-            from:     $query->from,
-            to:       $query->to,
-            step:     $query->step,
+            unit: $def->unit(),
+            from: $query->from,
+            to: $query->to,
+            step: $query->step,
         );
+        $result->setDisplay(array_merge(
+            ['renderer' => 'timeseries', 'legend' => true, 'tooltip' => true],
+            $def->display()
+        ));
+        foreach ($def->markers($device, $query) as $marker) {
+            $result->addMarker($marker);
+        }
+        foreach ($def->thresholds($device, $query) as $threshold) {
+            $result->addThreshold($threshold);
+        }
 
-        // Group series by (rrdFile, step) so each unique combination costs one rrdtool call.
         $groups = [];
         foreach ($def->series($device, $query) as $seriesDef) {
-            $step = $seriesDef->step ?? $query->step;
-            $key  = $seriesDef->rrdFile . ':' . $step;
-            $groups[$key][] = [$seriesDef, $step];
+            $binding = $seriesDef->binding(RrdMetricBinding::SOURCE);
+            if (! $binding instanceof RrdMetricBinding) {
+                $result->addWarning("Series '{$seriesDef->key}' has no RRD binding; empty series returned.");
+                $result->addSeries($this->emptySeries($seriesDef));
+                continue;
+            }
+
+            $step = $binding->step ?? $query->step;
+            $consolidation = strtoupper($binding->consolidation);
+            $rrdFile = $this->rrd->name($device['hostname'], $binding->rrdName);
+            $key = implode(':', [$rrdFile, $step, $consolidation]);
+            $groups[$key][] = [$seriesDef, $binding, $rrdFile, $step, $consolidation];
         }
 
         $emptyReasons = [];
         foreach ($groups as $entries) {
-            /** @var SeriesDefinition $firstDef */
-            [$firstDef, $step] = $entries[0];
+            [, , $rrdFile, $step, $consolidation] = $entries[0];
 
             $stepQuery = $step !== $query->step
-                ? new GraphQuery($query->graphType, $query->from, $query->to, $step, $query->width, $query->entities)
+                ? $query->withStep($step)
                 : $query;
 
             try {
-                $allData = $this->fetchRrdData($firstDef->rrdFile, $stepQuery);
+                $allData = $this->fetchRrdData($rrdFile, $stepQuery, $consolidation);
 
-                foreach ($entries as [$seriesDef]) {
-                    $series = new GraphSeries(
-                        name:        $seriesDef->name,
-                        key:         $seriesDef->key,
-                        unit:        $def->unit(),
-                        area:        $seriesDef->area,
-                        stack:       $seriesDef->stack,
-                        color:       $seriesDef->color,
-                        lineColor:   $seriesDef->lineColor,
-                        areaOpacity: $seriesDef->areaOpacity,
-                        negate:      $seriesDef->negate,
-                    );
+                foreach ($entries as [$seriesDef, $binding]) {
+                    $series = $this->emptySeries($seriesDef);
 
-                    foreach ($allData[$seriesDef->ds] ?? [] as [$tsMs, $value]) {
+                    foreach ($allData[$binding->ds] ?? [] as [$tsMs, $value]) {
                         if ($value !== null && is_finite($value)) {
-                            if ($seriesDef->transform !== null) {
-                                $value = ($seriesDef->transform)($value);
+                            if ($binding->transform !== null) {
+                                $value = ($binding->transform)($value);
                             }
                             $series->addPoint($tsMs, round($value, 4));
                         }
@@ -100,27 +110,15 @@ class RrdGraphDataProvider implements DataProvider
                     $result->addSeries($series);
                 }
             } catch (\RuntimeException $e) {
-                // RRD file missing or fetch failed — add empty series so the frontend
-                // still receives the correct series names and can show a "no data" state.
                 \Log::debug('RRD graph data fetch failed: ' . $e->getMessage());
                 $emptyReasons[] = 'rrd_fetch_failed';
                 foreach ($entries as [$seriesDef]) {
-                    $result->addSeries(new GraphSeries(
-                        name:        $seriesDef->name,
-                        key:         $seriesDef->key,
-                        unit:        $def->unit(),
-                        area:        $seriesDef->area,
-                        stack:       $seriesDef->stack,
-                        color:       $seriesDef->color,
-                        lineColor:   $seriesDef->lineColor,
-                        areaOpacity: $seriesDef->areaOpacity,
-                        negate:      $seriesDef->negate,
-                    ));
+                    $result->addSeries($this->emptySeries($seriesDef));
                 }
             }
         }
 
-        $result->setSource('rrd');
+        $result->setSource(RrdMetricBinding::SOURCE);
         if ($emptyReasons !== []) {
             $result->setEmptyReason('rrd_fetch_failed');
             $result->addWarning('One or more RRD files could not be read; empty series returned.');
@@ -129,44 +127,43 @@ class RrdGraphDataProvider implements DataProvider
         return $result;
     }
 
-    private function resolveDefinition(string $graphType): GraphDefinition
+    private function emptySeries(GraphSeriesDefinition $seriesDef): GraphSeries
     {
-        $class = self::$definitions[$graphType] ?? null;
-        if ($class === null) {
-            throw new \RuntimeException(
-                "Graph type '{$graphType}' is not yet supported by the JSON graph data API."
-            );
-        }
-
-        return new $class();
+        return new GraphSeries(
+            name: $seriesDef->name,
+            key: $seriesDef->key,
+            unit: $seriesDef->unit,
+            type: $seriesDef->type,
+            area: $seriesDef->area,
+            stack: $seriesDef->stack,
+            color: $seriesDef->color,
+            lineColor: $seriesDef->lineColor,
+            areaOpacity: $seriesDef->areaOpacity,
+            negate: $seriesDef->negate,
+        );
     }
 
     /**
      * Fetch all data sources from one RRD file for the given time range.
      *
-     * Returns an array keyed by DS name; each value is a list of [timestamp_ms, float|null].
-     *
      * @return array<string, list<array{int, float|null}>>
      */
-    private function fetchRrdData(string $rrdFile, GraphQuery $query): array
+    private function fetchRrdData(string $rrdFile, GraphQuery $query, string $consolidation): array
     {
-        $rrd     = app(\LibreNMS\Data\Store\Rrd::class);
-        $command = $rrd->buildCommand('fetch', $rrdFile, [
-            'AVERAGE',
-            '--start',      (string) $query->from,
-            '--end',        (string) $query->to,
+        $command = $this->rrd->buildCommand('fetch', $rrdFile, [
+            $consolidation,
+            '--start', (string) $query->from,
+            '--end', (string) $query->to,
             '--resolution', (string) $query->step,
         ]);
 
-        $rawOutput = $this->executeRrdFetch($command);
-
-        return $this->parseRrdFetchOutput($rawOutput);
+        return self::parseRrdFetchOutput($this->executeRrdFetch($command));
     }
 
     private function executeRrdFetch(array $command): string
     {
         $rrdtool = LibrenmsConfig::get('rrdtool', 'rrdtool');
-        $rrdDir  = LibrenmsConfig::get('rrd_dir', LibrenmsConfig::get('install_dir') . '/rrd');
+        $rrdDir = LibrenmsConfig::get('rrd_dir', LibrenmsConfig::get('install_dir') . '/rrd');
 
         $proc = new Process(array_merge([$rrdtool], $command), $rrdDir);
         $proc->run();
@@ -181,22 +178,22 @@ class RrdGraphDataProvider implements DataProvider
     /**
      * Parse rrdtool fetch output into per-DS data arrays.
      *
-     * rrdtool fetch prints:
-     *   ds1     ds2
-     *
-     *   1234567890: 1.23e+00 4.56e+00
-     *   ...
-     *
      * @return array<string, list<array{int, float|null}>>
      */
-    private function parseRrdFetchOutput(string $output): array
+    public static function parseRrdFetchOutput(string $output): array
     {
-        $lines   = explode("\n", trim($output));
-        $header  = array_shift($lines);
-        array_shift($lines); // blank line between header and data
+        $lines = explode("\n", trim($output));
+        $header = array_shift($lines);
+        if ($header === null || trim($header) === '') {
+            return [];
+        }
+
+        if (($lines[0] ?? null) !== null && trim($lines[0]) === '') {
+            array_shift($lines);
+        }
 
         $dsNames = preg_split('/\s+/', trim($header));
-        $result  = array_fill_keys($dsNames, []);
+        $result = array_fill_keys($dsNames, []);
 
         foreach ($lines as $line) {
             if (trim($line) === '') {
@@ -205,10 +202,10 @@ class RrdGraphDataProvider implements DataProvider
 
             [$tsRaw, $valuesRaw] = explode(':', $line, 2);
             $values = preg_split('/\s+/', trim($valuesRaw));
-            $tsMs   = (int) trim($tsRaw) * 1000;
+            $tsMs = (int) trim($tsRaw) * 1000;
 
             foreach ($dsNames as $i => $ds) {
-                $val          = $values[$i] ?? null;
+                $val = $values[$i] ?? null;
                 $result[$ds][] = [
                     $tsMs,
                     ($val === null || strtolower($val) === 'nan') ? null : (float) $val,

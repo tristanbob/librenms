@@ -18,18 +18,24 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph\Definitions\Port;
 
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
-use LibreNMS\Graph\SeriesDefinition;
+use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\RrdMetricBinding;
 
 class BitsGraph implements GraphDefinition
 {
     public const GRAPH_TYPE = 'port_bits';
+
+    public function graphType(): string
+    {
+        return self::GRAPH_TYPE;
+    }
 
     public function id(array $device, GraphQuery $query): string
     {
@@ -43,9 +49,9 @@ class BitsGraph implements GraphDefinition
 
     public function subtitle(array $device, GraphQuery $query): string
     {
-        $port = \App\Models\Port::findOrFail($query->entities['port_id']);
+        $portName = $query->entities['port_name'] ?? ('port ' . ($query->entities['port_id'] ?? '?'));
 
-        return $device['hostname'] . ' ' . ($port->ifName ?: $port->ifDescr);
+        return $device['hostname'] . ' ' . $portName;
     }
 
     public function unit(): string
@@ -53,35 +59,52 @@ class BitsGraph implements GraphDefinition
         return 'bps';
     }
 
+    public function entityType(): string
+    {
+        return 'port';
+    }
+
+    public function display(): array
+    {
+        return ['kind' => 'line', 'stacked' => false, 'area' => true];
+    }
+
     public function series(array $device, GraphQuery $query): array
     {
         $portId  = $query->entities['port_id'];
-        $rrd     = app(\LibreNMS\Data\Store\Rrd::class);
-        $rrdFile = $rrd->name($device['hostname'], $rrd->portName($portId));
+        $rrdName = "port-id$portId";
         $toBits  = fn ($v) => $v * 8;
 
         return [
-            new SeriesDefinition(
+            new GraphSeriesDefinition(
                 name: 'In',
                 key: 'bits_in',
-                rrdFile: $rrdFile,
-                ds: 'INOCTETS',
+                unit: $this->unit(),
                 color: '90B040',
                 lineColor: '608720',
                 area: true,
-                transform: $toBits,
+                bindings: [new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits)],
             ),
-            new SeriesDefinition(
+            new GraphSeriesDefinition(
                 name: 'Out',
                 key: 'bits_out',
-                rrdFile: $rrdFile,
-                ds: 'OUTOCTETS',
+                unit: $this->unit(),
                 color: '8080C0',
                 lineColor: '606090',
                 area: true,
-                transform: $toBits,
                 negate: true,
+                bindings: [new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits)],
             ),
         ];
+    }
+
+    public function markers(array $device, GraphQuery $query): array
+    {
+        return [];
+    }
+
+    public function thresholds(array $device, GraphQuery $query): array
+    {
+        return [];
     }
 }

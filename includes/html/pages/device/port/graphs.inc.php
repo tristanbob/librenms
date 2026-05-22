@@ -1,6 +1,7 @@
 <?php
 
 use App\Facades\LibrenmsConfig;
+use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Util\Url;
 
 if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_id']))) {
@@ -22,7 +23,7 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
         foreach ($periods as $period => $period_text) {
             $from    = LibrenmsConfig::get("time.$period");
             $to      = time();
-            $dataUrl = "/graph-data/ports/$portId/graphs/port_bits?from=$from&to=$to";
+            $dataUrl = GraphDataUrl::port($portId, 'port_bits', ['from' => $from, 'to' => $to]);
             $linkUrl = Url::generate(['page' => 'graphs', 'type' => 'port_bits', 'id' => $portId, 'from' => $from, 'to' => $to]);
 
             echo '<div class="col-md-3 col-sm-6 col-xs-12">';
