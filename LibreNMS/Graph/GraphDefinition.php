@@ -18,13 +18,15 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph;
 
 interface GraphDefinition
 {
+    public function graphType(): string;
+
     public function id(array $device, GraphQuery $query): string;
 
     public function title(array $device): string;
@@ -39,7 +41,25 @@ interface GraphDefinition
      * Receiving $query lets definitions make time-range decisions (e.g. skip
      * the weekly average line when the window is less than 8 days).
      *
-     * @return SeriesDefinition[]
+     * @return GraphSeriesDefinition[]
      */
     public function series(array $device, GraphQuery $query): array;
+
+    public function markers(array $device, GraphQuery $query): array;
+
+    public function thresholds(array $device, GraphQuery $query): array;
+
+    /**
+     * The primary entity type this graph belongs to.
+     * Used by the view layer to build the correct data URL.
+     * Examples: 'device', 'port', 'sensor', 'bill'
+     */
+    public function entityType(): string;
+
+    /**
+     * Frontend renderer hints for this graph type.
+     * Merged with base display defaults before serialization.
+     * Keys: kind ('line'|'bar'), stacked (bool), area (bool)
+     */
+    public function display(): array;
 }

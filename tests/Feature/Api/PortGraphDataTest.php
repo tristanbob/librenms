@@ -20,7 +20,7 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Tests\Feature\Api;
@@ -30,8 +30,8 @@ use App\Models\Device;
 use App\Models\Port;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use LibreNMS\Graph\DataProvider;
 use LibreNMS\Graph\GraphDataResult;
+use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeries;
 use LibreNMS\Tests\DBTestCase;
@@ -53,10 +53,10 @@ class PortGraphDataTest extends DBTestCase
         $this->device     = Device::factory()->create();
         $this->port       = Port::factory()->create(['device_id' => $this->device->device_id]);
 
-        // Bind a stub DataProvider that returns a realistic port_bits result without hitting rrdtool.
-        $this->app->bind(DataProvider::class, function () {
-            return new class implements DataProvider {
-                public function query(GraphQuery $query, array $device): GraphDataResult
+        // Bind a stub GraphDataProvider that returns a realistic port_bits result without hitting rrdtool.
+        $this->app->bind(GraphDataProvider::class, function () {
+            return new class implements GraphDataProvider {
+                public function query(GraphQuery $query): GraphDataResult
                 {
                     if (! in_array($query->graphType, ['port_bits'], true)) {
                         throw new \RuntimeException("Graph type '{$query->graphType}' is not yet supported by the JSON graph data API.");
@@ -73,6 +73,7 @@ class PortGraphDataTest extends DBTestCase
                         step:     $query->step,
                     );
                     $result->setSource('rrd');
+                    $result->setDisplay(['renderer' => 'timeseries', 'kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true, 'tooltip' => true]);
 
                     $seriesIn  = new GraphSeries(name: 'In',  key: 'bits_in',  unit: 'bps', area: true, stack: null, color: '006600');
                     $seriesOut = new GraphSeries(name: 'Out', key: 'bits_out', unit: 'bps', area: true, stack: null, color: '000099', negate: true);

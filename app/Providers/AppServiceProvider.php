@@ -53,8 +53,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton('sensor-discovery', fn (Application $app) => new \App\Discovery\Sensor($app->make('device-cache')->getPrimary()));
-
-        $this->app->singleton(\LibreNMS\Graph\DataProvider::class, fn () => new \LibreNMS\Graph\RrdGraphDataProvider());
     }
 
     /**

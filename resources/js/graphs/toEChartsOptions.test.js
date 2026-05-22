@@ -39,6 +39,20 @@ describe('toEChartsOptions', () => {
         expect(opts.series[0].data).toEqual([[1000000000, 12.5]]);
     });
 
+    test('honors bar display kind for series without an explicit type', () => {
+        const fixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                display: { ...FIXTURE.graph.display, kind: 'bar' },
+                series: [{ ...FIXTURE.graph.series[0], type: undefined }],
+            },
+        };
+        const opts = toEChartsOptions(fixture);
+        expect(opts.series[0].type).toBe('bar');
+        expect(opts.series[0].areaStyle).toBeUndefined();
+    });
+
     test('animation is false', () => {
         expect(toEChartsOptions(FIXTURE).animation).toBe(false);
     });

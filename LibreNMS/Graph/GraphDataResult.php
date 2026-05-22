@@ -18,7 +18,7 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2024 LibreNMS Contributors
+ * @copyright  2026 LibreNMS Contributors
  */
 
 namespace LibreNMS\Graph;
@@ -33,6 +33,7 @@ class GraphDataResult
     private bool   $fallback   = false;
     private ?string $emptyReason = null;
     private array   $warnings    = [];
+    private array   $display     = [];
 
     public function __construct(
         public readonly string $id,
@@ -46,12 +47,14 @@ class GraphDataResult
         public readonly string $timezone = 'UTC',
     ) {}
 
-    public function addSeries(GraphSeries $series): void { $this->series[] = $series; }
-    public function addMarker(array $marker): void       { $this->markers[] = $marker; }
-    public function setSource(string $source): void      { $this->source = $source; }
-    public function setFallback(bool $fb): void          { $this->fallback = $fb; }
+    public function addSeries(GraphSeries $series): void  { $this->series[] = $series; }
+    public function addMarker(array $marker): void        { $this->markers[] = $marker; }
+    public function addThreshold(array $threshold): void  { $this->thresholds[] = $threshold; }
+    public function setSource(string $source): void       { $this->source = $source; }
+    public function setFallback(bool $fb): void           { $this->fallback = $fb; }
     public function setEmptyReason(?string $reason): void { $this->emptyReason = $reason; }
-    public function addWarning(string $warning): void      { $this->warnings[] = $warning; }
+    public function addWarning(string $warning): void     { $this->warnings[] = $warning; }
+    public function setDisplay(array $display): void      { $this->display = $display; }
 
     public function toArray(): array
     {
@@ -67,14 +70,7 @@ class GraphDataResult
                 'to'       => $this->to,
                 'step'     => $this->step,
                 'timezone' => $this->timezone,
-                'display'  => [
-                    'renderer' => 'timeseries',
-                    'kind'     => 'line',
-                    'stacked'  => false,
-                    'area'     => true,
-                    'legend'   => true,
-                    'tooltip'  => true,
-                ],
+                'display'  => $this->display,
                 'x_axis'     => ['type' => 'time'],
                 'y_axis'     => ['unit' => $this->unit, 'scale' => 'linear', 'min' => null, 'max' => null],
                 'series'     => array_map(fn ($s) => $s->toArray(), $this->series),

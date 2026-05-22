@@ -298,7 +298,6 @@ Route::middleware(['auth'])->group(function (): void {
         Route::post('set_style', [Ajax\SessionController::class, 'style']);
         Route::post('ripe/raw', [Ajax\RipeNccApiController::class, 'raw']);
         Route::get('snmp/capabilities', Ajax\SnmpCapabilities::class)->name('snmp.capabilities');
-        Route::get('devices/{hostname}/graphs/{graph_type}/data', [\App\Api\Controllers\LegacyApiController::class, 'get_device_graph_data'])->name('ajax.device.graph_data');
 
         Route::get('settings/list', [SettingsController::class, 'listAll'])->name('settings.list');
 

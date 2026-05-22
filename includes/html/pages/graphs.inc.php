@@ -54,12 +54,16 @@ if (! $auth) {
     // Determine if this graph type has an ECharts data endpoint
     $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
     $echart_data_url = null;
-    if ($renderer === 'echarts') {
-        if ($vars['type'] === 'port_bits' && $id) {
-            $echart_data_url = '/graph-data/ports/' . (int) $id . '/graphs/port_bits';
-        } elseif ($vars['type'] === 'device_poller_perf' && isset($device)) {
-            $echart_data_url = '/graph-data/devices/' . (int) $device['device_id'] . '/graphs/device_poller_perf';
-        }
+    $graphRegistry = app(\LibreNMS\Graph\GraphDefinitionRegistry::class);
+    if ($renderer === 'echarts' && $graphRegistry->supports($vars['type'])) {
+        $def = $graphRegistry->definitionFor($vars['type']);
+        $echart_data_url = match ($def->entityType()) {
+            'port'   => $id ? \LibreNMS\Graph\GraphDataUrl::port((int) $id, $vars['type']) : null,
+            'device' => isset($device)
+                            ? \LibreNMS\Graph\GraphDataUrl::device((int) $device['device_id'], $vars['type'])
+                            : null,
+            default  => null,
+        };
     }
     $use_echarts = $echart_data_url !== null;
 
