@@ -29,9 +29,9 @@ use Illuminate\Support\Facades\Log;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Interfaces\Data\Datastore;
 use LibreNMS\Util\Http;
-use LibreNMS\Util\VictoriaMetrics\LabelExtractor;
-use LibreNMS\Util\VictoriaMetrics\MetricMapper;
-use LibreNMS\Util\VictoriaMetrics\PrometheusTextFormatter;
+use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
+use LibreNMS\Data\Store\VictoriaMetrics\MetricMapper;
+use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
 
 /**
  * Optional dual-write datastore that sends metrics to VictoriaMetrics or

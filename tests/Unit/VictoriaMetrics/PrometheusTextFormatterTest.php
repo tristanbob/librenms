@@ -3,8 +3,8 @@
 namespace LibreNMS\Tests\Unit\VictoriaMetrics;
 
 use LibreNMS\Tests\TestCase;
-use LibreNMS\Util\VictoriaMetrics\MetricDefinition;
-use LibreNMS\Util\VictoriaMetrics\PrometheusTextFormatter;
+use LibreNMS\Data\Store\VictoriaMetrics\MetricDefinition;
+use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
 
 final class PrometheusTextFormatterTest extends TestCase
 {
