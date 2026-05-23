@@ -4,7 +4,7 @@ namespace LibreNMS\Tests\Unit\VictoriaMetrics;
 
 use App\Models\Device;
 use LibreNMS\Tests\TestCase;
-use LibreNMS\Util\VictoriaMetrics\LabelExtractor;
+use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
 
 final class LabelExtractorTest extends TestCase
 {

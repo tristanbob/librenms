@@ -21,7 +21,7 @@
  * @copyright  2026 LibreNMS Contributors
  */
 
-namespace LibreNMS\Util\VictoriaMetrics;
+namespace LibreNMS\Data\Store\VictoriaMetrics;
 
 use App\Models\Device;
 

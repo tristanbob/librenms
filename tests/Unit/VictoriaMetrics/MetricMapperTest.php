@@ -3,7 +3,7 @@
 namespace LibreNMS\Tests\Unit\VictoriaMetrics;
 
 use LibreNMS\Tests\TestCase;
-use LibreNMS\Util\VictoriaMetrics\MetricMapper;
+use LibreNMS\Data\Store\VictoriaMetrics\MetricMapper;
 
 final class MetricMapperTest extends TestCase
 {
