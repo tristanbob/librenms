@@ -28,6 +28,7 @@ use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
 class PollerPerfGraph implements GraphDefinition
 {
@@ -83,7 +84,13 @@ class PollerPerfGraph implements GraphDefinition
                 color:       LibrenmsConfig::get("graph_colours.$p.0"),
                 area:        true,
                 areaOpacity: 0.2,
-                bindings:    [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller')],
+                bindings:    [
+                    new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller'),
+                    new VictoriaMetricsMetricBinding(
+                        metricName: 'librenms_device_poller_duration_seconds',
+                        labelKeys:  ['device_id'],
+                    ),
+                ],
             ),
             new GraphSeriesDefinition(
                 name:    '1 hour avg',
