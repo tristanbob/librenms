@@ -25,7 +25,14 @@ final class GraphQueryTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        GraphQuery::fromRequest('device', 'device_poller_perf', ['device_id' => 1], 1000, 1000 + 31622401);
+        GraphQuery::fromRequest('device', 'device_poller_perf', ['device_id' => 1], 1000, 1000 + 63244801);
+    }
+
+    public function testAllowsTwoYearGraphRange(): void
+    {
+        $query = GraphQuery::fromRequest('device', 'device_poller_perf', ['device_id' => 1], 1000, 1000 + 63072000);
+
+        $this->assertSame(52560, $query->step);
     }
 
     public function testPreservesScopeEntitiesAndOptions(): void
