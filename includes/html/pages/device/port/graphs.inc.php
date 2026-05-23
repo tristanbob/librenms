@@ -97,33 +97,12 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
             ? LibrenmsConfig::get('graphs.mini.widescreen')
             : LibrenmsConfig::get('graphs.mini.normal');
 
-        echo '<p class="text-muted small" style="margin-bottom:4px;">Errors</p>';
         echo '<div class="row">';
         foreach ($periods as $period => $period_text) {
             $from    = LibrenmsConfig::get("time.$period");
             $to      = time();
             $dataUrl = GraphDataUrl::port($portId, 'port_errors', ['from' => $from, 'to' => $to]);
             $linkUrl = Url::generate(['page' => 'graphs', 'type' => 'port_errors', 'id' => $portId, 'from' => $from, 'to' => $to]);
-
-            echo '<div class="col-md-3 col-sm-6 col-xs-12">';
-            echo '<div'
-                . ' class="lnms-echart"'
-                . ' style="width: 100%; height: 200px;"'
-                . ' data-graph-url="' . e($dataUrl) . '"'
-                . ' data-link-url="' . e($linkUrl) . '"'
-                . ' data-hide-datazoom="true"'
-                . '></div>';
-            echo '</div>';
-        }
-        echo '</div>';
-
-        echo '<p class="text-muted small" style="margin-top:12px; margin-bottom:4px;">Discards</p>';
-        echo '<div class="row">';
-        foreach ($periods as $period => $period_text) {
-            $from    = LibrenmsConfig::get("time.$period");
-            $to      = time();
-            $dataUrl = GraphDataUrl::port($portId, 'port_discards', ['from' => $from, 'to' => $to]);
-            $linkUrl = Url::generate(['page' => 'graphs', 'type' => 'port_discards', 'id' => $portId, 'from' => $from, 'to' => $to]);
 
             echo '<div class="col-md-3 col-sm-6 col-xs-12">';
             echo '<div'
