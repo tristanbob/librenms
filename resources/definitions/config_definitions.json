@@ -6460,7 +6460,7 @@
         },
         "victoriametrics.write_url": {
             "default": "http://127.0.0.1:8429/api/v1/import/prometheus",
-            "type": "string",
+            "type": "text",
             "group": "poller",
             "section": "victoriametrics",
             "order": 2
@@ -6492,6 +6492,34 @@
             "group": "poller",
             "section": "victoriametrics",
             "order": 6
+        },
+        "victoriametrics.query_enabled": {
+            "default": false,
+            "type": "boolean",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 7
+        },
+        "victoriametrics.query_url": {
+            "default": "http://127.0.0.1:8428",
+            "type": "text",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 8
+        },
+        "victoriametrics.compare_with_rrd": {
+            "default": false,
+            "type": "boolean",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 9
+        },
+        "victoriametrics.compare_tolerance_percent": {
+            "default": 2.0,
+            "type": "float",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 10
         },
         "public_status": {
             "default": false,

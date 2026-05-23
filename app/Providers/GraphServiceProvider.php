@@ -7,9 +7,11 @@ use Illuminate\Support\ServiceProvider;
 use LibreNMS\Data\Store\Rrd;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Port\BitsGraph;
+use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\RrdGraphDataProvider;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class GraphServiceProvider extends ServiceProvider
 {
@@ -20,9 +22,18 @@ class GraphServiceProvider extends ServiceProvider
             BitsGraph::class,
         ]));
 
-        $this->app->singleton(GraphDataProvider::class, fn (Application $app) => new RrdGraphDataProvider(
+        $this->app->singleton(RrdGraphDataProvider::class, fn (Application $app) => new RrdGraphDataProvider(
             $app->make(Rrd::class),
             $app->make(GraphDefinitionRegistry::class),
+        ));
+
+        $this->app->singleton(VictoriaMetricsGraphDataProvider::class, fn (Application $app) =>
+            new VictoriaMetricsGraphDataProvider($app->make(GraphDefinitionRegistry::class))
+        );
+
+        $this->app->singleton(GraphDataProvider::class, fn (Application $app) => new GraphDataBackendSelector(
+            $app->make(RrdGraphDataProvider::class),
+            $app->make(VictoriaMetricsGraphDataProvider::class),
         ));
     }
 }

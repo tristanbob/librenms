@@ -27,6 +27,7 @@ use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
 class BitsGraph implements GraphDefinition
 {
@@ -77,23 +78,35 @@ class BitsGraph implements GraphDefinition
 
         return [
             new GraphSeriesDefinition(
-                name: 'In',
-                key: 'bits_in',
-                unit: $this->unit(),
-                color: '90B040',
+                name:      'In',
+                key:       'bits_in',
+                unit:      $this->unit(),
+                color:     '90B040',
                 lineColor: '608720',
-                area: true,
-                bindings: [new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits)],
+                area:      true,
+                bindings:  [
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits),
+                    new VictoriaMetricsMetricBinding(
+                        metricName: 'librenms_port_if_in_bits_per_second',
+                        labelKeys:  ['device_id', 'port_id'],
+                    ),
+                ],
             ),
             new GraphSeriesDefinition(
-                name: 'Out',
-                key: 'bits_out',
-                unit: $this->unit(),
-                color: '8080C0',
+                name:      'Out',
+                key:       'bits_out',
+                unit:      $this->unit(),
+                color:     '8080C0',
                 lineColor: '606090',
-                area: true,
-                negate: true,
-                bindings: [new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits)],
+                area:      true,
+                negate:    true,
+                bindings:  [
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits),
+                    new VictoriaMetricsMetricBinding(
+                        metricName: 'librenms_port_if_out_bits_per_second',
+                        labelKeys:  ['device_id', 'port_id'],
+                    ),
+                ],
             ),
         ];
     }

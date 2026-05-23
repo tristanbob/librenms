@@ -29,6 +29,8 @@ use App\Models\ApiToken;
 use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Http;
+use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Tests\DBTestCase;
 
 class GraphDataTest extends DBTestCase
@@ -110,5 +112,41 @@ class GraphDataTest extends DBTestCase
         $data = $response->json();
         $this->assertEquals($from, $data['graph']['from']);
         $this->assertEquals($to,   $data['graph']['to']);
+    }
+
+    public function testGraphDataUsesVictoriaMetricsWhenEnabled(): void
+    {
+        LibrenmsConfig::set('victoriametrics.query_enabled', true);
+
+        $vmResponse = [
+            'status' => 'success',
+            'data'   => [
+                'resultType' => 'matrix',
+                'result'     => [[
+                    'metric' => ['device_id' => (string) $this->device->device_id],
+                    'values' => [[time() - 300, '1.23'], [time(), '2.34']],
+                ]],
+            ],
+        ];
+
+        Http::fake(['*/api/v1/query_range*' => Http::response($vmResponse, 200)]);
+
+        $this->json(
+            'GET',
+            "/api/v0/devices/{$this->device->hostname}/graphs/device_poller_perf/data",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        )
+        ->assertStatus(200)
+        ->assertJson([
+            'graph' => [
+                'meta' => [
+                    'source'        => 'victoriametrics',
+                    'fallback_used' => false,
+                ],
+            ],
+        ]);
+
+        LibrenmsConfig::set('victoriametrics.query_enabled', false);
     }
 }
