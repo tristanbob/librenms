@@ -7,6 +7,9 @@ use Illuminate\Support\ServiceProvider;
 use LibreNMS\Data\Store\Rrd;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Port\BitsGraph;
+use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
+use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
+use LibreNMS\Graph\Definitions\Port\PacketsGraph;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDefinitionRegistry;
@@ -20,6 +23,9 @@ class GraphServiceProvider extends ServiceProvider
         $this->app->singleton(GraphDefinitionRegistry::class, fn () => new GraphDefinitionRegistry([
             PollerPerfGraph::class,
             BitsGraph::class,
+            PacketsGraph::class,
+            ErrorsGraph::class,
+            DiscardsGraph::class,
         ]));
 
         $this->app->singleton(RrdGraphDataProvider::class, fn (Application $app) => new RrdGraphDataProvider(

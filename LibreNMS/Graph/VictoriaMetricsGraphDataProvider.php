@@ -50,7 +50,22 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         array           $device,
         GraphQuery      $query
     ): void {
-        foreach ($def->series($device, $query) as $seriesDef) {
+        $series = $def->series($device, $query);
+
+        $hasVmBinding = false;
+        foreach ($series as $seriesDef) {
+            if ($seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE) instanceof VictoriaMetricsMetricBinding) {
+                $hasVmBinding = true;
+                break;
+            }
+        }
+        if (! $hasVmBinding) {
+            throw new \RuntimeException(
+                "No VictoriaMetrics bindings defined for graph type '{$query->graphType}'; RRD should be used."
+            );
+        }
+
+        foreach ($series as $seriesDef) {
             $binding = $seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE);
             if (! $binding instanceof VictoriaMetricsMetricBinding) {
                 $result->addSeries($this->emptySeries($seriesDef));
