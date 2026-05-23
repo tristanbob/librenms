@@ -101,10 +101,18 @@ export function toEChartsOptions(payload, options = {}) {
                 return `${ts.toLocaleString()}<br>${lines.join('<br>')}`;
             },
         },
-        legend: { show: false },
+        legend: graph.display?.legend
+            ? {
+                show:      true,
+                type:      'scroll',
+                orient:    'horizontal',
+                bottom:    0,
+                textStyle: { color: t.font, fontFamily: MONO, fontSize: 10 },
+              }
+            : { show: false },
         grid: options.sparkline
             ? { top: 2, bottom: 2, left: 2, right: 2, containLabel: false }
-            : { top: '5%', bottom: '5%', left: '7%', right: '3%', containLabel: true },
+            : { top: '5%', bottom: graph.display?.legend ? '18%' : '5%', left: '7%', right: '3%', containLabel: true },
         xAxis: options.sparkline
             ? { type: 'time', show: false }
             : buildXAxis(t),
