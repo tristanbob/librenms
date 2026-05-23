@@ -79,8 +79,8 @@ class PacketsGraph implements GraphDefinition
                 name:      'In',
                 key:       'packets_in',
                 unit:      $this->unit(),
-                color:     'AA44AA',
-                lineColor: '7A1A7A',
+                color:     'AA66AA',
+                lineColor: '330033',
                 area:      true,
                 bindings:  [
                     new RrdMetricBinding(rrdName: $rrdName, ds: 'INUCASTPKTS'),
@@ -90,8 +90,8 @@ class PacketsGraph implements GraphDefinition
                 name:      'Out',
                 key:       'packets_out',
                 unit:      $this->unit(),
-                color:     '4444AA',
-                lineColor: '22227A',
+                color:     'FFDD88',
+                lineColor: 'FF6600',
                 area:      true,
                 negate:    true,
                 bindings:  [

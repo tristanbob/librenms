@@ -44,7 +44,7 @@ class ErrorsGraph implements GraphDefinition
 
     public function title(array $device): string
     {
-        return 'Errors';
+        return 'Errors & Discards';
     }
 
     public function subtitle(array $device, GraphQuery $query): string
@@ -56,7 +56,7 @@ class ErrorsGraph implements GraphDefinition
 
     public function unit(): string
     {
-        return 'eps';
+        return 'pps';
     }
 
     public function entityType(): string
@@ -76,26 +76,53 @@ class ErrorsGraph implements GraphDefinition
 
         return [
             new GraphSeriesDefinition(
-                name:      'In',
+                name:      'Errors In',
                 key:       'errors_in',
                 unit:      $this->unit(),
-                color:     'CC2222',
-                lineColor: '991111',
+                color:     'FF3300',
+                lineColor: 'CC2200',
                 area:      true,
+                stack:     'in',
                 bindings:  [
                     new RrdMetricBinding(rrdName: $rrdName, ds: 'INERRORS'),
                 ],
             ),
             new GraphSeriesDefinition(
-                name:      'Out',
+                name:      'Errors Out',
                 key:       'errors_out',
                 unit:      $this->unit(),
-                color:     'FF7744',
+                color:     'FF6633',
                 lineColor: 'CC4411',
                 area:      true,
+                stack:     'out',
                 negate:    true,
                 bindings:  [
                     new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTERRORS'),
+                ],
+            ),
+            new GraphSeriesDefinition(
+                name:      'Discards In',
+                key:       'discards_in',
+                unit:      $this->unit(),
+                color:     '805080',
+                lineColor: '603060',
+                area:      true,
+                stack:     'in',
+                bindings:  [
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INDISCARDS'),
+                ],
+            ),
+            new GraphSeriesDefinition(
+                name:      'Discards Out',
+                key:       'discards_out',
+                unit:      $this->unit(),
+                color:     'C0A060',
+                lineColor: '907030',
+                area:      true,
+                stack:     'out',
+                negate:    true,
+                bindings:  [
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTDISCARDS'),
                 ],
             ),
         ];
