@@ -30,7 +30,7 @@ class GraphQuery
     private const MIN_HEIGHT = 1;
     private const MAX_HEIGHT = 3000;
     private const MIN_STEP = 300;
-    private const MAX_RANGE = 31622400; // 366 days
+    private const MAX_RANGE = 63244800; // 2 * 366 days
     private const MAX_POINTS = 10000;
 
     public readonly int $step;
