@@ -21,8 +21,6 @@ export const THEME = {
 
 const MONO = '"Courier New", Courier, monospace';
 const DEFAULT_COLOR = '663399';
-const MIN_DATA_ZOOM_SPAN_MS = 300 * 10 * 1000;
-
 const DAYS_SHORT   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -71,6 +69,7 @@ export function toEChartsOptions(payload, options = {}) {
             itemStyle: { color: fillColor },
             areaStyle: seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
             stack:     s.style?.stack ?? undefined,
+            emphasis:  options.sparkline ? { disabled: true } : undefined,
             data,
         };
     });
@@ -124,12 +123,7 @@ export function toEChartsOptions(payload, options = {}) {
                 axisTick:     { lineStyle: { color: t.frame } },
                 axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
             },
-        dataZoom: options.hideDataZoom ? [] : [{
-            type:            'inside',
-            filterMode:      'none',
-            minValueSpan:    MIN_DATA_ZOOM_SPAN_MS,
-            moveOnMouseWheel: false,
-        }],
+        dataZoom: [],
         series,
     };
 }

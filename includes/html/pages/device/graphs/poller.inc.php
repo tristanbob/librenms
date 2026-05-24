@@ -39,7 +39,6 @@ foreach ($graph_enable as $graph => $entry) {
                 . ' data-graph-url="' . e($data_url) . '"'
                 . ' data-link-url="' . e($detail_url) . '"'
                 . ' data-refresh="300"'
-                . ' data-hide-datazoom="true"'
                 . '></div>';
             echo '</div>';
         }

@@ -123,29 +123,8 @@ describe('toEChartsOptions', () => {
         expect(opts.title.show).toBe(false);
     });
 
-    test('dataZoom minValueSpan enforces 10x native-step minimum to show meaningful context', () => {
+    test('dataZoom is always an empty array', () => {
         const opts = toEChartsOptions(FIXTURE);
-        expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
-    });
-
-    test('dataZoom minValueSpan does not grow when adaptive zoom-out loads coarser data', () => {
-        const coarse = { ...FIXTURE, graph: { ...FIXTURE.graph, step: 3600 } };
-        const opts = toEChartsOptions(coarse);
-        expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
-    });
-
-    test('dataZoom disables scroll-wheel panning to prevent accidental axis movement at zoom floor', () => {
-        const opts = toEChartsOptions(FIXTURE);
-        expect(opts.dataZoom[0].moveOnMouseWheel).toBe(false);
-    });
-
-    test('dataZoom does not filter offscreen points so zoomed lines clip to chart borders', () => {
-        const opts = toEChartsOptions(FIXTURE);
-        expect(opts.dataZoom[0].filterMode).toBe('none');
-    });
-
-    test('dataZoom is empty array when hideDataZoom is set', () => {
-        const opts = toEChartsOptions(FIXTURE, { hideDataZoom: true });
         expect(opts.dataZoom).toHaveLength(0);
     });
 

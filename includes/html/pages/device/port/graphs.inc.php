@@ -32,7 +32,6 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
                 . ' style="width: 100%; height: 200px;"'
                 . ' data-graph-url="' . e($dataUrl) . '"'
                 . ' data-link-url="' . e($linkUrl) . '"'
-                . ' data-hide-datazoom="true"'
                 . '></div>';
             echo '</div>';
         }
@@ -66,7 +65,6 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
                 . ' style="width: 100%; height: 200px;"'
                 . ' data-graph-url="' . e($dataUrl) . '"'
                 . ' data-link-url="' . e($linkUrl) . '"'
-                . ' data-hide-datazoom="true"'
                 . '></div>';
             echo '</div>';
         }
@@ -110,7 +108,6 @@ if (Rrd::checkRrdExists(get_port_rrdfile_path($device['hostname'], $port['port_i
                 . ' style="width: 100%; height: 200px;"'
                 . ' data-graph-url="' . e($dataUrl) . '"'
                 . ' data-link-url="' . e($linkUrl) . '"'
-                . ' data-hide-datazoom="true"'
                 . '></div>';
             echo '</div>';
         }
