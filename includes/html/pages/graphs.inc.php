@@ -18,6 +18,12 @@ if (session('widescreen')) {
 $vars['from'] = Time::parseAt($vars['from'] ?? '') ?: LibrenmsConfig::get('time.day');
 $vars['to'] = Time::parseAt($vars['to'] ?? '') ?: LibrenmsConfig::get('time.now');
 
+// Prevent zoom below a reasonable minimum (10 data points at typical 5-minute step)
+$min_span = 10 * 300;
+if (($vars['to'] - $vars['from']) < $min_span) {
+    $vars['from'] = $vars['to'] - $min_span;
+}
+
 preg_match('/^(?P<type>[A-Za-z0-9]+)_(?P<subtype>.+)/', (string) $vars['type'], $graphtype);
 
 $type = basename($graphtype['type']);
