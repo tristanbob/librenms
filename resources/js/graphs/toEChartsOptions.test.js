@@ -61,6 +61,10 @@ describe('toEChartsOptions', () => {
         expect(toEChartsOptions(FIXTURE).xAxis.type).toBe('time');
     });
 
+    test('xAxis does not pad the time range', () => {
+        expect(toEChartsOptions(FIXTURE).xAxis.boundaryGap).toBe(false);
+    });
+
     test('markLine is added when markers are present', () => {
         const withMarker = {
             ...FIXTURE,
@@ -117,6 +121,32 @@ describe('toEChartsOptions', () => {
     test('title is always hidden (section heading serves as title)', () => {
         const opts = toEChartsOptions(FIXTURE);
         expect(opts.title.show).toBe(false);
+    });
+
+    test('dataZoom minValueSpan enforces 10x step minimum to show meaningful context', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
+    });
+
+    test('dataZoom minValueSpan falls back to 10x 300s when step is absent', () => {
+        const noStep = { ...FIXTURE, graph: { ...FIXTURE.graph, step: undefined } };
+        const opts = toEChartsOptions(noStep);
+        expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
+    });
+
+    test('dataZoom disables scroll-wheel panning to prevent accidental axis movement at zoom floor', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.dataZoom[0].moveOnMouseWheel).toBe(false);
+    });
+
+    test('dataZoom does not filter offscreen points so zoomed lines clip to chart borders', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.dataZoom[0].filterMode).toBe('none');
+    });
+
+    test('dataZoom is empty array when hideDataZoom is set', () => {
+        const opts = toEChartsOptions(FIXTURE, { hideDataZoom: true });
+        expect(opts.dataZoom).toHaveLength(0);
     });
 
     test('yAxis tick formatter uses formatNumber (no unit)', () => {

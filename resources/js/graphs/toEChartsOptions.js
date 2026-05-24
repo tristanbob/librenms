@@ -31,10 +31,11 @@ function pad2(n) { return String(n).padStart(2, '0'); }
 // width and data range. We only define the label format for each level.
 function buildXAxis(t) {
     return {
-        type:      'time',
-        splitLine: { show: true, lineStyle: { color: t.grid, type: 'solid' } },
-        axisLine:  { lineStyle: { color: t.frame } },
-        axisTick:  { lineStyle: { color: t.frame } },
+        type:        'time',
+        boundaryGap: false,
+        splitLine:   { show: true, lineStyle: { color: t.grid, type: 'solid' } },
+        axisLine:    { lineStyle: { color: t.frame } },
+        axisTick:    { lineStyle: { color: t.frame } },
         axisLabel: {
             color: t.font, fontFamily: MONO, fontSize: 10,
             formatter: {
@@ -122,7 +123,12 @@ export function toEChartsOptions(payload, options = {}) {
                 axisTick:     { lineStyle: { color: t.frame } },
                 axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
             },
-        dataZoom: options.hideDataZoom ? [] : [{ type: 'inside' }],
+        dataZoom: options.hideDataZoom ? [] : [{
+            type:            'inside',
+            filterMode:      'none',
+            minValueSpan:    (graph.step ?? 300) * 10 * 1000,
+            moveOnMouseWheel: false,
+        }],
         series,
     };
 }
