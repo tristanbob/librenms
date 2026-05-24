@@ -54,7 +54,7 @@ class DiscardsGraph implements GraphDefinition
         return $device['hostname'] . ' ' . $portName;
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'dps';
     }
@@ -78,7 +78,7 @@ class DiscardsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'In',
                 key:       'discards_in',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'FF8800',
                 lineColor: 'CC6600',
                 area:      true,
@@ -89,7 +89,7 @@ class DiscardsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Out',
                 key:       'discards_out',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'FFBB44',
                 lineColor: 'CC8811',
                 area:      true,

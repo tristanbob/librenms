@@ -54,7 +54,7 @@ class ErrorsGraph implements GraphDefinition
         return $device['hostname'] . ' ' . $portName;
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'pps';
     }
@@ -78,7 +78,7 @@ class ErrorsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Errors In',
                 key:       'errors_in',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'FF3300',
                 lineColor: 'CC2200',
                 area:      true,
@@ -90,7 +90,7 @@ class ErrorsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Errors Out',
                 key:       'errors_out',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'FF6633',
                 lineColor: 'CC4411',
                 area:      true,
@@ -103,7 +103,7 @@ class ErrorsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Discards In',
                 key:       'discards_in',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     '805080',
                 lineColor: '603060',
                 area:      true,
@@ -115,7 +115,7 @@ class ErrorsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Discards Out',
                 key:       'discards_out',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'C0A060',
                 lineColor: '907030',
                 area:      true,

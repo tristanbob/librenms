@@ -3,7 +3,9 @@
 use App\Facades\LibrenmsConfig;
 use App\Models\Sensor;
 use LibreNMS\Enum\Severity;
+use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Util\Html;
+use LibreNMS\Util\Url;
 
 $row = 0;
 $unit ??= $class->unit();
@@ -48,10 +50,27 @@ foreach ($sensors as $sensor) {
         </div>';
     echo "<div class='panel-body'>";
 
-    $graph_array['id'] = $sensor['sensor_id'];
-    $graph_array['type'] = $graph_type;
-
-    include 'includes/html/print-graphrow.inc.php';
+    $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
+    if ($renderer === 'echarts') {
+        $periods = LibrenmsConfig::get('graphs.mini.normal');
+        $echartsGraphType = 'sensor_' . $sensor->sensor_class;
+        echo '<div class="row">';
+        foreach ($periods as $period => $period_text) {
+            $from    = LibrenmsConfig::get("time.$period");
+            $to      = time();
+            $dataUrl = GraphDataUrl::sensor($sensor->sensor_id, $echartsGraphType, ['from' => $from, 'to' => $to]);
+            $linkUrl = Url::generate(['page' => 'graphs', 'type' => $graph_type, 'id' => $sensor->sensor_id, 'from' => $from, 'to' => $to]);
+            echo '<div class="col-md-3 col-sm-6 col-xs-12">';
+            echo '<a href="' . e($linkUrl) . '">';
+            echo '<div class="lnms-echart" style="width:100%;height:150px" data-graph-url="' . e($dataUrl) . '" data-link-url="' . e($linkUrl) . '"></div>';
+            echo '</a></div>';
+        }
+        echo '</div>';
+    } else {
+        $graph_array['id']   = $sensor['sensor_id'];
+        $graph_array['type'] = $graph_type;
+        include 'includes/html/print-graphrow.inc.php';
+    }
 
     echo '</div></div>';
 }

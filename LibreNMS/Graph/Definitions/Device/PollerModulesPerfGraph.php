@@ -54,7 +54,7 @@ class PollerModulesPerfGraph implements GraphDefinition
         return $device['hostname'];
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'seconds';
     }
@@ -98,7 +98,7 @@ class PollerModulesPerfGraph implements GraphDefinition
             $series[] = new GraphSeriesDefinition(
                 name:        $module,
                 key:         'module_' . str_replace('-', '_', $module),
-                unit:        $this->unit(),
+                unit:        $this->unit($device, $query),
                 color:       $hex,
                 lineColor:   self::darken($hex, 0.7),
                 area:        true,

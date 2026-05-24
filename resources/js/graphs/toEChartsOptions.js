@@ -75,11 +75,15 @@ export function toEChartsOptions(payload, options = {}) {
     });
 
     if (graph.markers.length > 0) {
+        const SEVERITY_COLOR = { warning: '#FF8800', critical: '#FF0000' };
         series[0].markLine = {
-            symbol:    ['none', 'none'],
-            label:     { position: 'end', formatter: '{b}', color: t.font },
-            lineStyle: { color: '#ff0000', type: 'dashed', width: 1.5 },
-            data:      graph.markers.map(m => ({ yAxis: m.value, name: m.name })),
+            symbol: ['none', 'none'],
+            label:  { position: 'end', formatter: '{b}', color: t.font },
+            data: graph.markers.map(m => ({
+                yAxis:     m.value,
+                name:      m.name,
+                lineStyle: { color: SEVERITY_COLOR[m.severity] ?? '#FF0000', type: 'dashed', width: 1.5 },
+            })),
         };
     }
 

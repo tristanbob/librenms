@@ -83,6 +83,51 @@ describe('toEChartsOptions', () => {
         expect(opts.series[0].markLine).toBeUndefined();
     });
 
+    test('warning markers use orange color', () => {
+        const withWarning = {
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, markers: [{ value: 70, name: 'High warning', severity: 'warning' }] },
+        };
+        const opts = toEChartsOptions(withWarning);
+        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF8800');
+    });
+
+    test('critical markers use red color', () => {
+        const withCritical = {
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, markers: [{ value: 80, name: 'High critical', severity: 'critical' }] },
+        };
+        const opts = toEChartsOptions(withCritical);
+        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF0000');
+    });
+
+    test('mixed severity markers each get their own color', () => {
+        const withMixed = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                markers: [
+                    { value: 10, name: 'Low critical',  severity: 'critical' },
+                    { value: 20, name: 'Low warning',   severity: 'warning' },
+                    { value: 70, name: 'High warning',  severity: 'warning' },
+                    { value: 80, name: 'High critical', severity: 'critical' },
+                ],
+            },
+        };
+        const opts = toEChartsOptions(withMixed);
+        const colors = opts.series[0].markLine.data.map(d => d.lineStyle.color);
+        expect(colors).toEqual(['#FF0000', '#FF8800', '#FF8800', '#FF0000']);
+    });
+
+    test('marker without severity falls back to red', () => {
+        const withNoSeverity = {
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, markers: [{ value: 5, name: 'Threshold' }] },
+        };
+        const opts = toEChartsOptions(withNoSeverity);
+        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF0000');
+    });
+
     test('dark mode applies exact RRD dark background color', () => {
         const opts = toEChartsOptions(FIXTURE, { dark: true });
         expect(opts.backgroundColor).toBe('#2e3338');
