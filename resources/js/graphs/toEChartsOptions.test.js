@@ -123,14 +123,14 @@ describe('toEChartsOptions', () => {
         expect(opts.title.show).toBe(false);
     });
 
-    test('dataZoom minValueSpan enforces 10x step minimum to show meaningful context', () => {
+    test('dataZoom minValueSpan enforces 10x native-step minimum to show meaningful context', () => {
         const opts = toEChartsOptions(FIXTURE);
         expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
     });
 
-    test('dataZoom minValueSpan falls back to 10x 300s when step is absent', () => {
-        const noStep = { ...FIXTURE, graph: { ...FIXTURE.graph, step: undefined } };
-        const opts = toEChartsOptions(noStep);
+    test('dataZoom minValueSpan does not grow when adaptive zoom-out loads coarser data', () => {
+        const coarse = { ...FIXTURE, graph: { ...FIXTURE.graph, step: 3600 } };
+        const opts = toEChartsOptions(coarse);
         expect(opts.dataZoom[0].minValueSpan).toBe(300 * 10 * 1000);
     });
 

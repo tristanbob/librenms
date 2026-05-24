@@ -15,9 +15,9 @@ $now = time() - (time() % $step);
 $start = $now - ($historyHours * 3600);
 
 $primary = Device::where('hostname', 'snmp-device')->firstOrFail();
-$devices = [$primary];
+$devices = [];
 
-for ($host = 2; $host <= $hostCount; $host++) {
+for ($host = 1; $host <= $hostCount; $host++) {
     $hostname = sprintf('synthetic-device-%02d', $host);
     $device = Device::updateOrCreate(
         ['hostname' => $hostname],
@@ -132,11 +132,13 @@ foreach ($devices as $deviceIndex => $device) {
 flushVmSamples($vmLines, true);
 
 echo sprintf(
-    "seeded %d devices, %d synthetic interfaces per device, %d hours at %d second step\n",
+    "seeded %d synthetic devices, %d synthetic interfaces per device, %d hours at %d second step; live device is %s (%d)\n",
     count($devices),
     $interfacesPerHost,
     $historyHours,
-    $step
+    $step,
+    $primary->hostname,
+    $primary->device_id
 );
 
 function seedPortRrd(Device $device, Port $port, array $datasets, array $rra, int $start, int $now, int $step, int $deviceIndex, int $interface): array

@@ -109,7 +109,7 @@ if (! $auth) {
         $thumb_array = LibrenmsConfig::get('graphs.row.normal');
 
         if ($use_echarts) {
-            echo '<table width="100%" class="thumbnail_graph_table"><tr>';
+            echo '<table width="100%" class="thumbnail_graph_table lnms-echart-thumbnail-table"><tr>';
             foreach ($thumb_array as $period => $text) {
                 $from    = LibrenmsConfig::get("time.$period");
                 $to      = time();
@@ -121,7 +121,7 @@ if (! $auth) {
                 ]);
                 $linkUrl = \LibreNMS\Util\Url::generate(array_merge($vars, ['page' => 'graphs', 'from' => $from, 'to' => $to]));
 
-                echo '<td style="padding: 0 1px; text-align: center;">';
+                echo '<td class="lnms-echart-thumbnail-cell">';
                 echo '<b>' . e($text) . '</b><br>';
                 echo '<div'
                     . ' class="lnms-echart"'

@@ -21,6 +21,7 @@ export const THEME = {
 
 const MONO = '"Courier New", Courier, monospace';
 const DEFAULT_COLOR = '663399';
+const MIN_DATA_ZOOM_SPAN_MS = 300 * 10 * 1000;
 
 const DAYS_SHORT   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -126,7 +127,7 @@ export function toEChartsOptions(payload, options = {}) {
         dataZoom: options.hideDataZoom ? [] : [{
             type:            'inside',
             filterMode:      'none',
-            minValueSpan:    (graph.step ?? 300) * 10 * 1000,
+            minValueSpan:    MIN_DATA_ZOOM_SPAN_MS,
             moveOnMouseWheel: false,
         }],
         series,
