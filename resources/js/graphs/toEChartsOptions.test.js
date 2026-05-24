@@ -95,6 +95,20 @@ describe('toEChartsOptions', () => {
         expect(toEChartsOptions(FIXTURE).legend.show).toBe(false);
     });
 
+    test('echarts legend stays hidden when the payload requests a legend', () => {
+        const fixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                display: { ...FIXTURE.graph.display, legend: true },
+            },
+        };
+
+        const opts = toEChartsOptions(fixture);
+        expect(opts.legend.show).toBe(false);
+        expect(opts.grid.bottom).toBe('5%');
+    });
+
     test('area opacity comes from style.areaOpacity', () => {
         const opts = toEChartsOptions(FIXTURE);
         expect(opts.series[0].areaStyle.opacity).toBe(0.2);
