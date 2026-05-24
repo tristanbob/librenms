@@ -1,13 +1,20 @@
 import { describe, test, expect } from 'vitest';
 import {
     buildGraphDataUrl,
+    computeExpandedRange,
+    computeInitialBufferedRange,
     desiredStepMs,
     estimatePayloadStepMs,
     estimateSeriesStepMs,
     isDetailFiner,
+    isFullRangeView,
     mergeDetailPayload,
+    retainOverlappingDetailRanges,
+    rangeFromGraphDataUrl,
     shouldFetchDetail,
+    shouldSuppressExpansion,
     visibleRangeFromDataZoom,
+    zoomStateForRange,
 } from './adaptiveGraphDetail.js';
 
 function fakeChart(dataZoom) {
@@ -57,6 +64,13 @@ describe('buildGraphDataUrl', () => {
 
         expect(url).toBe('/graph-data/ports/1/graphs/port_bits?from=100&to=200&foo=bar&width=800');
     });
+
+    test('extracts a range from graph data url params', () => {
+        expect(rangeFromGraphDataUrl('/graph-data/ports/1/graphs/port_bits?from=100&to=200')).toEqual({
+            from: 100,
+            to:   200,
+        });
+    });
 });
 
 describe('visibleRangeFromDataZoom', () => {
@@ -76,6 +90,99 @@ describe('visibleRangeFromDataZoom', () => {
         }), BASE_PAYLOAD);
 
         expect(range).toEqual({ from: 1900, to: 3700 });
+    });
+});
+
+describe('range expansion', () => {
+    test('detects a view covering nearly the full loaded range', () => {
+        expect(isFullRangeView({ from: 1000, to: 1950 }, { from: 1000, to: 2000 })).toBe(true);
+        expect(isFullRangeView({ from: 1200, to: 1800 }, { from: 1000, to: 2000 })).toBe(false);
+    });
+
+    test('doubles the loaded span when expanding', () => {
+        expect(computeExpandedRange({
+            from: 1000,
+            to: 4600,
+        }, {
+            nowSeconds: 10000,
+            originalTo: 10000,
+        })).toEqual({ from: -800, to: 6400 });
+    });
+
+    test('right-anchors expansion near now', () => {
+        expect(computeExpandedRange({
+            from: 1000,
+            to: 4600,
+        }, {
+            nowSeconds: 4700,
+            originalTo: 4600,
+        })).toEqual({ from: -2600, to: 4600 });
+    });
+
+    test('expands historical ranges around their center', () => {
+        expect(computeExpandedRange({
+            from: 1000,
+            to: 4600,
+        }, {
+            nowSeconds: 100000,
+            originalTo: 100000,
+        })).toEqual({ from: -800, to: 6400 });
+    });
+
+    test('clamps expansion to the backend maximum range', () => {
+        const expanded = computeExpandedRange({
+            from: 0,
+            to: 4000,
+        }, {
+            nowSeconds: 4000,
+            originalTo: 4000,
+            maxRangeSeconds: 5000,
+        });
+
+        expect(expanded.to - expanded.from).toBe(5000);
+        expect(expanded).toEqual({ from: -1000, to: 4000 });
+    });
+
+    test('builds a right-anchored initial buffer near now', () => {
+        expect(computeInitialBufferedRange({
+            from: 1000,
+            to:   4600,
+        }, {
+            nowSeconds: 4600,
+        })).toEqual({ from: -2600, to: 4600 });
+    });
+
+    test('builds a centered initial buffer for historical ranges', () => {
+        expect(computeInitialBufferedRange({
+            from: 1000,
+            to:   4600,
+        }, {
+            nowSeconds: 100000,
+        })).toEqual({ from: -800, to: 6400 });
+    });
+
+    test('creates value-based dataZoom state for a display range', () => {
+        expect(zoomStateForRange({ from: 1000, to: 4600 })).toEqual({
+            startValue: 1000000,
+            endValue:   4600000,
+        });
+    });
+
+    test('suppresses recently failed expansion ranges', () => {
+        const cache = [{ from: 0, to: 1000, expiresAt: 2000 }];
+
+        expect(shouldSuppressExpansion({ from: 500, to: 1500 }, cache, 1000)).toBe(true);
+        expect(shouldSuppressExpansion({ from: 500, to: 1500 }, cache, 3000)).toBe(false);
+    });
+
+    test('retains only detail ranges overlapping the expanded base range', () => {
+        const cache = [
+            { from: 0, to: 1000, payload: {} },
+            { from: 2000, to: 3000, payload: {} },
+        ];
+
+        expect(retainOverlappingDetailRanges(cache, { from: 500, to: 2500 })).toEqual(cache);
+        expect(retainOverlappingDetailRanges(cache, { from: 1100, to: 1900 })).toEqual([]);
     });
 });
 

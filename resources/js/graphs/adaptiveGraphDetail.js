@@ -2,6 +2,10 @@ export const DEFAULT_MIN_STEP_SECONDS = 300;
 export const DETAIL_IMPROVEMENT_RATIO = 0.75;
 export const PREFETCH_RATIO = 0.05;
 export const MAX_CACHE_RANGES = 8;
+export const MAX_EXPANSION_RANGE_SECONDS = 63244800;
+export const FULL_RANGE_RATIO = 0.95;
+export const EXPANSION_FAILURE_TTL_MS = 60000;
+export const INITIAL_BUFFER_MULTIPLIER = 2;
 
 function finiteNumber(value) {
     if (value == null || value === '') return null;
@@ -61,6 +65,10 @@ function clampRange(range, bounds) {
     return { from, to };
 }
 
+export function graphRangeFromPayload(payload) {
+    return graphRangeSeconds(payload);
+}
+
 export function visibleRangeFromDataZoom(chart, fallbackPayload) {
     const zoom = chart?.getOption?.()?.dataZoom?.[0] ?? {};
     const bounds = graphRangeSeconds(fallbackPayload);
@@ -112,6 +120,19 @@ export function buildGraphDataUrl(baseUrl, params = {}) {
     });
 
     return isAbsolute ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function rangeFromGraphDataUrl(baseUrl) {
+    const origin = typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : 'http://localhost';
+    const url = new URL(baseUrl, origin);
+    const from = epochToSeconds(url.searchParams.get('from'));
+    const to = epochToSeconds(url.searchParams.get('to'));
+
+    if (from == null || to == null || from >= to) return null;
+
+    return { from, to };
 }
 
 export function desiredStepMs(range, width, minStepSeconds = DEFAULT_MIN_STEP_SECONDS) {
@@ -168,6 +189,123 @@ export function estimatePayloadStepMs(payload, range = null) {
 
 function rangesOverlap(a, b) {
     return a && b && a.from < b.to && b.from < a.to;
+}
+
+export function rangeOverlaps(a, b) {
+    return rangesOverlap(a, b);
+}
+
+export function rangeSpan(range) {
+    return range ? Math.max(0, range.to - range.from) : 0;
+}
+
+export function isFullRangeView(visibleRange, baseRange, ratio = FULL_RANGE_RATIO) {
+    const visibleSpan = rangeSpan(visibleRange);
+    const baseSpan = rangeSpan(baseRange);
+
+    if (visibleSpan <= 0 || baseSpan <= 0) return false;
+
+    return visibleSpan >= baseSpan * ratio;
+}
+
+export function computeExpandedRange(
+    currentRange,
+    {
+        nowSeconds = Math.floor(Date.now() / 1000),
+        originalTo = null,
+        maxRangeSeconds = MAX_EXPANSION_RANGE_SECONDS,
+    } = {}
+) {
+    if (!currentRange) return null;
+
+    const span = rangeSpan(currentRange);
+    if (span <= 0 || span >= maxRangeSeconds) return null;
+
+    const nextSpan = Math.min(maxRangeSeconds, span * 2);
+    const edgeTolerance = Math.max(DEFAULT_MIN_STEP_SECONDS, Math.ceil(span * 0.05));
+    const anchorTo = [nowSeconds, originalTo]
+        .filter((value) => value != null)
+        .some((value) => Math.abs(currentRange.to - value) <= edgeTolerance);
+
+    let from;
+    let to;
+    if (anchorTo) {
+        to = currentRange.to;
+        from = to - nextSpan;
+    } else {
+        const center = currentRange.from + span / 2;
+        from = Math.floor(center - nextSpan / 2);
+        to = from + nextSpan;
+    }
+
+    from = Math.round(from);
+    to = Math.round(to);
+
+    if (to - from > maxRangeSeconds) {
+        if (anchorTo) {
+            from = to - maxRangeSeconds;
+        } else {
+            const center = currentRange.from + span / 2;
+            from = Math.round(center - maxRangeSeconds / 2);
+            to = from + maxRangeSeconds;
+        }
+    }
+
+    if (from === currentRange.from && to === currentRange.to) return null;
+
+    return { from, to };
+}
+
+export function computeInitialBufferedRange(
+    displayRange,
+    {
+        nowSeconds = Math.floor(Date.now() / 1000),
+        maxRangeSeconds = MAX_EXPANSION_RANGE_SECONDS,
+        multiplier = INITIAL_BUFFER_MULTIPLIER,
+    } = {}
+) {
+    if (!displayRange) return null;
+
+    const span = rangeSpan(displayRange);
+    if (span <= 0) return null;
+
+    const bufferedSpan = Math.min(maxRangeSeconds, Math.max(span, span * multiplier));
+    const edgeTolerance = Math.max(DEFAULT_MIN_STEP_SECONDS, Math.ceil(span * 0.05));
+    const anchorToNow = Math.abs(displayRange.to - nowSeconds) <= edgeTolerance;
+
+    let from;
+    let to;
+    if (anchorToNow) {
+        to = displayRange.to;
+        from = to - bufferedSpan;
+    } else {
+        const center = displayRange.from + span / 2;
+        from = Math.floor(center - bufferedSpan / 2);
+        to = from + bufferedSpan;
+    }
+
+    return { from: Math.round(from), to: Math.round(to) };
+}
+
+export function zoomStateForRange(range) {
+    if (!range) return null;
+
+    return {
+        startValue: epochToMs(range.from),
+        endValue:   epochToMs(range.to),
+    };
+}
+
+export function shouldSuppressExpansion(range, failedExpansionCache = [], nowMs = Date.now()) {
+    return failedExpansionCache.some((entry) => {
+        if (entry.expiresAt != null && entry.expiresAt <= nowMs) return false;
+
+        return rangesOverlap(entry, range);
+    });
+}
+
+export function retainOverlappingDetailRanges(detailCache, baseRange) {
+    return detailCache.filter((entry) => rangesOverlap(entry, baseRange));
 }
 
 export function shouldFetchDetail(currentStepMs, desiredStepMs, noDetailCache = [], range = null) {

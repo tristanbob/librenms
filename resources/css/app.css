@@ -109,3 +109,44 @@
 .lnms-btn-primary .lnms-btn-badge {
   @apply tw:bg-white tw:text-[#337ab7];
 }
+
+.lnms-echart-clickable {
+    border-radius: 4px;
+    box-sizing: border-box;
+    box-shadow: inset 0 0 0 1px transparent;
+}
+
+.lnms-echart-clickable,
+.lnms-echart-clickable canvas {
+    cursor: pointer !important;
+}
+
+.lnms-echart-clickable:hover,
+.lnms-echart-clickable:focus-visible {
+    background: rgba(30, 64, 175, 0.05);
+    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.35);
+    outline: 0;
+}
+
+.dark .lnms-echart-clickable:hover,
+.dark .lnms-echart-clickable:focus-visible {
+    background: rgba(96, 165, 250, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
+}
+
+.lnms-echart-thumbnail-table {
+    table-layout: fixed;
+}
+
+.lnms-echart-thumbnail-cell {
+    padding: 0 5px;
+    text-align: center;
+    width: 11.111%;
+}
+
+.lnms-echart-thumbnail-cell b {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
