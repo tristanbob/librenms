@@ -18,12 +18,6 @@ if (session('widescreen')) {
 $vars['from'] = Time::parseAt($vars['from'] ?? '') ?: LibrenmsConfig::get('time.day');
 $vars['to'] = Time::parseAt($vars['to'] ?? '') ?: LibrenmsConfig::get('time.now');
 
-// Prevent zoom below a reasonable minimum (10 data points at typical 5-minute step)
-$min_span = 10 * 300;
-if (($vars['to'] - $vars['from']) < $min_span) {
-    $vars['from'] = $vars['to'] - $min_span;
-}
-
 preg_match('/^(?P<type>[A-Za-z0-9]+)_(?P<subtype>.+)/', (string) $vars['type'], $graphtype);
 
 $type = basename($graphtype['type']);
@@ -122,13 +116,12 @@ if (! $auth) {
                 $linkUrl = \LibreNMS\Util\Url::generate(array_merge($vars, ['page' => 'graphs', 'from' => $from, 'to' => $to]));
 
                 echo '<td class="lnms-echart-thumbnail-cell">';
-                echo '<b>' . e($text) . '</b><br>';
+                echo '<b>' . e($text) . '</b>';
                 echo '<div'
                     . ' class="lnms-echart"'
                     . ' style="width: 100%; height: 60px;"'
                     . ' data-graph-url="' . e($dataUrl) . '"'
                     . ' data-link-url="' . e($linkUrl) . '"'
-                    . ' data-hide-datazoom="true"'
                     . ' data-hide-legend="true"'
                     . ' data-hide-tooltip="true"'
                     . ' data-sparkline="true"'
@@ -137,7 +130,7 @@ if (! $auth) {
             }
             echo '</tr></table>';
         } else {
-            echo '<table width=100% class="thumbnail_graph_table"><tr>';
+            echo '<table width="100%" class="thumbnail_graph_table lnms-echart-thumbnail-table"><tr>';
 
             foreach ($thumb_array as $period => $text) {
                 $graph_array['from'] = LibrenmsConfig::get("time.$period");
@@ -148,9 +141,9 @@ if (! $auth) {
                 $link_array['page'] = 'graphs';
                 $link = \LibreNMS\Util\Url::generate($link_array);
 
-                echo '<td style="text-align: center;">';
-                echo '<b>' . $text . '</b>';
+                echo '<td class="lnms-echart-thumbnail-cell lnms-echart-clickable">';
                 echo '<a href="' . $link . '">';
+                echo '<b>' . $text . '</b>';
                 echo \LibreNMS\Util\Url::lazyGraphTag($graph_array);
                 echo '</a>';
                 echo '</td>';

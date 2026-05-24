@@ -66,9 +66,9 @@
 }
 
 .lnms-echart-clickable {
+    position: relative;
     border-radius: 4px;
     box-sizing: border-box;
-    box-shadow: inset 0 0 0 1px transparent;
 }
 
 .lnms-echart-clickable,
@@ -76,17 +76,32 @@
     cursor: pointer !important;
 }
 
-.lnms-echart-clickable:hover,
+/* ::after sits above the ECharts canvas so the hover ring is actually visible */
+.lnms-echart-clickable::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 2px transparent;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    z-index: 10;
+}
+
+.lnms-echart-clickable:hover::after,
+.lnms-echart-clickable:focus-visible::after {
+    background: rgba(30, 64, 175, 0.12);
+    box-shadow: inset 0 0 0 2px rgba(30, 64, 175, 0.8);
+}
+
 .lnms-echart-clickable:focus-visible {
-    background: rgba(30, 64, 175, 0.05);
-    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.35);
     outline: 0;
 }
 
-.dark .lnms-echart-clickable:hover,
-.dark .lnms-echart-clickable:focus-visible {
-    background: rgba(96, 165, 250, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.45);
+.dark .lnms-echart-clickable:hover::after,
+.dark .lnms-echart-clickable:focus-visible::after {
+    background: rgba(96, 165, 250, 0.16);
+    box-shadow: inset 0 0 0 2px rgba(96, 165, 250, 0.8);
 }
 
 .lnms-echart-thumbnail-table {
@@ -96,11 +111,33 @@
 .lnms-echart-thumbnail-cell {
     padding: 0 5px;
     text-align: center;
-    width: 11.111%;
+}
+
+.lnms-echart-thumbnail-cell a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    outline: none;
+}
+
+/* Stretched link: <a>::after is positioned relative to the <td> (position:relative),
+   covering the full cell including padding so every pixel is a click target. */
+.lnms-echart-thumbnail-cell a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.lnms-echart-thumbnail-cell img {
+    width: 100%;
+    height: 60px;
+    display: block;
 }
 
 .lnms-echart-thumbnail-cell b {
     display: block;
+    margin-bottom: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
