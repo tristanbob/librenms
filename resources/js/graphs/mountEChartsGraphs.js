@@ -3,15 +3,20 @@ import { toEChartsOptions, THEME } from './toEChartsOptions.js';
 import { buildHtmlLegend }  from './graphLegend.js';
 
 const isDark = () => document.documentElement.classList.contains('dark');
+const DENSE_SERIES_THRESHOLD = 12;
 
 function loadingOpts(text = '') {
     const t = THEME[isDark() ? 'dark' : 'light'];
     return {
         text,
-        maskColor:  t.background === 'transparent' ? 'rgba(255,255,255,0.85)' : t.background,
-        textColor:  t.font,
-        color:      t.font,
+            maskColor:  t.background === 'transparent' ? 'rgba(255,255,255,0.85)' : t.background,
+            textColor:  t.font,
+            color:      t.font,
     };
+}
+
+function seriesCount(payload) {
+    return payload?.graph?.series?.length ?? 0;
 }
 
 export function mountEChartsGraphs() {
@@ -25,12 +30,41 @@ export function mountEChartsGraphs() {
         let legendEl    = null;  // sibling <div> rendered below the chart canvas
         let lastPayload = null;  // cached for redraws on theme change
 
+        function sizingProfile() {
+            const dense = seriesCount(lastPayload) >= DENSE_SERIES_THRESHOLD;
+
+            return {
+                chartMin:  dense ? 380 : 280,
+                chartMax:  dense ? 560 : 460,
+                legendMax: dense ? 180 : 120,
+            };
+        }
+
+        function applyLegendSizing() {
+            if (!legendEl) return;
+
+            if (el.dataset.fillViewport === 'true') {
+                legendEl.style.maxHeight = `${sizingProfile().legendMax}px`;
+                legendEl.style.overflowY = 'auto';
+                legendEl.style.overflowX = 'auto';
+                legendEl.style.marginTop = '4px';
+                return;
+            }
+
+            legendEl.style.maxHeight = '';
+            legendEl.style.overflowY = '';
+            legendEl.style.overflowX = '';
+            legendEl.style.marginTop = '';
+        }
+
         function applyHeight() {
             if (el.dataset.sparkline === 'true') return;
             if (el.dataset.fillViewport === 'true') {
-                const legendHeight = legendEl ? legendEl.offsetHeight : 0;
-                const available    = window.innerHeight - el.getBoundingClientRect().top - legendHeight - 20;
-                el.style.height    = `${Math.max(200, available)}px`;
+                const { chartMin, chartMax, legendMax } = sizingProfile();
+                const viewportBudget = window.innerHeight - el.getBoundingClientRect().top - 20;
+                const available      = viewportBudget - legendMax;
+                const chartPx        = Math.min(chartMax, Math.max(chartMin, available));
+                el.style.height      = `${chartPx}px`;
                 return;
             }
             const chartPx   = Math.round(el.offsetWidth / 2.15);
@@ -49,6 +83,7 @@ export function mountEChartsGraphs() {
             }), true);
             if (legendEl) {
                 legendEl.innerHTML = hideLegend ? '' : buildHtmlLegend(lastPayload.graph, dark);
+                applyLegendSizing();
             }
         }
 
