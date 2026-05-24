@@ -2,9 +2,9 @@
 
 use App\Models\Device;
 use App\Models\Port;
+use App\Facades\Rrd;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use LibreNMS\Data\Store\Rrd;
 use Symfony\Component\Process\Process;
 
 $hostCount = max(1, min(25, (int) env('DEV_HOSTS', 1)));
@@ -92,7 +92,6 @@ foreach ($devices as $deviceIndex => $device) {
                 'ifAlias' => sprintf('Synthetic traffic sample %s/%s', $device->hostname, $ifName),
                 'ifType' => 'ethernetCsmacd',
                 'ifSpeed' => $speed,
-                'ifHighSpeed' => (int) ($speed / 1000000),
                 'ifOperStatus' => 'up',
                 'ifAdminStatus' => 'up',
                 'ifDuplex' => 'fullDuplex',
