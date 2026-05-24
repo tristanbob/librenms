@@ -107,7 +107,12 @@ if (! $auth) {
             foreach ($thumb_array as $period => $text) {
                 $from    = LibrenmsConfig::get("time.$period");
                 $to      = time();
-                $dataUrl = $echart_data_url . "?from=$from&to=$to";
+                $dataUrl = $echart_data_url . '?' . http_build_query([
+                    'from' => $from,
+                    'to' => $to,
+                    'width' => $thumb_width,
+                    'height' => 60,
+                ]);
                 $linkUrl = \LibreNMS\Util\Url::generate(array_merge($vars, ['page' => 'graphs', 'from' => $from, 'to' => $to]));
 
                 echo '<td style="padding: 0 1px; text-align: center;">';
@@ -215,7 +220,12 @@ if (! $auth) {
     echo '</center>';
 
     if ($use_echarts) {
-        $dataUrl = $echart_data_url . '?from=' . $vars['from'] . '&to=' . $vars['to'];
+        $dataUrl = $echart_data_url . '?' . http_build_query([
+            'from' => $vars['from'],
+            'to' => $vars['to'],
+            'width' => $graph_array['width'],
+            'height' => $graph_array['height'],
+        ]);
         echo '<div'
             . ' class="lnms-echart"'
             . ' style="width: 100%;"'

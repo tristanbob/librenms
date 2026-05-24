@@ -135,7 +135,7 @@ class PollerModulesPerfGraph implements GraphDefinition
         }
         $colors = [];
         for ($i = 0; $i < $count; $i++) {
-            $hue      = ($i * 360.0 / $count) % 360;
+            $hue      = fmod($i * 360.0 / $count, 360.0);
             $sat      = $i % 2 === 0 ? 72 : 58;
             $light    = 42;
             $colors[] = self::hslToHex($hue, $sat, $light);
