@@ -144,6 +144,8 @@ Route::prefix('v0')->group(function (): void {
         Route::post('{hostname}/eventlog', [App\Api\Controllers\LegacyApiController::class, 'add_eventlog'])->name('add_eventlog');
         // JSON graph data — additive, does not affect existing image endpoints
         Route::get('{hostname}/graphs/{graph_type}/data', [App\Api\Controllers\LegacyApiController::class, 'get_device_graph_data'])->name('get_device_graph_data');
+        Route::get('{hostname}/sensors/{sensor_id}/graphs/{graph_type}/data', [App\Api\Controllers\LegacyApiController::class, 'get_sensor_graph_data'])->name('get_sensor_graph_data')->where('sensor_id', '[0-9]+');
+        Route::get('{hostname}/wireless/{sensor_id}/graphs/{graph_type}/data', [App\Api\Controllers\LegacyApiController::class, 'get_wireless_graph_data'])->name('get_wireless_graph_data')->where('sensor_id', '[0-9]+');
         Route::get('{hostname}/{type}', [App\Api\Controllers\LegacyApiController::class, 'get_graph_generic_by_hostname'])->name('get_graph_generic_by_hostname');
         Route::get('', [App\Api\Controllers\LegacyApiController::class, 'list_devices'])->name('list_devices');
     });

@@ -47,7 +47,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             type:     $query->graphType,
             title:    $def->title($device),
             subtitle: $def->subtitle($device, $query),
-            unit:     $def->unit(),
+            unit:     $def->unit($device, $query),
             from:     $query->from,
             to:       $query->to,
             step:     $query->step,

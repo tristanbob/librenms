@@ -347,6 +347,96 @@ function get_port_graph_data(Request $request)
     });
 }
 
+function get_sensor_graph_data(Request $request)
+{
+    $hostname   = $request->route('hostname') ?? $request->route('device_id') ?? '';
+    $sensor_id  = (int) $request->route('sensor_id');
+    $graph_type = $request->route('graph_type');
+    $device_id  = ctype_digit((string) $hostname) ? (int) $hostname : getidbyname($hostname);
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $sensor_id, $graph_type) {
+        $sensor = \App\Models\Sensor::where('sensor_id', $sensor_id)
+                                    ->where('device_id', $device_id)
+                                    ->firstOrFail();
+
+        $from   = (int) $request->input('from',   time() - 86400);
+        $to     = (int) $request->input('to',     time());
+        $width  = (int) $request->input('width',  1200);
+        $height = (int) $request->input('height', 300);
+
+        $entities = [
+            'device_id'             => $device_id,
+            'sensor_id'             => $sensor->sensor_id,
+            'sensor_class'          => $sensor->sensor_class,
+            'sensor_type'           => $sensor->sensor_type,
+            'sensor_index'          => $sensor->sensor_index,
+            'poller_type'           => $sensor->poller_type,
+            'sensor_descr'          => $sensor->sensor_descr,
+            'sensor_limit'          => $sensor->sensor_limit,
+            'sensor_limit_warn'     => $sensor->sensor_limit_warn,
+            'sensor_limit_low'      => $sensor->sensor_limit_low,
+            'sensor_limit_low_warn' => $sensor->sensor_limit_low_warn,
+        ];
+
+        try {
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('sensor', $graph_type, $entities, $from, $to, $width, $height);
+            $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
+            $result   = $provider->query($query);
+
+            return response()->json($result->toArray());
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
+        }
+    });
+}
+
+function get_wireless_graph_data(Request $request)
+{
+    $hostname   = $request->route('hostname') ?? $request->route('device_id') ?? '';
+    $sensor_id  = (int) $request->route('sensor_id');
+    $graph_type = $request->route('graph_type');
+    $device_id  = ctype_digit((string) $hostname) ? (int) $hostname : getidbyname($hostname);
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $sensor_id, $graph_type) {
+        $sensor = \App\Models\WirelessSensor::where('sensor_id', $sensor_id)
+                                             ->where('device_id', $device_id)
+                                             ->firstOrFail();
+
+        $from   = (int) $request->input('from',   time() - 86400);
+        $to     = (int) $request->input('to',     time());
+        $width  = (int) $request->input('width',  1200);
+        $height = (int) $request->input('height', 300);
+
+        $sensorClass = $sensor->sensor_class instanceof \LibreNMS\Enum\WirelessSensorType
+            ? $sensor->sensor_class->value
+            : (string) $sensor->sensor_class;
+
+        $entities = [
+            'device_id'             => $device_id,
+            'sensor_id'             => $sensor->sensor_id,
+            'sensor_class'          => $sensorClass,
+            'sensor_type'           => $sensor->sensor_type,
+            'sensor_index'          => $sensor->sensor_index,
+            'poller_type'           => 'snmp',
+            'sensor_descr'          => $sensor->sensor_descr,
+            'sensor_limit'          => $sensor->sensor_limit,
+            'sensor_limit_warn'     => $sensor->sensor_limit_warn,
+            'sensor_limit_low'      => $sensor->sensor_limit_low,
+            'sensor_limit_low_warn' => $sensor->sensor_limit_low_warn,
+        ];
+
+        try {
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('wireless_sensor', $graph_type, $entities, $from, $to, $width, $height);
+            $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
+            $result   = $provider->query($query);
+
+            return response()->json($result->toArray());
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
+        }
+    });
+}
+
 function list_locations()
 {
     $locations = dbFetchRows('SELECT `locations`.* FROM `locations` WHERE `locations`.`location` IS NOT NULL');

@@ -55,7 +55,7 @@ class BitsGraph implements GraphDefinition
         return $device['hostname'] . ' ' . $portName;
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'bps';
     }
@@ -80,7 +80,7 @@ class BitsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'In',
                 key:       'bits_in',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     '90B040',
                 lineColor: '608720',
                 area:      true,
@@ -95,7 +95,7 @@ class BitsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Out',
                 key:       'bits_out',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     '8080C0',
                 lineColor: '606090',
                 area:      true,

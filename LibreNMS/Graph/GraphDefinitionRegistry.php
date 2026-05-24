@@ -28,6 +28,9 @@ class GraphDefinitionRegistry
     /** @var array<string, class-string<GraphDefinition>|GraphDefinition> */
     private array $map = [];
 
+    /** @var array<string, GraphDefinition> prefix → handler for wildcard graph types */
+    private array $prefixHandlers = [];
+
     /**
      * @param iterable<class-string<GraphDefinition>|GraphDefinition> $definitions
      */
@@ -47,21 +50,44 @@ class GraphDefinitionRegistry
         $this->map[$instance->graphType()] = $definition;
     }
 
+    /**
+     * Register a single handler for all graph types sharing a common prefix.
+     * Falls back to prefix handlers when no exact match exists.
+     */
+    public function registerPrefix(string $prefix, GraphDefinition $handler): void
+    {
+        $this->prefixHandlers[$prefix] = $handler;
+    }
+
     /** @throws \RuntimeException if the graph type has no registered definition */
     public function definitionFor(string $graphType): GraphDefinition
     {
         $definition = $this->map[$graphType] ?? null;
-        if ($definition === null) {
-            throw new \RuntimeException(
-                "Graph type '{$graphType}' is not yet supported by the JSON graph data API."
-            );
+        if ($definition !== null) {
+            return is_string($definition) ? new $definition() : $definition;
         }
 
-        return is_string($definition) ? new $definition() : $definition;
+        foreach ($this->prefixHandlers as $prefix => $handler) {
+            if (str_starts_with($graphType, $prefix)) {
+                return $handler;
+            }
+        }
+
+        throw new \RuntimeException(
+            "Graph type '{$graphType}' is not yet supported by the JSON graph data API."
+        );
     }
 
     public function supports(string $graphType): bool
     {
-        return isset($this->map[$graphType]);
+        if (isset($this->map[$graphType])) {
+            return true;
+        }
+        foreach ($this->prefixHandlers as $prefix => $_) {
+            if (str_starts_with($graphType, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

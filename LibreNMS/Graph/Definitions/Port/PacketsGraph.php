@@ -54,7 +54,7 @@ class PacketsGraph implements GraphDefinition
         return $device['hostname'] . ' ' . $portName;
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'pps';
     }
@@ -78,7 +78,7 @@ class PacketsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'In',
                 key:       'packets_in',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'AA66AA',
                 lineColor: '330033',
                 area:      true,
@@ -89,7 +89,7 @@ class PacketsGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:      'Out',
                 key:       'packets_out',
-                unit:      $this->unit(),
+                unit:      $this->unit($device, $query),
                 color:     'FFDD88',
                 lineColor: 'FF6600',
                 area:      true,

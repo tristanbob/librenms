@@ -11,6 +11,8 @@ use LibreNMS\Graph\Definitions\Port\BitsGraph;
 use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
 use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
 use LibreNMS\Graph\Definitions\Port\PacketsGraph;
+use LibreNMS\Graph\Definitions\Sensor\SensorGraph;
+use LibreNMS\Graph\Definitions\Wireless\WirelessSensorGraph;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDefinitionRegistry;
@@ -21,14 +23,19 @@ class GraphServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(GraphDefinitionRegistry::class, fn () => new GraphDefinitionRegistry([
-            PollerPerfGraph::class,
-            PollerModulesPerfGraph::class,
-            BitsGraph::class,
-            PacketsGraph::class,
-            ErrorsGraph::class,
-            DiscardsGraph::class,
-        ]));
+        $this->app->singleton(GraphDefinitionRegistry::class, function () {
+            $registry = new GraphDefinitionRegistry([
+                PollerPerfGraph::class,
+                PollerModulesPerfGraph::class,
+                BitsGraph::class,
+                PacketsGraph::class,
+                ErrorsGraph::class,
+                DiscardsGraph::class,
+            ]);
+            $registry->registerPrefix('sensor_',   new SensorGraph());
+            $registry->registerPrefix('wireless_', new WirelessSensorGraph());
+            return $registry;
+        });
 
         $this->app->singleton(RrdGraphDataProvider::class, fn (Application $app) => new RrdGraphDataProvider(
             $app->make(Rrd::class),

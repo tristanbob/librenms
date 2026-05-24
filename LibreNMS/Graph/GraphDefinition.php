@@ -33,7 +33,7 @@ interface GraphDefinition
 
     public function subtitle(array $device, GraphQuery $query): string;
 
-    public function unit(): string;
+    public function unit(array $device, GraphQuery $query): string;
 
     /**
      * Return the series to render for this graph.

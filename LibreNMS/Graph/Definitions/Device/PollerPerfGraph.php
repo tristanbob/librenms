@@ -56,7 +56,7 @@ class PollerPerfGraph implements GraphDefinition
         return $device['hostname'];
     }
 
-    public function unit(): string
+    public function unit(array $device, GraphQuery $query): string
     {
         return 'seconds';
     }
@@ -80,7 +80,7 @@ class PollerPerfGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:        'Poller time',
                 key:         'poller_time',
-                unit:        $this->unit(),
+                unit:        $this->unit($device, $query),
                 color:       LibrenmsConfig::get("graph_colours.$p.0"),
                 area:        true,
                 areaOpacity: 0.2,
@@ -95,7 +95,7 @@ class PollerPerfGraph implements GraphDefinition
             new GraphSeriesDefinition(
                 name:    '1 hour avg',
                 key:     'poller_time_1h',
-                unit:    $this->unit(),
+                unit:    $this->unit($device, $query),
                 color:   LibrenmsConfig::get("graph_colours.$p.4"),
                 bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 3600)],
             ),
@@ -106,7 +106,7 @@ class PollerPerfGraph implements GraphDefinition
             $series[] = new GraphSeriesDefinition(
                 name:    '1 day avg',
                 key:     'poller_time_1d',
-                unit:    $this->unit(),
+                unit:    $this->unit($device, $query),
                 color:   LibrenmsConfig::get("graph_colours.$p.5"),
                 bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 86400)],
             );
@@ -117,7 +117,7 @@ class PollerPerfGraph implements GraphDefinition
             $series[] = new GraphSeriesDefinition(
                 name:    '1 week avg',
                 key:     'poller_time_1w',
-                unit:    $this->unit(),
+                unit:    $this->unit($device, $query),
                 color:   LibrenmsConfig::get("graph_colours.$p.6"),
                 bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 604800)],
             );
