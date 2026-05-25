@@ -249,6 +249,26 @@ describe('toEChartsOptions — two-series (port_bits)', () => {
         expect(opts.series[1].areaStyle.opacity).toBe(1.0);
     });
 
+    test('line opacity defaults to fully opaque', () => {
+        const opts = toEChartsOptions(TWO_SERIES);
+        expect(opts.series[0].lineStyle.opacity).toBe(1.0);
+    });
+
+    test('line opacity comes from style.lineOpacity when present', () => {
+        const fixture = {
+            ...TWO_SERIES,
+            graph: {
+                ...TWO_SERIES.graph,
+                series: [
+                    { ...TWO_SERIES.graph.series[0], style: { ...TWO_SERIES.graph.series[0].style, lineOpacity: 0.5333333333333333 } },
+                ],
+            },
+        };
+
+        const opts = toEChartsOptions(fixture);
+        expect(opts.series[0].lineStyle.opacity).toBe(0.5333333333333333);
+    });
+
     test('tooltip formatter lists both series names', () => {
         const opts = toEChartsOptions(TWO_SERIES);
         const fakeParams = [

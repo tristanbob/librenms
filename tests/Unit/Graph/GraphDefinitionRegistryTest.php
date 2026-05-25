@@ -2,6 +2,7 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
+use LibreNMS\Graph\Definitions\Device\BitsGraph;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
@@ -14,9 +15,11 @@ final class GraphDefinitionRegistryTest extends TestCase
 {
     public function testResolvesKnownGraphType(): void
     {
-        $registry = new GraphDefinitionRegistry([PollerPerfGraph::class]);
+        $registry = new GraphDefinitionRegistry([BitsGraph::class, PollerPerfGraph::class]);
 
+        $this->assertTrue($registry->supports('device_bits'));
         $this->assertTrue($registry->supports('device_poller_perf'));
+        $this->assertInstanceOf(BitsGraph::class, $registry->definitionFor('device_bits'));
         $this->assertInstanceOf(PollerPerfGraph::class, $registry->definitionFor('device_poller_perf'));
     }
 

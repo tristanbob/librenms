@@ -65,7 +65,7 @@ export function toEChartsOptions(payload, options = {}) {
             type:      seriesType,
             smooth:    false,
             symbol:    seriesType === 'line' ? 'none' : undefined,
-            lineStyle: seriesType === 'line' ? { color: lineColor, width: 1.25 } : undefined,
+            lineStyle: seriesType === 'line' ? { color: lineColor, width: 1.25, opacity: s.style?.lineOpacity ?? 1.0 } : undefined,
             itemStyle: { color: fillColor },
             areaStyle: seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
             stack:     s.style?.stack ?? undefined,

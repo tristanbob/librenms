@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LibreNMS\Data\Store\Rrd;
+use LibreNMS\Graph\Definitions\Device\BitsGraph as DeviceBitsGraph;
 use LibreNMS\Graph\Definitions\Device\PollerModulesPerfGraph;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Port\BitsGraph;
@@ -25,6 +26,7 @@ class GraphServiceProvider extends ServiceProvider
     {
         $this->app->singleton(GraphDefinitionRegistry::class, function () {
             $registry = new GraphDefinitionRegistry([
+                DeviceBitsGraph::class,
                 PollerPerfGraph::class,
                 PollerModulesPerfGraph::class,
                 BitsGraph::class,

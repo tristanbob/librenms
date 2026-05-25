@@ -41,6 +41,7 @@ class GraphSeries
         public readonly string  $color       = '663399',
         public readonly ?string $lineColor   = null,
         public readonly float   $areaOpacity = 1.0,
+        public readonly float   $lineOpacity = 1.0,
         public readonly bool    $negate      = false,
     ) {}
 
@@ -73,7 +74,7 @@ class GraphSeries
             'type'  => $this->type,
             'unit'  => $this->unit,
             'data'  => $this->data,
-            'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color, 'lineColor' => $this->lineColor, 'areaOpacity' => $this->areaOpacity, 'negate' => $this->negate],
+            'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color, 'lineColor' => $this->lineColor, 'areaOpacity' => $this->areaOpacity, 'lineOpacity' => $this->lineOpacity, 'negate' => $this->negate],
             'stats' => $this->stats(),
         ];
     }

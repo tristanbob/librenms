@@ -159,10 +159,19 @@ foreach ($devices as $deviceIndex => $entry) {
 
 flushVmSamples($vmLines, true);
 
+// ── Health and wireless sensor seeding ───────────────────────────────────────
+// Attach sensors to the first synthetic device (snmp_disable=true, so the
+// poller will never overwrite our seeded rows or RRDs).
+$sensorDevice        = $devices[0]['device'];
+$seededHealthCount   = seedHealthSensors($sensorDevice, $rra, $start, $now, $step);
+$seededWirelessCount = seedWirelessSensors($sensorDevice, $rra, $start, $now, $step);
+
 echo sprintf(
-    "seeded %d synthetic devices, %d synthetic interfaces per device, %d hours at %d second step; live device is %s (%d)\n",
+    "seeded %d synthetic devices, %d ports/device, %d health sensors, %d wireless sensors, %d hours at %ds step; live device is %s (%d)\n",
     count($devices),
     $interfacesPerHost,
+    $seededHealthCount,
+    $seededWirelessCount,
     $historyHours,
     $step,
     $primary->hostname,
@@ -533,4 +542,180 @@ function runProcess(array $command): void
     $process = new Process($command);
     $process->setTimeout(120);
     $process->mustRun();
+}
+
+// ── Sensor RRD + DB seeding ───────────────────────────────────────────────────
+
+/**
+ * Seed health sensors (temperature, voltage, fanspeed, humidity) on the given device.
+ * Writes both the DB row and the RRD file with back-filled sinusoidal history.
+ * Returns the number of sensors seeded.
+ */
+function seedHealthSensors(Device $device, array $rra, int $start, int $now, int $step): int
+{
+    $sensors = [
+        [
+            'class' => 'temperature', 'index' => '1',
+            'descr' => 'CPU Temperature',
+            'base' => 45.0, 'amplitude' => 18.0, 'period' => 7200,
+            'limit' => 85.0, 'limit_warn' => 75.0, 'limit_low' => 0.0, 'limit_low_warn' => 5.0,
+        ],
+        [
+            'class' => 'temperature', 'index' => '2',
+            'descr' => 'Inlet Temperature',
+            'base' => 28.0, 'amplitude' => 8.0, 'period' => 9600,
+            'limit' => 40.0, 'limit_warn' => 35.0, 'limit_low' => 5.0, 'limit_low_warn' => 10.0,
+        ],
+        [
+            'class' => 'voltage', 'index' => '1',
+            'descr' => '3.3V Rail',
+            'base' => 3.32, 'amplitude' => 0.03, 'period' => 3600,
+            'limit' => 3.63, 'limit_warn' => 3.47, 'limit_low' => 2.97, 'limit_low_warn' => 3.14,
+        ],
+        [
+            'class' => 'fanspeed', 'index' => '1',
+            'descr' => 'System Fan 1',
+            'base' => 2400.0, 'amplitude' => 600.0, 'period' => 4800,
+            'limit' => 5000.0, 'limit_warn' => 4500.0, 'limit_low' => null, 'limit_low_warn' => 800.0,
+        ],
+        [
+            'class' => 'humidity', 'index' => '1',
+            'descr' => 'Rack Humidity',
+            'base' => 45.0, 'amplitude' => 12.0, 'period' => 14400,
+            'limit' => 80.0, 'limit_warn' => 70.0, 'limit_low' => null, 'limit_low_warn' => null,
+        ],
+    ];
+
+    foreach ($sensors as $s) {
+        $rrdName   = ['sensor', $s['class'], 'dev-synthetic', $s['index']];
+        $lastValue = seedSensorRrd($device->hostname, $rrdName, $rra, $start, $now, $step, $s);
+
+        DB::table('sensors')->updateOrInsert(
+            [
+                'device_id'    => $device->device_id,
+                'sensor_class' => $s['class'],
+                'sensor_type'  => 'dev-synthetic',
+                'sensor_index' => $s['index'],
+            ],
+            [
+                'sensor_oid'            => '.1.3.6.1.999.dev-synthetic.0',
+                'sensor_descr'          => $s['descr'],
+                'sensor_current'        => round($lastValue, 4),
+                'sensor_limit'          => $s['limit'],
+                'sensor_limit_warn'     => $s['limit_warn'],
+                'sensor_limit_low'      => $s['limit_low'],
+                'sensor_limit_low_warn' => $s['limit_low_warn'],
+                'poller_type'           => 'snmp',
+                'rrd_type'              => 'GAUGE',
+                'lastupdate'            => now(),
+            ]
+        );
+    }
+
+    return count($sensors);
+}
+
+/**
+ * Seed wireless sensors (frequency, rssi, clients, snr) on the given device.
+ * Returns the number of sensors seeded.
+ */
+function seedWirelessSensors(Device $device, array $rra, int $start, int $now, int $step): int
+{
+    $sensors = [
+        [
+            'class' => 'frequency', 'index' => '1',
+            'descr' => 'Radio 0 Frequency',
+            'base' => 2437.0, 'amplitude' => 0.0, 'period' => 3600,
+            'limit' => null, 'limit_warn' => null, 'limit_low' => null, 'limit_low_warn' => null,
+        ],
+        [
+            'class' => 'rssi', 'index' => '1',
+            'descr' => 'Radio 0 RSSI',
+            'base' => -68.0, 'amplitude' => 12.0, 'period' => 1800,
+            'limit' => null, 'limit_warn' => -80.0, 'limit_low' => null, 'limit_low_warn' => null,
+        ],
+        [
+            'class' => 'clients', 'index' => '1',
+            'descr' => 'Radio 0 Clients',
+            'base' => 22.0, 'amplitude' => 18.0, 'period' => 5400,
+            'limit' => null, 'limit_warn' => null, 'limit_low' => null, 'limit_low_warn' => null,
+        ],
+        [
+            'class' => 'snr', 'index' => '1',
+            'descr' => 'Radio 0 SNR',
+            'base' => 27.0, 'amplitude' => 7.0, 'period' => 2700,
+            'limit' => null, 'limit_warn' => 15.0, 'limit_low' => null, 'limit_low_warn' => null,
+        ],
+    ];
+
+    foreach ($sensors as $s) {
+        $rrdName   = ['wireless-sensor', $s['class'], 'dev-synthetic', $s['index']];
+        $lastValue = seedSensorRrd($device->hostname, $rrdName, $rra, $start, $now, $step, $s);
+
+        DB::table('wireless_sensors')->updateOrInsert(
+            [
+                'device_id'    => $device->device_id,
+                'sensor_class' => $s['class'],
+                'sensor_type'  => 'dev-synthetic',
+                'sensor_index' => $s['index'],
+            ],
+            [
+                'sensor_descr'          => $s['descr'],
+                'sensor_current'        => round($lastValue, 4),
+                'sensor_limit'          => $s['limit'],
+                'sensor_limit_warn'     => $s['limit_warn'],
+                'sensor_limit_low'      => $s['limit_low'],
+                'sensor_limit_low_warn' => $s['limit_low_warn'],
+                'sensor_oids'           => '[]',
+                'lastupdate'            => now(),
+            ]
+        );
+    }
+
+    return count($sensors);
+}
+
+/**
+ * Create an RRD file with a single GAUGE DS named 'sensor' and fill it with
+ * sinusoidal history derived from the sensor spec's base/amplitude/period.
+ * Returns the last computed value (used to populate sensor_current in the DB).
+ */
+function seedSensorRrd(string $hostname, array $rrdName, array $rra, int $start, int $now, int $step, array $s): float
+{
+    $file = Rrd::name($hostname, $rrdName);
+    $dir  = dirname($file);
+    if (! is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+    if (is_file($file)) {
+        unlink($file);
+    }
+
+    $create = ['rrdtool', 'create', $file,
+               '--start', (string) ($start - $step),
+               '--step',  (string) $step,
+               'DS:sensor:GAUGE:600:U:U'];
+    array_push($create, ...$rra);
+    runProcess($create);
+
+    $updates   = [];
+    $lastValue = $s['base'];
+    $classHash = abs(crc32(implode('|', $rrdName)));
+
+    for ($ts = $start; $ts <= $now; $ts += $step) {
+        $phase     = (2.0 * M_PI * ($ts % max(1, (int) $s['period']))) / max(1, (int) $s['period']);
+        $noise     = ($s['amplitude'] * 0.04) * (deterministicRand($ts, $classHash) * 2.0 - 1.0);
+        $lastValue = $s['base'] + $s['amplitude'] * sin($phase) + $noise;
+        $updates[] = $ts . ':' . round($lastValue, 4);
+
+        if (count($updates) >= 5000) {
+            runProcess(['rrdtool', 'update', $file, ...$updates]);
+            $updates = [];
+        }
+    }
+    if ($updates !== []) {
+        runProcess(['rrdtool', 'update', $file, ...$updates]);
+    }
+
+    return $lastValue;
 }
