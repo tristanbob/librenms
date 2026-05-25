@@ -1,8 +1,11 @@
 <?php
 
 use App\Models\WirelessSensor;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Enum\WirelessSensorType;
+use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Util\Number;
+use LibreNMS\Util\Url;
 
 // this determines the order of the tabs
 $db_classes = WirelessSensor::where('device_id', $device['device_id'])
@@ -45,10 +48,33 @@ foreach ($sensor_classes as $type) {
 
 print_optionbar_end();
 
+$renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
+$periods = LibrenmsConfig::get('graphs.mini.normal');
+
+$printEchartsRow = function (callable $dataUrl, callable $linkUrl, bool $hideLegend = false) use ($periods): void {
+    echo '<div class="row">';
+    foreach ($periods as $period => $period_text) {
+        $from = LibrenmsConfig::get("time.$period");
+        $to = time();
+
+        echo '<div class="col-md-3 col-sm-6 col-xs-12">';
+        echo '<a href="' . e($linkUrl($from, $to)) . '">';
+        echo '<div'
+            . ' class="lnms-echart"'
+            . ' style="width:100%;height:150px"'
+            . ' data-graph-url="' . e($dataUrl($from, $to)) . '"'
+            . ' data-link-url="' . e($linkUrl($from, $to)) . '"'
+            . ($hideLegend ? ' data-hide-legend="true"' : '')
+            . '></div>';
+        echo '</a></div>';
+    }
+    echo '</div>';
+};
+
 if ($vars['metric'] == 'overview') {
     foreach ($sensor_classes as $type) {
         $text = __("wireless.$type.long");
-        $unit = __("wireless.$type.unit");
+        $unit = $type === WirelessSensorType::Frequency->value ? 'Hz' : __("wireless.$type.unit");
         if (! empty($unit)) {
             $text .= " ($unit)";
         }
@@ -56,7 +82,26 @@ if ($vars['metric'] == 'overview') {
         $graph_title = generate_link($text, $wireless_link_array, ['metric' => $type]);
         $graph_array['type'] = 'device_wireless_' . $type;
 
-        include \App\Facades\LibrenmsConfig::get('install_dir') . '/includes/html/print-device-graph.php';
+        echo '<div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">' . $graph_title . '</h3>
+            </div>
+            <div class="panel-body">';
+
+        if ($renderer === 'echarts') {
+            $graphType = 'device_wireless_' . $type;
+            $printEchartsRow(
+                fn (int $from, int $to): string => GraphDataUrl::device((int) $device['device_id'], $graphType, ['from' => $from, 'to' => $to]),
+                fn (int $from, int $to): string => Url::generate(['page' => 'graphs', 'device' => $device['device_id'], 'type' => $graphType, 'from' => $from, 'to' => $to]),
+                true,
+            );
+        } else {
+            echo '<div class="row">';
+            include LibrenmsConfig::get('install_dir') . '/includes/html/print-graphrow.inc.php';
+            echo '</div>';
+        }
+
+        echo '</div></div>';
     }
 } elseif (WirelessSensorType::tryFrom($vars['metric'])) {
     $unit = __('wireless.' . $vars['metric'] . '.unit');
@@ -73,9 +118,9 @@ if ($vars['metric'] == 'overview') {
     );
     foreach ($sensors as $sensor) {
         if (! is_int($row++ / 2)) {
-            $row_colour = \App\Facades\LibrenmsConfig::get('list_colour.even');
+            $row_colour = LibrenmsConfig::get('list_colour.even');
         } else {
-            $row_colour = \App\Facades\LibrenmsConfig::get('list_colour.odd');
+            $row_colour = LibrenmsConfig::get('list_colour.odd');
         }
 
         $sensor_descr = $sensor['sensor_descr'];
@@ -102,7 +147,16 @@ if ($vars['metric'] == 'overview') {
         $graph_array['id'] = $sensor['sensor_id'];
         $graph_array['type'] = 'wireless_' . $vars['metric'];
 
-        include \App\Facades\LibrenmsConfig::get('install_dir') . '/includes/html/print-graphrow.inc.php';
+        if ($renderer === 'echarts') {
+            $graphType = 'wireless_' . $vars['metric'];
+            $sensorId = (int) $sensor['sensor_id'];
+            $printEchartsRow(
+                fn (int $from, int $to): string => GraphDataUrl::wireless((int) $device['device_id'], $sensorId, $graphType, ['from' => $from, 'to' => $to]),
+                fn (int $from, int $to): string => Url::generate(['page' => 'graphs', 'device' => $device['device_id'], 'type' => $graphType, 'id' => $sensorId, 'from' => $from, 'to' => $to]),
+            );
+        } else {
+            include LibrenmsConfig::get('install_dir') . '/includes/html/print-graphrow.inc.php';
+        }
 
         echo '</div></div>';
     }

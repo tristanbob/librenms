@@ -42,6 +42,7 @@ class GraphSeriesDefinition
         public readonly ?string $lineColor = null,
         public readonly float $areaOpacity = 1.0,
         public readonly float $lineOpacity = 1.0,
+        public readonly float $lineWidth = 1.25,
         public readonly bool $negate = false,
         array $bindings = [],
     ) {

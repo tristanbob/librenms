@@ -39,6 +39,12 @@ describe('toEChartsOptions', () => {
         expect(opts.series[0].data).toEqual([[1000000000, 12.5]]);
     });
 
+    test('line series keep hover symbols for native cursor interaction', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.series[0].symbol).toBe('circle');
+        expect(opts.series[0].showSymbol).toBe(false);
+    });
+
     test('honors bar display kind for series without an explicit type', () => {
         const fixture = {
             ...FIXTURE,
@@ -57,12 +63,31 @@ describe('toEChartsOptions', () => {
         expect(toEChartsOptions(FIXTURE).animation).toBe(false);
     });
 
+    test('tooltip uses a native axis pointer line', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.tooltip.trigger).toBe('axis');
+        expect(opts.tooltip.axisPointer.type).toBe('line');
+        expect(opts.tooltip.axisPointer.snap).toBe(true);
+    });
+
     test('xAxis type is time', () => {
         expect(toEChartsOptions(FIXTURE).xAxis.type).toBe('time');
     });
 
     test('xAxis does not pad the time range', () => {
         expect(toEChartsOptions(FIXTURE).xAxis.boundaryGap).toBe(false);
+    });
+
+    test('xAxis is pinned to requested graph range even when data starts later', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.xAxis.min).toBe(FIXTURE.graph.from * 1000);
+        expect(opts.xAxis.max).toBe(FIXTURE.graph.to * 1000);
+    });
+
+    test('sparkline xAxis is also pinned to requested graph range', () => {
+        const opts = toEChartsOptions(FIXTURE, { sparkline: true });
+        expect(opts.xAxis.min).toBe(FIXTURE.graph.from * 1000);
+        expect(opts.xAxis.max).toBe(FIXTURE.graph.to * 1000);
     });
 
     test('markLine is added when markers are present', () => {
@@ -117,6 +142,100 @@ describe('toEChartsOptions', () => {
         const opts = toEChartsOptions(withMixed);
         const colors = opts.series[0].markLine.data.map(d => d.lineStyle.color);
         expect(colors).toEqual(['#FF0000', '#FF8800', '#FF8800', '#FF0000']);
+    });
+
+    test('direction-aware sensor severity markers use RRD threshold colors', () => {
+        const withSensorMarkers = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                markers: [
+                    { value: 5,  name: 'Low critical',  severity: 'low_critical' },
+                    { value: 10, name: 'Low warning',   severity: 'low_warning' },
+                    { value: 70, name: 'High warning',  severity: 'high_warning' },
+                    { value: 80, name: 'High critical', severity: 'high_critical' },
+                ],
+            },
+        };
+        const opts = toEChartsOptions(withSensorMarkers);
+        const colors = opts.series[0].markLine.data.map(d => d.lineStyle.color);
+        expect(colors).toEqual(['#00008b', '#005bdf', '#ffa420', '#ff0000']);
+    });
+
+    test('limit severity uses semi-transparent red matching wireless RRD #cc000060', () => {
+        const withLimit = {
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, markers: [{ value: 100, name: 'High limit', severity: 'limit' }] },
+        };
+        const opts = toEChartsOptions(withLimit);
+        const line = opts.series[0].markLine.data[0].lineStyle;
+        expect(line.color).toBe('#cc0000');
+        expect(line.opacity).toBeCloseTo(0.376, 2);
+    });
+
+    test('non-limit markers have full opacity', () => {
+        const withCritical = {
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, markers: [{ value: 80, name: 'High critical', severity: 'high_critical' }] },
+        };
+        const opts = toEChartsOptions(withCritical);
+        expect(opts.series[0].markLine.data[0].lineStyle.opacity).toBe(1.0);
+    });
+
+    test('theme-ink color in light mode resolves to legacy sensor line color #272b30', () => {
+        const themeInkFixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                series: [{ ...FIXTURE.graph.series[0], style: { ...FIXTURE.graph.series[0].style, color: 'theme-ink' } }],
+            },
+        };
+        const opts = toEChartsOptions(themeInkFixture, { dark: false });
+        expect(opts.series[0].lineStyle.color).toBe('#272b30');
+        expect(opts.series[0].itemStyle.color).toBe('#272b30');
+    });
+
+    test('theme-ink color in dark mode resolves to legacy sensor line color #f2f2f2', () => {
+        const themeInkFixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                series: [{ ...FIXTURE.graph.series[0], style: { ...FIXTURE.graph.series[0].style, color: 'theme-ink' } }],
+            },
+        };
+        const opts = toEChartsOptions(themeInkFixture, { dark: true });
+        expect(opts.series[0].lineStyle.color).toBe('#f2f2f2');
+        expect(opts.series[0].itemStyle.color).toBe('#f2f2f2');
+    });
+
+    test('theme-ink lineColor token resolves when fill color differs', () => {
+        const themeInkFixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                series: [{ ...FIXTURE.graph.series[0], style: { ...FIXTURE.graph.series[0].style, color: '0000cc', lineColor: 'theme-ink' } }],
+            },
+        };
+        const opts = toEChartsOptions(themeInkFixture, { dark: false });
+        expect(opts.series[0].lineStyle.color).toBe('#272b30');
+        expect(opts.series[0].itemStyle.color).toBe('#0000cc');
+    });
+
+    test('lineWidth comes from style.lineWidth', () => {
+        const fixture = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                series: [{ ...FIXTURE.graph.series[0], style: { ...FIXTURE.graph.series[0].style, lineWidth: 2.0 } }],
+            },
+        };
+        const opts = toEChartsOptions(fixture);
+        expect(opts.series[0].lineStyle.width).toBe(2.0);
+    });
+
+    test('lineWidth defaults to 1.25 when not set', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.series[0].lineStyle.width).toBe(1.25);
     });
 
     test('marker without severity falls back to red', () => {

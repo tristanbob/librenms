@@ -34,7 +34,10 @@ if ($mempools->isNotEmpty()) {
         'legend' => 'no',
         'popup_title' => DeviceCache::getPrimary()->hostname . ' - Memory Usage',
     ]);
-    echo \LibreNMS\Util\Url::graphPopup($graph, \LibreNMS\Util\Url::lazyGraphTag($graph), $mempools_url);
+    $echart_graph = device_overview_echart_tag($graph, DeviceCache::getPrimary()->toArray(), ['sparkline' => false, 'hideTooltip' => true, 'hideLegend' => true]);
+    echo $echart_graph === null
+        ? \LibreNMS\Util\Url::graphPopup($graph, \LibreNMS\Util\Url::lazyGraphTag($graph), $mempools_url)
+        : \LibreNMS\Util\Url::overlibLink($mempools_url, $echart_graph, device_overview_echart_overlib_grid_content($graph, DeviceCache::getPrimary()->toArray(), DeviceCache::getPrimary()->hostname . ' - Memory Usage'));
     echo '  </td>
             </tr>';
 
@@ -66,13 +69,15 @@ if ($mempools->isNotEmpty()) {
         ];
 
         $link = Url::generate(['page' => 'graphs'], Arr::only($graph_array, ['id', 'type', 'from']));
-        $overlib_content = generate_overlib_content($graph_array, DeviceCache::getPrimary()->hostname . ' - ' . $mempool->mempool_descr);
-
         $graph_array['width'] = 80;
         $graph_array['height'] = 20;
         $graph_array['bg'] = 'ffffff00';
         // the 00 at the end makes the area transparent.
-        $minigraph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $echart_minigraph = device_overview_echart_tag($graph_array, DeviceCache::getPrimary()->toArray());
+        $minigraph = $echart_minigraph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $overlib_content = $echart_minigraph === null
+            ? generate_overlib_content($graph_array, DeviceCache::getPrimary()->hostname . ' - ' . $mempool->mempool_descr)
+            : device_overview_echart_overlib_content($graph_array, DeviceCache::getPrimary()->toArray(), DeviceCache::getPrimary()->hostname . ' - ' . $mempool->mempool_descr);
 
         $percentageBar = match ($mempool->mempool_class) {
             'system' => Html::percentageBar(400, 10, $mempool->mempool_perc, "$used / $total ($mempool->mempool_perc%)", $free, $mempool->mempool_perc_warn, $available_used_all),

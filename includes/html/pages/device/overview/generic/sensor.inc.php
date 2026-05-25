@@ -48,20 +48,25 @@ if ($sensors->isNotEmpty()) {
             $sensor->sensor_descr = substr((string) $sensor->sensor_descr, 0, 48);
         }
 
-        $overlib_content = '<div class=overlib><span class=overlib-text>' . $device['hostname'] . ' - ' . $sensor->sensor_descr . '</span><br />';
-        foreach (['day', 'week', 'month', 'year'] as $period) {
-            $graph_array['from'] = \App\Facades\LibrenmsConfig::get("time.$period");
-            $overlib_content .= str_replace('"', "\'", \LibreNMS\Util\Url::graphTag($graph_array));
-        }
-
-        $overlib_content .= '</div>';
-
         $graph_array['width'] = 80;
         $graph_array['height'] = 20;
         $graph_array['bg'] = 'ffffff00';
         // the 00 at the end makes the area transparent.
         $graph_array['from'] = \App\Facades\LibrenmsConfig::get('time.day');
-        $sensor_minigraph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $echart_minigraph = device_overview_echart_tag($graph_array, $device);
+        $sensor_minigraph = $echart_minigraph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $overlib_content = '';
+        if ($echart_minigraph === null) {
+            $overlib_content = '<div class=overlib><span class=overlib-text>' . $device['hostname'] . ' - ' . $sensor->sensor_descr . '</span><br />';
+            foreach (['day', 'week', 'month', 'year'] as $period) {
+                $graph_array['from'] = \App\Facades\LibrenmsConfig::get("time.$period");
+                $overlib_content .= str_replace('"', "\'", \LibreNMS\Util\Url::graphTag($graph_array));
+            }
+
+            $overlib_content .= '</div>';
+        } else {
+            $overlib_content = device_overview_echart_overlib_content($graph_array, $device, $device['hostname'] . ' - ' . $sensor->sensor_descr);
+        }
 
         $sensor_current = Html::severityToLabel($sensor->currentStatus(), $sensor->formatValue());
 

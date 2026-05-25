@@ -72,13 +72,8 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
                 foreach ($entries as [$seriesDef, $binding]) {
                     $series = $this->emptySeries($seriesDef);
 
-                    foreach ($allData[$binding->ds] ?? [] as [$tsMs, $value]) {
-                        if ($value !== null && is_finite($value)) {
-                            if ($binding->transform !== null) {
-                                $value = ($binding->transform)($value);
-                            }
-                            $series->addPoint($tsMs, round($value, 4));
-                        }
+                    foreach ($this->pointsForBinding($allData, $binding) as [$tsMs, $value]) {
+                        $series->addPoint($tsMs, round($value, 4));
                     }
 
                     $result->addSeries($series);
@@ -97,6 +92,55 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
             $result->setEmptyReason('rrd_fetch_failed');
             $result->addWarning('One or more RRD files could not be read; empty series returned.');
         }
+    }
+
+    /**
+     * @param array<string, list<array{int, float|null}>> $allData
+     * @return list<array{int, float}>
+     */
+    private function pointsForBinding(array $allData, RrdMetricBinding $binding): array
+    {
+        if (is_string($binding->ds)) {
+            $points = [];
+            foreach ($allData[$binding->ds] ?? [] as [$tsMs, $value]) {
+                if ($value === null || ! is_finite($value)) {
+                    continue;
+                }
+                if ($binding->transform !== null) {
+                    $value = ($binding->transform)($value);
+                }
+                if ($value !== null && is_finite($value)) {
+                    $points[] = [$tsMs, (float) $value];
+                }
+            }
+
+            return $points;
+        }
+
+        $dsNames = $binding->ds;
+        $firstDs = reset($dsNames);
+        if (! is_string($firstDs)) {
+            return [];
+        }
+
+        $points = [];
+        foreach ($allData[$firstDs] ?? [] as $i => [$tsMs]) {
+            $values = [];
+            foreach ($dsNames as $ds) {
+                $value = $allData[$ds][$i][1] ?? null;
+                if ($value === null || ! is_finite($value)) {
+                    continue 2;
+                }
+                $values[$ds] = $value;
+            }
+
+            $value = $binding->transform !== null ? ($binding->transform)($values) : null;
+            if ($value !== null && is_finite($value)) {
+                $points[] = [$tsMs, (float) $value];
+            }
+        }
+
+        return $points;
     }
 
     /**

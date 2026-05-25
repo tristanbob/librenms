@@ -19,6 +19,8 @@ use App\Models\Port;
 use App\Models\Sensor;
 use Illuminate\Support\Facades\Gate;
 use LibreNMS\Enum\ImageFormat;
+use LibreNMS\Graph\GraphDataUrl;
+use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Util\Number;
 use LibreNMS\Util\Rewrite;
 use LibreNMS\Util\Url;
@@ -255,10 +257,10 @@ function generate_port_link($port, $text = null, $type = null, $overlib = 1, $si
         $port = cleanPort($port);
     }
 
-    $content = '<div class="overlib-text">' . ($port['hostname'] ?? '') . ' - ' . Rewrite::normalizeIfName(addslashes(\LibreNMS\Util\Clean::html($port['label'], []))) . '</div>';
+    $title = ($port['hostname'] ?? '') . ' - ' . Rewrite::normalizeIfName(\LibreNMS\Util\Clean::html($port['label'], []));
+    $content = '<div class="overlib-text">' . addslashes($title) . '</div>';
     $content .= addslashes(\LibreNMS\Util\Clean::html($port['ifAlias'], [])) . '<br />';
 
-    $content .= "<div style=\'width: 850px\'>";
     $graph_array['type'] = $port['graph_type'];
     $graph_array['legend'] = 'yes';
     $graph_array['height'] = '100';
@@ -266,17 +268,7 @@ function generate_port_link($port, $text = null, $type = null, $overlib = 1, $si
     $graph_array['to'] = LibrenmsConfig::get('time.now');
     $graph_array['from'] = LibrenmsConfig::get('time.day');
     $graph_array['id'] = $port['port_id'];
-    $content .= Url::graphTag($graph_array);
-    if ($single_graph == 0) {
-        $graph_array['from'] = LibrenmsConfig::get('time.week');
-        $content .= Url::graphTag($graph_array);
-        $graph_array['from'] = LibrenmsConfig::get('time.month');
-        $content .= Url::graphTag($graph_array);
-        $graph_array['from'] = LibrenmsConfig::get('time.year');
-        $content .= Url::graphTag($graph_array);
-    }
-
-    $content .= '</div>';
+    $content .= generate_port_overlib_graphs($graph_array, $single_graph == 0);
 
     $url = generate_port_url($port);
 
@@ -288,6 +280,53 @@ function generate_port_link($port, $text = null, $type = null, $overlib = 1, $si
         return Rewrite::normalizeIfName($text);
     }
 }//end generate_port_link()
+
+function generate_port_overlib_graphs(array $graph_array, bool $include_history = true): string
+{
+    $ranges = [LibrenmsConfig::get('time.day')];
+    if ($include_history) {
+        $ranges[] = LibrenmsConfig::get('time.week');
+        $ranges[] = LibrenmsConfig::get('time.month');
+        $ranges[] = LibrenmsConfig::get('time.year');
+    }
+
+    if (LibrenmsConfig::get('graphs.renderer', 'rrd') === 'echarts') {
+        $type = $graph_array['type'] ?? '';
+        $registry = app(GraphDefinitionRegistry::class);
+        if ($type !== '' && $registry->supports($type) && $registry->definitionFor($type)->entityType() === 'port') {
+            $previewWidth = 320;
+            $previewHeight = 95;
+            $columns = $include_history ? 2 : 1;
+            $gridWidth = ($previewWidth * $columns) + (6 * ($columns - 1));
+            $content = "<div style=\'display:grid;grid-template-columns:repeat($columns, {$previewWidth}px);gap:6px;width:{$gridWidth}px;max-width:calc(100vw - 48px);\'>";
+            foreach ($ranges as $from) {
+                $query = [
+                    'from' => (int) $from,
+                    'to' => (int) $graph_array['to'],
+                    'width' => $previewWidth,
+                    'height' => $previewHeight,
+                ];
+                $content .= '<div class="lnms-echart"'
+                    . ' style="width:' . $previewWidth . 'px;height:' . $previewHeight . 'px"'
+                    . ' data-graph-url="' . e(GraphDataUrl::port((int) $graph_array['id'], $type, $query)) . '"'
+                    . ' data-hide-legend="true"'
+                    . ' data-hide-tooltip="false"'
+                    . ' data-sparkline="false"'
+                    . '></div>';
+            }
+
+            return $content . '</div>';
+        }
+    }
+
+    $content = "<div style=\'width: 850px\'>";
+    foreach ($ranges as $from) {
+        $graph_array['from'] = $from;
+        $content .= Url::graphTag($graph_array);
+    }
+
+    return $content . '</div>';
+}
 
 function generate_port_url($port, $vars = [])
 {

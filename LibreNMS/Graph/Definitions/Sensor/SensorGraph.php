@@ -74,11 +74,13 @@ class SensorGraph implements GraphDefinition
         $unit    = $this->unit($device, $query);
 
         return [new GraphSeriesDefinition(
-            name:     $e['sensor_descr'] ?? 'sensor',
-            key:      'sensor',
-            unit:     $unit,
-            area:     true,
-            bindings: [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
+            name:      $e['sensor_descr'] ?? 'sensor',
+            key:       'sensor',
+            unit:      $unit,
+            area:      false,
+            color:     'theme-ink',
+            lineWidth: 2.0,
+            bindings:  [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
         )];
     }
 
@@ -88,16 +90,16 @@ class SensorGraph implements GraphDefinition
         $markers = [];
 
         if (isset($e['sensor_limit_low']) && $e['sensor_limit_low'] !== null) {
-            $markers[] = $this->marker('Low critical', $e['sensor_limit_low'], 'critical');
+            $markers[] = $this->marker('Low critical', $e['sensor_limit_low'], 'low_critical');
         }
         if (isset($e['sensor_limit_low_warn']) && $e['sensor_limit_low_warn'] !== null) {
-            $markers[] = $this->marker('Low warning', $e['sensor_limit_low_warn'], 'warning');
+            $markers[] = $this->marker('Low warning', $e['sensor_limit_low_warn'], 'low_warning');
         }
         if (isset($e['sensor_limit_warn']) && $e['sensor_limit_warn'] !== null) {
-            $markers[] = $this->marker('High warning', $e['sensor_limit_warn'], 'warning');
+            $markers[] = $this->marker('High warning', $e['sensor_limit_warn'], 'high_warning');
         }
         if (isset($e['sensor_limit']) && $e['sensor_limit'] !== null) {
-            $markers[] = $this->marker('High critical', $e['sensor_limit'], 'critical');
+            $markers[] = $this->marker('High critical', $e['sensor_limit'], 'high_critical');
         }
 
         return $markers;

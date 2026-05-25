@@ -29,6 +29,8 @@ namespace LibreNMS\Util;
 use App\Facades\LibrenmsConfig;
 use LibreNMS\Enum\PowerState;
 use LibreNMS\Enum\Severity;
+use LibreNMS\Graph\GraphDataUrl;
+use LibreNMS\Graph\GraphDefinitionRegistry;
 
 class Html
 {
@@ -127,7 +129,9 @@ class Html
             unset($link_array['height'], $link_array['width']);
             $link = Url::generate($link_array);
 
-            $full_link = Url::overlibLink($link, Url::lazyGraphTag($graph_array), Url::graphTag($graph_array_zoom));
+            $graph = self::echartGraphTag($graph_array, true) ?? Url::lazyGraphTag($graph_array);
+            $popup = self::echartGraphTag($graph_array_zoom, false) ?? Url::graphTag($graph_array_zoom);
+            $full_link = Url::overlibLink($link, $graph, $popup);
             $graph_data[] = $full_link;
 
             if ($print) {
@@ -136,6 +140,61 @@ class Html
         }
 
         return $graph_data;
+    }
+
+    private static function echartGraphTag(array $graph_array, bool $sparkline): ?string
+    {
+        if (LibrenmsConfig::get('graphs.renderer', 'rrd') !== 'echarts') {
+            return null;
+        }
+
+        $type = $graph_array['type'] ?? '';
+        if ($type === '') {
+            return null;
+        }
+
+        $registry = app(GraphDefinitionRegistry::class);
+        if (! $registry->supports($type)) {
+            return null;
+        }
+
+        $definition = $registry->definitionFor($type);
+        $deviceId = (int) ($graph_array['device'] ?? \DeviceCache::getPrimary()->device_id ?? 0);
+        $query = [
+            'from' => (int) ($graph_array['from'] ?? LibrenmsConfig::get('time.day')),
+            'to' => (int) ($graph_array['to'] ?? LibrenmsConfig::get('time.now')),
+            'width' => (int) ($graph_array['width'] ?? ($sparkline ? 215 : 400)),
+            'height' => (int) ($graph_array['height'] ?? ($sparkline ? 100 : 150)),
+        ];
+
+        $dataUrl = match ($definition->entityType()) {
+            'device' => $deviceId > 0 ? GraphDataUrl::device($deviceId, $type, $query) : null,
+            'mempool' => isset($graph_array['id']) && $deviceId > 0
+                ? GraphDataUrl::mempool($deviceId, (int) $graph_array['id'], $type, $query)
+                : null,
+            'processor' => isset($graph_array['id']) && $deviceId > 0
+                ? GraphDataUrl::processor($deviceId, (int) $graph_array['id'], $type, $query)
+                : null,
+            'storage' => isset($graph_array['id']) && $deviceId > 0
+                ? GraphDataUrl::storage($deviceId, (int) $graph_array['id'], $type, $query)
+                : null,
+            'printer_supply' => isset($graph_array['id']) && $deviceId > 0
+                ? GraphDataUrl::printerSupply($deviceId, (int) $graph_array['id'], $type, $query)
+                : null,
+            default => null,
+        };
+
+        if ($dataUrl === null) {
+            return null;
+        }
+
+        return '<div class="lnms-echart"'
+            . ' style="width:' . $query['width'] . 'px;height:' . $query['height'] . 'px"'
+            . ' data-graph-url="' . e($dataUrl) . '"'
+            . ' data-hide-legend="true"'
+            . ' data-hide-tooltip="' . ($sparkline ? 'true' : 'false') . '"'
+            . ' data-sparkline="' . ($sparkline ? 'true' : 'false') . '"'
+            . '></div>';
     }
 
     public static function percentageBar($width, $height, $percent, $left_text = '', $right_text = '', $warn = null, $shadow = null, $colors = null)

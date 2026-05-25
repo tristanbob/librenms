@@ -38,13 +38,15 @@ if (count($processors)) {
             $link_array['page'] = 'graphs';
             unset($link_array['height'], $link_array['width'], $link_array['legend']);
             $link = \LibreNMS\Util\Url::generate($link_array);
-            $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $text_descr);
-
             //Generate the minigraph
             $graph_array['width'] = 80;
             $graph_array['height'] = 20;
             $graph_array['bg'] = 'ffffff00'; // the 00 at the end makes the area transparent.
-            $minigraph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+            $echart_minigraph = device_overview_echart_tag($graph_array, $device);
+            $minigraph = $echart_minigraph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+            $overlib_content = $echart_minigraph === null
+                ? generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $text_descr)
+                : device_overview_echart_overlib_content($graph_array, $device, $device['hostname'] . ' - ' . $text_descr);
 
             echo '<tr>
                 <td class="col-md-4">' . \LibreNMS\Util\Url::overlibLink($link, $text_descr, $overlib_content) . '</td>
@@ -78,7 +80,8 @@ if (count($processors)) {
         //Generate average cpu graph
         $graph_array['device'] = $device['device_id'];
         $graph_array['type'] = 'device_processor';
-        $graph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $echart_graph = device_overview_echart_tag($graph_array, $device, ['sparkline' => false, 'hideTooltip' => true, 'hideLegend' => true]);
+        $graph = $echart_graph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
 
         //Generate link to graphs
         $link_array = $graph_array;
@@ -89,7 +92,9 @@ if (count($processors)) {
         //Generate tooltip
         $graph_array['width'] = 210;
         $graph_array['height'] = 100;
-        $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . ' - CPU usage');
+        $overlib_content = $echart_graph === null
+            ? generate_overlib_content($graph_array, $device['hostname'] . ' - CPU usage')
+            : device_overview_echart_overlib_grid_content($graph_array, $device, $device['hostname'] . ' - CPU usage');
 
         echo '<tr>
               <td colspan="12">';

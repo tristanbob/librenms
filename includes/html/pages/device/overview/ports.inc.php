@@ -17,7 +17,8 @@ if (ObjectCache::portCounts(['total'], $device['device_id'])['total'] > 0) {
     $graph_array['type'] = 'device_bits';
     $graph_array['from'] = \App\Facades\LibrenmsConfig::get('time.day');
     $graph_array['legend'] = 'no';
-    $graph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+    $echart_graph = device_overview_echart_tag($graph_array, $device, ['sparkline' => false, 'hideTooltip' => true, 'hideLegend' => true]);
+    $graph = $echart_graph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
 
     //Generate tooltip
     $graph_array['width'] = 210;
@@ -28,7 +29,9 @@ if (ObjectCache::portCounts(['total'], $device['device_id'])['total'] > 0) {
     $link = \LibreNMS\Util\Url::generate($link_array);
 
     $graph_array['width'] = '210';
-    $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . ' - Device Traffic');
+    $overlib_content = $echart_graph === null
+        ? generate_overlib_content($graph_array, $device['hostname'] . ' - Device Traffic')
+        : device_overview_echart_overlib_grid_content($graph_array, $device, $device['hostname'] . ' - Device Traffic');
 
     echo \LibreNMS\Util\Url::overlibLink($link, $graph, $overlib_content);
 

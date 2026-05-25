@@ -65,13 +65,15 @@ if (count($drives)) {
 
         $drive['storage_descr'] = Str::limit($drive['storage_descr'], 50);
 
-        $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $drive['storage_descr']);
-
         $graph_array['width'] = 80;
         $graph_array['height'] = 20;
         $graph_array['bg'] = 'ffffff00';
         // the 00 at the end makes the area transparent.
-        $minigraph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $echart_minigraph = device_overview_echart_tag($graph_array, $device);
+        $minigraph = $echart_minigraph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+        $overlib_content = $echart_minigraph === null
+            ? generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $drive['storage_descr'])
+            : device_overview_echart_overlib_content($graph_array, $device, $device['hostname'] . ' - ' . $drive['storage_descr']);
 
         echo '<tr>
            <td class="col-md-4">' . \LibreNMS\Util\Url::overlibLink($link, $drive['storage_descr'], $overlib_content) . '</td>

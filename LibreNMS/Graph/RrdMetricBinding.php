@@ -29,11 +29,12 @@ class RrdMetricBinding implements MetricBinding
 
     /**
      * @param string|array $rrdName RRD name component(s), relative to the device's RRD directory
+     * @param string|array $ds Data source name, or multiple data sources passed to transform keyed by name
      * @param callable|null $transform Applied to each raw value before storage, e.g. fn($v) => $v * 8
      */
     public function __construct(
         public readonly string|array $rrdName,
-        public readonly string $ds,
+        public readonly string|array $ds,
         public readonly string $consolidation = 'AVERAGE',
         public readonly ?int $step = null,
         public readonly mixed $transform = null,

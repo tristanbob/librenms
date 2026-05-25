@@ -68,11 +68,14 @@ class WirelessSensorGraph implements GraphDefinition
         $unit    = $this->unit($device, $query);
 
         return [new GraphSeriesDefinition(
-            name:     $e['sensor_descr'] ?? 'wireless',
-            key:      'sensor',
-            unit:     $unit,
-            area:     true,
-            bindings: [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
+            name:        $e['sensor_descr'] ?? 'wireless',
+            key:         'sensor',
+            unit:        $unit,
+            area:        $this->hasAreaFill(),
+            color:       '0000cc',
+            lineWidth:   1.5,
+            areaOpacity: 0.333,
+            bindings:    [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
         )];
     }
 
@@ -82,16 +85,10 @@ class WirelessSensorGraph implements GraphDefinition
         $markers = [];
 
         if (isset($e['sensor_limit_low']) && $e['sensor_limit_low'] !== null) {
-            $markers[] = $this->marker('Low critical', $e['sensor_limit_low'], 'critical');
-        }
-        if (isset($e['sensor_limit_low_warn']) && $e['sensor_limit_low_warn'] !== null) {
-            $markers[] = $this->marker('Low warning', $e['sensor_limit_low_warn'], 'warning');
-        }
-        if (isset($e['sensor_limit_warn']) && $e['sensor_limit_warn'] !== null) {
-            $markers[] = $this->marker('High warning', $e['sensor_limit_warn'], 'warning');
+            $markers[] = $this->marker('Low limit', $e['sensor_limit_low'], 'limit');
         }
         if (isset($e['sensor_limit']) && $e['sensor_limit'] !== null) {
-            $markers[] = $this->marker('High critical', $e['sensor_limit'], 'critical');
+            $markers[] = $this->marker('High limit', $e['sensor_limit'], 'limit');
         }
 
         return $markers;
@@ -133,6 +130,21 @@ class WirelessSensorGraph implements GraphDefinition
         return match ($this->sensorClass) {
             WirelessSensorType::Distance => fn (float $value): float => $value * 1000,
             default => null,
+        };
+    }
+
+    // Matches RRD wireless-sensor.inc.php: area fill only when scale_min >= 0
+    private function hasAreaFill(): bool
+    {
+        return match ($this->sensorClass) {
+            WirelessSensorType::NoiseFloor,
+            WirelessSensorType::Ssr,
+            WirelessSensorType::Power,
+            WirelessSensorType::Mse,
+            WirelessSensorType::Channel,
+            WirelessSensorType::Mcs,
+            WirelessSensorType::Xpi => false,
+            default => true,
         };
     }
 }

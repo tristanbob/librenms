@@ -451,6 +451,18 @@ Route::middleware('auth')->prefix('graph-data')->group(function (): void {
     Route::get('devices/{device_id}/wireless/{sensor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_wireless_graph_data'])
         ->where('device_id', '[0-9]+')
         ->where('sensor_id', '[0-9]+');
+    Route::get('devices/{device_id}/processors/{processor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_processor_graph_data'])
+        ->where('device_id', '[0-9]+')
+        ->where('processor_id', '[0-9]+');
+    Route::get('devices/{device_id}/mempools/{mempool_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_mempool_graph_data'])
+        ->where('device_id', '[0-9]+')
+        ->where('mempool_id', '[0-9]+');
+    Route::get('devices/{device_id}/storage/{storage_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_storage_graph_data'])
+        ->where('device_id', '[0-9]+')
+        ->where('storage_id', '[0-9]+');
+    Route::get('devices/{device_id}/printer-supplies/{supply_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_printer_supply_graph_data'])
+        ->where('device_id', '[0-9]+')
+        ->where('supply_id', '[0-9]+');
 });
 
 // Legacy routes
