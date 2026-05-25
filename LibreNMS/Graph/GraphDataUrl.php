@@ -45,6 +45,26 @@ class GraphDataUrl
         return self::withQuery("/graph-data/devices/$deviceId/wireless/$sensorId/graphs/$graphType", $query);
     }
 
+    public static function processor(int $deviceId, int $processorId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/devices/$deviceId/processors/$processorId/graphs/$graphType", $query);
+    }
+
+    public static function mempool(int $deviceId, int $mempoolId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/devices/$deviceId/mempools/$mempoolId/graphs/$graphType", $query);
+    }
+
+    public static function storage(int $deviceId, int $storageId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/devices/$deviceId/storage/$storageId/graphs/$graphType", $query);
+    }
+
+    public static function printerSupply(int $deviceId, int $supplyId, string $graphType, array $query = []): string
+    {
+        return self::withQuery("/graph-data/devices/$deviceId/printer-supplies/$supplyId/graphs/$graphType", $query);
+    }
+
     private static function withQuery(string $path, array $query): string
     {
         $query = array_filter($query, fn ($value) => $value !== null);

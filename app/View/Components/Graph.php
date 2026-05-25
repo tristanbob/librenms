@@ -2,9 +2,13 @@
 
 namespace App\View\Components;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use App\Models\Port;
 use Illuminate\View\Component;
+use LibreNMS\Graph\GraphDataUrl;
+use LibreNMS\Graph\GraphDefinitionRegistry;
+use LibreNMS\Util\Time;
 
 class Graph extends Component
 {
@@ -41,6 +45,8 @@ class Graph extends Component
      * @var bool
      */
     private $popup;
+    public bool $useEcharts = false;
+    public ?string $echartsDataUrl = null;
 
     /**
      * Create a new component instance.
@@ -107,6 +113,8 @@ class Graph extends Component
             'link' => $this->getLink(),
             'src' => $this->getSrc(),
         ];
+        $this->echartsDataUrl = $this->getEchartsDataUrl();
+        $this->useEcharts = $this->echartsDataUrl !== null;
 
         return view($view, $data);
     }
@@ -157,6 +165,55 @@ class Graph extends Component
             ], '', '/'),
             false => '',
             default => $this->link,
+        };
+    }
+
+    private function getEchartsDataUrl(): ?string
+    {
+        if (LibrenmsConfig::get('graphs.renderer', 'rrd') !== 'echarts' || $this->type === '') {
+            return null;
+        }
+
+        $registry = app(GraphDefinitionRegistry::class);
+        if (! $registry->supports($this->type)) {
+            return null;
+        }
+
+        $query = [
+            'from' => Time::parseAt($this->from ?: '-1d'),
+            'to' => $this->to === null || $this->to === '' ? time() : Time::parseAt($this->to),
+            'width' => $this->width,
+            'height' => $this->height,
+        ];
+
+        $definition = $registry->definitionFor($this->type);
+
+        return match ($definition->entityType()) {
+            'device' => isset($this->vars['device'])
+                ? GraphDataUrl::device((int) $this->vars['device'], $this->type, $query)
+                : null,
+            'port' => isset($this->vars['id'])
+                ? GraphDataUrl::port((int) $this->vars['id'], $this->type, $query)
+                : null,
+            'sensor' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::sensor((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            'wireless_sensor' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::wireless((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            'processor' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::processor((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            'mempool' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::mempool((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            'storage' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::storage((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            'printer_supply' => isset($this->vars['device'], $this->vars['id'])
+                ? GraphDataUrl::printerSupply((int) $this->vars['device'], (int) $this->vars['id'], $this->type, $query)
+                : null,
+            default => null,
         };
     }
 }

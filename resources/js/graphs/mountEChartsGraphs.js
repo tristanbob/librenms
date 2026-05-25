@@ -4,6 +4,7 @@ import { buildHtmlLegend }  from './graphLegend.js';
 
 const isDark = () => document.documentElement.classList.contains('dark');
 const DENSE_SERIES_THRESHOLD = 12;
+let globalObserversAttached = false;
 
 function loadingOpts(text = '') {
     const t = THEME[isDark() ? 'dark' : 'light'];
@@ -23,6 +24,9 @@ export function mountEChartsGraphs() {
     const containers = document.querySelectorAll('.lnms-echart[data-graph-url]');
 
     containers.forEach((el) => {
+        if (el.dataset.echartsMounted === 'true') return;
+        el.dataset.echartsMounted = 'true';
+
         const url     = el.dataset.graphUrl;
         const refresh = parseInt(el.dataset.refresh || '0', 10);
 
@@ -167,7 +171,7 @@ export function mountEChartsGraphs() {
                 lastPayload = await fetchGraphData(graphDataUrl());
                 chart.hideLoading();
 
-                if (!legendEl) {
+                if (el.dataset.hideLegend !== 'true' && !legendEl) {
                     legendEl = document.createElement('div');
                     legendEl.className = 'lnms-echart-legend';
                     el.insertAdjacentElement('afterend', legendEl);
@@ -219,10 +223,23 @@ export function mountEChartsGraphs() {
 
     // applySiteStyle() in librenms.js toggles `dark` on <html class> with no custom event.
     // Watch for that class change and notify all mounted charts.
+    if (globalObserversAttached) return;
+    globalObserversAttached = true;
+
     const mo = new MutationObserver(() => {
-        document.querySelectorAll('.lnms-echart[data-graph-url]').forEach(el => {
+        document.querySelectorAll('.lnms-echart[data-graph-url][data-echarts-mounted="true"]').forEach(el => {
             el.dispatchEvent(new CustomEvent('lnms:theme-change'));
         });
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    const chartMo = new MutationObserver((mutations) => {
+        if (mutations.some(mutation => [...mutation.addedNodes].some(node =>
+            node.nodeType === Node.ELEMENT_NODE &&
+            (node.matches?.('.lnms-echart[data-graph-url]') || node.querySelector?.('.lnms-echart[data-graph-url]'))
+        ))) {
+            mountEChartsGraphs();
+        }
+    });
+    chartMo.observe(document.body, { childList: true, subtree: true });
 }

@@ -8,6 +8,7 @@ export const THEME = {
         grid:       '#292929',
         frame:      '#5e5e5e',
         font:       '#f8f9f9',
+        sensorInk:  '#f2f2f2',
     },
     light: {
         background:  'transparent',
@@ -15,6 +16,7 @@ export const THEME = {
         grid:        '#a5a5a5',
         frame:       '#5e5e5e',
         font:        '#000000',
+        sensorInk:   '#272b30',
     },
 };
 
@@ -28,9 +30,17 @@ function pad2(n) { return String(n).padStart(2, '0'); }
 
 // ECharts auto-selects tick density and level (hour/day/month/year) based on chart
 // width and data range. We only define the label format for each level.
-function buildXAxis(t) {
+function timeBounds(graph) {
+    return {
+        min: graph.from * 1000,
+        max: graph.to * 1000,
+    };
+}
+
+function buildXAxis(t, graph) {
     return {
         type:        'time',
+        ...timeBounds(graph),
         boundaryGap: false,
         splitLine:   { show: true, lineStyle: { color: t.grid, type: 'solid' } },
         axisLine:    { lineStyle: { color: t.frame } },
@@ -53,19 +63,24 @@ export function toEChartsOptions(payload, options = {}) {
     const t     = THEME[options.dark ? 'dark' : 'light'];
     const defaultKind = ['line', 'bar'].includes(graph.display?.kind) ? graph.display.kind : 'line';
 
+    // Renderer token used by PHP graph definitions for the legacy sensor line color.
+    const resolveColor = (colorStr) =>
+        colorStr === 'theme-ink' ? t.sensorInk : `#${colorStr ?? DEFAULT_COLOR}`;
+
     const series = graph.series.map((s, idx) => {
-        const fillColor = `#${s.style?.color ?? DEFAULT_COLOR}`;
-        const lineColor = s.style?.lineColor ? `#${s.style.lineColor}` : fillColor;
+        const fillColor  = resolveColor(s.style?.color);
+        const lineColor  = s.style?.lineColor ? resolveColor(s.style.lineColor) : fillColor;
         const seriesType = ['line', 'bar'].includes(s.type) ? s.type : defaultKind;
-        const data      = s.style?.negate
+        const data       = s.style?.negate
             ? s.data.map(([t, v]) => [t, v != null ? -v : null])
             : s.data;
         return {
             name:      s.name,
             type:      seriesType,
             smooth:    false,
-            symbol:    seriesType === 'line' ? 'none' : undefined,
-            lineStyle: seriesType === 'line' ? { color: lineColor, width: 1.25, opacity: s.style?.lineOpacity ?? 1.0 } : undefined,
+            symbol:    seriesType === 'line' ? 'circle' : undefined,
+            showSymbol: seriesType === 'line' ? false : undefined,
+            lineStyle: seriesType === 'line' ? { color: lineColor, width: s.style?.lineWidth ?? 1.25, opacity: s.style?.lineOpacity ?? 1.0 } : undefined,
             itemStyle: { color: fillColor },
             areaStyle: seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
             stack:     s.style?.stack ?? undefined,
@@ -75,14 +90,30 @@ export function toEChartsOptions(payload, options = {}) {
     });
 
     if (graph.markers.length > 0) {
-        const SEVERITY_COLOR = { warning: '#FF8800', critical: '#FF0000' };
+        // Direction-aware severity colors matching RRD sensor/generic.inc.php threshold lines.
+        // Wireless sensor limits use 'limit' (semi-transparent red matching #cc000060).
+        const SEVERITY_COLOR = {
+            low_critical:  '#00008b',
+            low_warning:   '#005bdf',
+            high_warning:  '#ffa420',
+            high_critical: '#ff0000',
+            critical:      '#FF0000',
+            warning:       '#FF8800',
+            limit:         '#cc0000',
+        };
+        const SEVERITY_OPACITY = { limit: 0.376 };
         series[0].markLine = {
             symbol: ['none', 'none'],
             label:  { position: 'end', formatter: '{b}', color: t.font },
             data: graph.markers.map(m => ({
                 yAxis:     m.value,
                 name:      m.name,
-                lineStyle: { color: SEVERITY_COLOR[m.severity] ?? '#FF0000', type: 'dashed', width: 1.5 },
+                lineStyle: {
+                    color:   SEVERITY_COLOR[m.severity] ?? '#FF0000',
+                    type:    'dashed',
+                    width:   1.5,
+                    opacity: SEVERITY_OPACITY[m.severity] ?? 1.0,
+                },
             })),
         };
     }
@@ -93,6 +124,12 @@ export function toEChartsOptions(payload, options = {}) {
         title:           { show: false },
         tooltip: options.hideTooltip ? { show: false } : {
             trigger:         'axis',
+            axisPointer:     {
+                type:       'line',
+                snap:       true,
+                lineStyle:  { color: t.frame, width: 1, type: 'solid' },
+                label:      { show: false },
+            },
             backgroundColor: t.tooltip,
             borderColor:     t.frame,
             textStyle:       { color: t.font, fontFamily: MONO, fontSize: 11 },
@@ -111,8 +148,8 @@ export function toEChartsOptions(payload, options = {}) {
             ? { top: 2, bottom: 2, left: 2, right: 2, containLabel: false }
             : { top: '5%', bottom: '5%', left: '7%', right: '3%', containLabel: true },
         xAxis: options.sparkline
-            ? { type: 'time', show: false }
-            : buildXAxis(t),
+            ? { type: 'time', ...timeBounds(graph), show: false }
+            : buildXAxis(t, graph),
         yAxis: options.sparkline
             ? { type: 'value', show: false }
             : {

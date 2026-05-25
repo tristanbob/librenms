@@ -23,6 +23,8 @@
 
 namespace LibreNMS\Graph;
 
+use App\Models\Device;
+
 abstract class AbstractGraphDataProvider implements GraphDataProvider
 {
     public function __construct(
@@ -39,7 +41,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             );
         }
 
-        $device = device_by_id_cache($deviceId);
+        $device = Device::findOrFail($deviceId)->toArray();
         $def    = $this->registry->definitionFor($query->graphType);
 
         $result = new GraphDataResult(
@@ -88,6 +90,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             lineColor:   $seriesDef->lineColor,
             areaOpacity: $seriesDef->areaOpacity,
             lineOpacity: $seriesDef->lineOpacity,
+            lineWidth:   $seriesDef->lineWidth,
             negate:      $seriesDef->negate,
         );
     }

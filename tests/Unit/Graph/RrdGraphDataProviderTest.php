@@ -16,4 +16,31 @@ final class RrdGraphDataProviderTest extends TestCase
         $this->assertSame([[1000000, 1.0], [1300000, 2.5]], $parsed['INOCTETS']);
         $this->assertSame([[1000000, null], [1300000, 3.0]], $parsed['OUTOCTETS']);
     }
+
+    public function testCalculatedMultiDatasourceBindingsDoNotMutateReadonlyBinding(): void
+    {
+        $binding = new \LibreNMS\Graph\RrdMetricBinding(
+            rrdName: 'mempool',
+            ds: ['used', 'free'],
+            transform: fn (array $values) => $values['used'] / ($values['used'] + $values['free']) * 100,
+        );
+
+        $provider = new class(new \LibreNMS\Graph\GraphDefinitionRegistry()) extends RrdGraphDataProvider {
+            public function __construct(\LibreNMS\Graph\GraphDefinitionRegistry $registry) {}
+
+            public function expose(array $allData, \LibreNMS\Graph\RrdMetricBinding $binding): array
+            {
+                $method = new \ReflectionMethod(RrdGraphDataProvider::class, 'pointsForBinding');
+
+                return $method->invoke($this, $allData, $binding);
+            }
+        };
+
+        $points = $provider->expose([
+            'used' => [[1000000, 25.0], [1300000, 40.0]],
+            'free' => [[1000000, 75.0], [1300000, 60.0]],
+        ], $binding);
+
+        $this->assertSame([[1000000, 25.0], [1300000, 40.0]], $points);
+    }
 }

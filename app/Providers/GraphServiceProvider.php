@@ -6,13 +6,21 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LibreNMS\Data\Store\Rrd;
 use LibreNMS\Graph\Definitions\Device\BitsGraph as DeviceBitsGraph;
+use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
+use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
 use LibreNMS\Graph\Definitions\Device\PollerModulesPerfGraph;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
+use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
+use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Mempool\UsageGraph as MempoolUsageGraph;
 use LibreNMS\Graph\Definitions\Port\BitsGraph;
 use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
 use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
 use LibreNMS\Graph\Definitions\Port\PacketsGraph;
+use LibreNMS\Graph\Definitions\Processor\UsageGraph as ProcessorUsageGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Storage\UsageGraph as StorageUsageGraph;
+use LibreNMS\Graph\Definitions\Toner\UsageGraph as TonerUsageGraph;
 use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
@@ -27,13 +35,21 @@ class GraphServiceProvider extends ServiceProvider
         $this->app->singleton(GraphDefinitionRegistry::class, function () {
             $registry = new GraphDefinitionRegistry([
                 DeviceBitsGraph::class,
+                IcmpPerfGraph::class,
+                DeviceProcessorGraph::class,
+                DeviceMempoolGraph::class,
                 PollerPerfGraph::class,
                 PollerModulesPerfGraph::class,
+                ProcessorUsageGraph::class,
+                MempoolUsageGraph::class,
+                StorageUsageGraph::class,
+                TonerUsageGraph::class,
                 BitsGraph::class,
                 PacketsGraph::class,
                 ErrorsGraph::class,
                 DiscardsGraph::class,
             ]);
+            $registry->registerResolver(new DeviceWirelessGraphDefinitionResolver());
             $registry->registerResolver(new SensorGraphDefinitionResolver());
             $registry->registerResolver(new WirelessGraphDefinitionResolver());
             return $registry;

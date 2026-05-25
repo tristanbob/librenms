@@ -445,6 +445,132 @@ function get_wireless_graph_data(Request $request)
     });
 }
 
+function get_processor_graph_data(Request $request)
+{
+    $device_id = (int) $request->route('device_id');
+    $processor_id = (int) $request->route('processor_id');
+    $graph_type = $request->route('graph_type');
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $processor_id, $graph_type) {
+        $processor = \App\Models\Processor::where('processor_id', $processor_id)
+            ->where('device_id', $device_id)
+            ->firstOrFail();
+
+        if ($graph_type !== 'processor_usage') {
+            return response()->json(['status' => 'error', 'message' => 'Processor graph type does not match processor entity.'], 404);
+        }
+
+        $entities = [
+            'device_id' => $device_id,
+            'processor_id' => $processor->processor_id,
+            'processor_type' => $processor->processor_type,
+            'processor_index' => $processor->processor_index,
+            'processor_descr' => $processor->processor_descr,
+        ];
+
+        return api_entity_graph_data($request, 'processor', $graph_type, $entities);
+    });
+}
+
+function get_mempool_graph_data(Request $request)
+{
+    $device_id = (int) $request->route('device_id');
+    $mempool_id = (int) $request->route('mempool_id');
+    $graph_type = $request->route('graph_type');
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $mempool_id, $graph_type) {
+        $mempool = \App\Models\Mempool::where('mempool_id', $mempool_id)
+            ->where('device_id', $device_id)
+            ->firstOrFail();
+
+        if ($graph_type !== 'mempool_usage') {
+            return response()->json(['status' => 'error', 'message' => 'Mempool graph type does not match mempool entity.'], 404);
+        }
+
+        $entities = [
+            'device_id' => $device_id,
+            'mempool_id' => $mempool->mempool_id,
+            'mempool_type' => $mempool->mempool_type,
+            'mempool_class' => $mempool->mempool_class,
+            'mempool_index' => $mempool->mempool_index,
+            'mempool_descr' => $mempool->mempool_descr,
+        ];
+
+        return api_entity_graph_data($request, 'mempool', $graph_type, $entities);
+    });
+}
+
+function get_storage_graph_data(Request $request)
+{
+    $device_id = (int) $request->route('device_id');
+    $storage_id = (int) $request->route('storage_id');
+    $graph_type = $request->route('graph_type');
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $storage_id, $graph_type) {
+        $storage = \App\Models\Storage::where('storage_id', $storage_id)
+            ->where('device_id', $device_id)
+            ->firstOrFail();
+
+        if ($graph_type !== 'storage_usage') {
+            return response()->json(['status' => 'error', 'message' => 'Storage graph type does not match storage entity.'], 404);
+        }
+
+        $entities = [
+            'device_id' => $device_id,
+            'storage_id' => $storage->storage_id,
+            'type' => $storage->type,
+            'storage_descr' => $storage->storage_descr,
+        ];
+
+        return api_entity_graph_data($request, 'storage', $graph_type, $entities);
+    });
+}
+
+function get_printer_supply_graph_data(Request $request)
+{
+    $device_id = (int) $request->route('device_id');
+    $supply_id = (int) $request->route('supply_id');
+    $graph_type = $request->route('graph_type');
+
+    return check_device_permission($device_id, function ($device_id) use ($request, $supply_id, $graph_type) {
+        $supply = \App\Models\PrinterSupply::where('supply_id', $supply_id)
+            ->where('device_id', $device_id)
+            ->firstOrFail();
+
+        if ($graph_type !== 'toner_usage') {
+            return response()->json(['status' => 'error', 'message' => 'Printer supply graph type does not match printer supply entity.'], 404);
+        }
+
+        $entities = [
+            'device_id' => $device_id,
+            'supply_id' => $supply->supply_id,
+            'supply_type' => $supply->supply_type,
+            'supply_index' => $supply->supply_index,
+            'supply_descr' => $supply->supply_descr,
+        ];
+
+        return api_entity_graph_data($request, 'printer_supply', $graph_type, $entities);
+    });
+}
+
+function api_entity_graph_data(Request $request, string $entity_type, string $graph_type, array $entities)
+{
+    $from = (int) $request->input('from', time() - 86400);
+    $to = (int) $request->input('to', time());
+    $width = (int) $request->input('width', 1200);
+    $height = (int) $request->input('height', 300);
+
+    try {
+        $query = \LibreNMS\Graph\GraphQuery::fromRequest($entity_type, $graph_type, $entities, $from, $to, $width, $height);
+        $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
+        $result = $provider->query($query);
+
+        return response()->json($result->toArray());
+    } catch (\InvalidArgumentException|\RuntimeException $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
+    }
+}
+
 function list_locations()
 {
     $locations = dbFetchRows('SELECT `locations`.* FROM `locations` WHERE `locations`.`location` IS NOT NULL');

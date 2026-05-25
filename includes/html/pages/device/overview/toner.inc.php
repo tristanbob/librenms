@@ -38,13 +38,15 @@ foreach ($supplies as $type => $supply) {
             unset($link_array['height'], $link_array['width'], $link_array['legend']);
             $link = \LibreNMS\Util\Url::generate($link_array);
 
-            $overlib_content = generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $toner['supply_descr']);
-
             $graph_array['width'] = 80;
             $graph_array['height'] = 20;
             $graph_array['bg'] = 'ffffff00';
             // the 00 at the end makes the area transparent.
-            $minigraph = \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+            $echart_minigraph = device_overview_echart_tag($graph_array, $device);
+            $minigraph = $echart_minigraph ?? \LibreNMS\Util\Url::lazyGraphTag($graph_array);
+            $overlib_content = $echart_minigraph === null
+                ? generate_overlib_content($graph_array, $device['hostname'] . ' - ' . $toner['supply_descr'])
+                : device_overview_echart_overlib_content($graph_array, $device, $device['hostname'] . ' - ' . $toner['supply_descr']);
 
             echo '<tr>
             <td class="col-md-4">' . \LibreNMS\Util\Url::overlibLink($link, $toner['supply_descr'], $overlib_content) . '</td>

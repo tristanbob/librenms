@@ -22,7 +22,10 @@ if (Rrd::checkRrdExists(Rrd::name(DeviceCache::getPrimary()->hostname, 'icmp-per
         'popup_title' => DeviceCache::getPrimary()->hostname . ' - Ping Response',
     ]);
 
-    echo \LibreNMS\Util\Url::graphPopup($graph, \LibreNMS\Util\Url::lazyGraphTag($graph), $perf_url);
+    $echart_graph = device_overview_echart_tag($graph, DeviceCache::getPrimary()->toArray(), ['sparkline' => false, 'hideTooltip' => true, 'hideLegend' => true]);
+    echo $echart_graph === null
+        ? \LibreNMS\Util\Url::graphPopup($graph, \LibreNMS\Util\Url::lazyGraphTag($graph), $perf_url)
+        : \LibreNMS\Util\Url::overlibLink($perf_url, $echart_graph, device_overview_echart_overlib_grid_content($graph, DeviceCache::getPrimary()->toArray(), DeviceCache::getPrimary()->hostname . ' - Ping Response'));
     echo '  </td>
             </tr>
         </table>
