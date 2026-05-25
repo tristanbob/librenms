@@ -87,6 +87,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             color:       $seriesDef->color,
             lineColor:   $seriesDef->lineColor,
             areaOpacity: $seriesDef->areaOpacity,
+            lineOpacity: $seriesDef->lineOpacity,
             negate:      $seriesDef->negate,
         );
     }
