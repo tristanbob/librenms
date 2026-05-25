@@ -31,6 +31,10 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph implements GraphDefinition
 {
+    private bool $transformComputed = false;
+    /** @var callable|null */
+    private $transform = null;
+
     public function __construct(private readonly WirelessSensorType $sensorClass) {}
 
     public function graphType(): string { return 'wireless_' . $this->sensorClass->value; }
@@ -39,10 +43,6 @@ class WirelessSensorGraph implements GraphDefinition
 
     public function unit(array $device, GraphQuery $query): string
     {
-        if ($this->sensorClass === WirelessSensorType::Frequency) {
-            return 'Hz';
-        }
-
         return __("wireless.{$this->sensorClass->value}.unit");
     }
 
@@ -53,7 +53,7 @@ class WirelessSensorGraph implements GraphDefinition
 
     public function title(array $device): string
     {
-        return 'Wireless Sensor';
+        return __("wireless.{$this->sensorClass->value}.long");
     }
 
     public function subtitle(array $device, GraphQuery $query): string
@@ -120,8 +120,17 @@ class WirelessSensorGraph implements GraphDefinition
 
     private function valueTransform(): ?callable
     {
+        if (! $this->transformComputed) {
+            $this->transform = $this->computeTransform();
+            $this->transformComputed = true;
+        }
+
+        return $this->transform;
+    }
+
+    private function computeTransform(): ?callable
+    {
         return match ($this->sensorClass) {
-            WirelessSensorType::Frequency => fn (float $value): float => $value * 1000000,
             WirelessSensorType::Distance => fn (float $value): float => $value * 1000,
             default => null,
         };

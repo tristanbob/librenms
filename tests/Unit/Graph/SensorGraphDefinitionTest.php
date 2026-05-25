@@ -48,7 +48,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
         $this->assertSame(176.0, $markers[0]['value']);
     }
 
-    public function testWirelessFrequencyGraphTransformsMhzBackedValuesToHz(): void
+    public function testWirelessFrequencyUnitIsMhzWithNoTransform(): void
     {
         $graph = new WirelessSensorGraph(WirelessSensorType::Frequency);
         $query = $this->sensorQuery('wireless_frequency', 'frequency', ['sensor_limit' => 5800.0]);
@@ -56,9 +56,21 @@ final class SensorGraphDefinitionTest extends DBTestCase
         $markers = $graph->markers($this->device(), $query);
 
         $this->assertSame('wireless_frequency', $graph->graphType());
-        $this->assertSame('Hz', $graph->unit($this->device(), $query));
-        $this->assertSame(5800000000.0, ($binding->transform)(5800.0));
-        $this->assertSame(5800000000.0, $markers[0]['value']);
+        $this->assertSame('MHz', $graph->unit($this->device(), $query));
+        $this->assertNull($binding->transform);
+        $this->assertSame(5800.0, $markers[0]['value']);
+    }
+
+    public function testSensorGraphTitleReturnsClassLabel(): void
+    {
+        $this->assertSame('Temperature', (new SensorGraph(SensorClass::Temperature))->title($this->device()));
+        $this->assertSame('Voltage', (new SensorGraph(SensorClass::Voltage))->title($this->device()));
+    }
+
+    public function testWirelessGraphTitleReturnsLongLabel(): void
+    {
+        $this->assertSame('Frequency', (new WirelessSensorGraph(WirelessSensorType::Frequency))->title($this->device()));
+        $this->assertSame('Received Signal Strength Indicator', (new WirelessSensorGraph(WirelessSensorType::Rssi))->title($this->device()));
     }
 
     public function testWirelessDistanceGraphTransformsKmBackedValuesToMeters(): void

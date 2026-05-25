@@ -53,7 +53,10 @@ foreach ($sensors as $sensor) {
     $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
     if ($renderer === 'echarts') {
         $periods = LibrenmsConfig::get('graphs.mini.normal');
-        $echartsGraphType = 'sensor_' . $sensor->sensor_class;
+        $sensorClassValue = $sensor->sensor_class instanceof \LibreNMS\Enum\Sensor
+            ? $sensor->sensor_class->value
+            : (string) $sensor->sensor_class;
+        $echartsGraphType = 'sensor_' . $sensorClassValue;
         echo '<div class="row">';
         foreach ($periods as $period => $period_text) {
             $from    = LibrenmsConfig::get("time.$period");
