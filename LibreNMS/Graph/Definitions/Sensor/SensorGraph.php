@@ -34,6 +34,10 @@ use LibreNMS\Util\Rewrite;
 
 class SensorGraph implements GraphDefinition
 {
+    private bool $transformComputed = false;
+    /** @var callable|null */
+    private $transform = null;
+
     public function __construct(private readonly SensorClass $sensorClass) {}
 
     public function graphType(): string { return 'sensor_' . $this->sensorClass->value; }
@@ -52,7 +56,7 @@ class SensorGraph implements GraphDefinition
 
     public function title(array $device): string
     {
-        return 'Sensor';
+        return $this->sensorClass->label();
     }
 
     public function subtitle(array $device, GraphQuery $query): string
@@ -121,6 +125,16 @@ class SensorGraph implements GraphDefinition
     }
 
     private function valueTransform(): ?callable
+    {
+        if (! $this->transformComputed) {
+            $this->transform = $this->computeTransform();
+            $this->transformComputed = true;
+        }
+
+        return $this->transform;
+    }
+
+    private function computeTransform(): ?callable
     {
         if ($this->sensorClass !== SensorClass::Temperature) {
             return null;

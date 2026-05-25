@@ -45,14 +45,22 @@ interface GraphDefinition
      */
     public function series(array $device, GraphQuery $query): array;
 
+    /**
+     * Horizontal reference lines rendered on the graph (e.g. sensor alert thresholds).
+     * Each entry: ['type' => 'horizontal_line', 'name' => string, 'value' => float, 'severity' => 'warning'|'critical']
+     */
     public function markers(array $device, GraphQuery $query): array;
 
+    /**
+     * Shaded threshold bands (reserved for future use — return [] for now).
+     * Distinct from markers(): markers() = horizontal lines, thresholds() = shaded regions.
+     */
     public function thresholds(array $device, GraphQuery $query): array;
 
     /**
-     * The primary entity type this graph belongs to.
-     * Used by the view layer to build the correct data URL.
-     * Examples: 'device', 'port', 'sensor', 'bill'
+     * The primary entity type this graph belongs to ('device', 'port', 'sensor', 'wireless_sensor', 'bill').
+     * Informational — used for routing context and debug identification.
+     * URL construction is handled explicitly via GraphDataUrl static helpers, not by dispatching on this value.
      */
     public function entityType(): string;
 
