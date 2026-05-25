@@ -28,8 +28,8 @@ class GraphDefinitionRegistry
     /** @var array<string, class-string<GraphDefinition>|GraphDefinition> */
     private array $map = [];
 
-    /** @var array<string, GraphDefinition> prefix → handler for wildcard graph types */
-    private array $prefixHandlers = [];
+    /** @var GraphDefinitionResolver[] */
+    private array $resolvers = [];
 
     /**
      * @param iterable<class-string<GraphDefinition>|GraphDefinition> $definitions
@@ -50,13 +50,9 @@ class GraphDefinitionRegistry
         $this->map[$instance->graphType()] = $definition;
     }
 
-    /**
-     * Register a single handler for all graph types sharing a common prefix.
-     * Falls back to prefix handlers when no exact match exists.
-     */
-    public function registerPrefix(string $prefix, GraphDefinition $handler): void
+    public function registerResolver(GraphDefinitionResolver $resolver): void
     {
-        $this->prefixHandlers[$prefix] = $handler;
+        $this->resolvers[] = $resolver;
     }
 
     /** @throws \RuntimeException if the graph type has no registered definition */
@@ -67,9 +63,9 @@ class GraphDefinitionRegistry
             return is_string($definition) ? new $definition() : $definition;
         }
 
-        foreach ($this->prefixHandlers as $prefix => $handler) {
-            if (str_starts_with($graphType, $prefix)) {
-                return $handler;
+        foreach ($this->resolvers as $resolver) {
+            if ($resolver->supports($graphType)) {
+                return $resolver->definitionFor($graphType);
             }
         }
 
@@ -83,8 +79,8 @@ class GraphDefinitionRegistry
         if (isset($this->map[$graphType])) {
             return true;
         }
-        foreach ($this->prefixHandlers as $prefix => $_) {
-            if (str_starts_with($graphType, $prefix)) {
+        foreach ($this->resolvers as $resolver) {
+            if ($resolver->supports($graphType)) {
                 return true;
             }
         }

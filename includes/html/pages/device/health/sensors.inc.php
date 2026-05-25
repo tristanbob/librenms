@@ -58,7 +58,7 @@ foreach ($sensors as $sensor) {
         foreach ($periods as $period => $period_text) {
             $from    = LibrenmsConfig::get("time.$period");
             $to      = time();
-            $dataUrl = GraphDataUrl::sensor($sensor->sensor_id, $echartsGraphType, ['from' => $from, 'to' => $to]);
+            $dataUrl = GraphDataUrl::sensor((int) $device['device_id'], $sensor->sensor_id, $echartsGraphType, ['from' => $from, 'to' => $to]);
             $linkUrl = Url::generate(['page' => 'graphs', 'type' => $graph_type, 'id' => $sensor->sensor_id, 'from' => $from, 'to' => $to]);
             echo '<div class="col-md-3 col-sm-6 col-xs-12">';
             echo '<a href="' . e($linkUrl) . '">';

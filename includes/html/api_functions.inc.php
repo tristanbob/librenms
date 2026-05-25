@@ -360,6 +360,10 @@ function get_sensor_graph_data(Request $request)
                                     ->where('device_id', $device_id)
                                     ->firstOrFail();
 
+        if ($graph_type !== 'sensor_' . $sensor->sensor_class) {
+            return response()->json(['status' => 'error', 'message' => 'Sensor graph type does not match sensor class.'], 404);
+        }
+
         $from   = (int) $request->input('from',   time() - 86400);
         $to     = (int) $request->input('to',     time());
         $width  = (int) $request->input('width',  1200);
@@ -411,6 +415,10 @@ function get_wireless_graph_data(Request $request)
         $sensorClass = $sensor->sensor_class instanceof \LibreNMS\Enum\WirelessSensorType
             ? $sensor->sensor_class->value
             : (string) $sensor->sensor_class;
+
+        if ($graph_type !== 'wireless_' . $sensorClass) {
+            return response()->json(['status' => 'error', 'message' => 'Wireless graph type does not match sensor class.'], 404);
+        }
 
         $entities = [
             'device_id'             => $device_id,

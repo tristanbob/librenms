@@ -445,9 +445,11 @@ Route::middleware('auth')->prefix('graph-data')->group(function (): void {
         ->where('port_id', '[0-9]+');
     Route::get('devices/{device_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_device_graph_data'])
         ->where('device_id', '[0-9]+');
-    Route::get('sensors/{sensor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_sensor_graph_data'])
+    Route::get('devices/{device_id}/sensors/{sensor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_sensor_graph_data'])
+        ->where('device_id', '[0-9]+')
         ->where('sensor_id', '[0-9]+');
-    Route::get('wireless/{sensor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_wireless_graph_data'])
+    Route::get('devices/{device_id}/wireless/{sensor_id}/graphs/{graph_type}', [\App\Api\Controllers\LegacyApiController::class, 'get_wireless_graph_data'])
+        ->where('device_id', '[0-9]+')
         ->where('sensor_id', '[0-9]+');
 });
 
