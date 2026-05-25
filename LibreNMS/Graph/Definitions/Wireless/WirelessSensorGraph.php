@@ -23,6 +23,7 @@
 
 namespace LibreNMS\Graph\Definitions\Wireless;
 
+use LibreNMS\Enum\WirelessSensorType;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
@@ -30,39 +31,24 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph implements GraphDefinition
 {
-    private const UNIT_MAP = [
-        'clients'      => '',
-        'rssi'         => 'dBm',
-        'signal'       => 'dBm',
-        'snr'          => 'dB',
-        'noise-floor'  => 'dBm',
-        'quality'      => '%',
-        'utilization'  => '%',
-        'rate'         => 'bps',
-        'mse'          => '',
-        'ber'          => '',
-        'sinr'         => 'dB',
-        'cinr'         => 'dB',
-        'power'        => 'dBm',
-        'errors'       => '',
-        'frequency'    => 'MHz',
-        'distance'     => 'm',
-        'capacity'     => 'bps',
-        'ccq'          => '%',
-    ];
+    public function __construct(private readonly WirelessSensorType $sensorClass) {}
 
-    public function graphType(): string { return 'wireless_sensor'; }
+    public function graphType(): string { return 'wireless_' . $this->sensorClass->value; }
 
     public function entityType(): string { return 'wireless_sensor'; }
 
     public function unit(array $device, GraphQuery $query): string
     {
-        return self::UNIT_MAP[$query->entities['sensor_class'] ?? ''] ?? '';
+        if ($this->sensorClass === WirelessSensorType::Frequency) {
+            return 'Hz';
+        }
+
+        return __("wireless.{$this->sensorClass->value}.unit");
     }
 
     public function id(array $device, GraphQuery $query): string
     {
-        return 'wireless_' . ($query->entities['sensor_class'] ?? '') . ':' . ($query->entities['sensor_id'] ?? '');
+        return $this->graphType() . ':' . ($query->entities['sensor_id'] ?? '');
     }
 
     public function title(array $device): string
@@ -78,15 +64,15 @@ class WirelessSensorGraph implements GraphDefinition
     public function series(array $device, GraphQuery $query): array
     {
         $e       = $query->entities;
-        $rrdName = ['wireless-sensor', $e['sensor_class'] ?? '', $e['sensor_type'] ?? '', $e['sensor_index'] ?? ''];
-        $unit    = self::UNIT_MAP[$e['sensor_class'] ?? ''] ?? ($e['sensor_class'] ?? '');
+        $rrdName = ['wireless-sensor', $this->sensorClass->value, $e['sensor_type'] ?? '', $e['sensor_index'] ?? ''];
+        $unit    = $this->unit($device, $query);
 
         return [new GraphSeriesDefinition(
             name:     $e['sensor_descr'] ?? 'wireless',
             key:      'sensor',
             unit:     $unit,
             area:     true,
-            bindings: [new RrdMetricBinding($rrdName, 'sensor')],
+            bindings: [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
         )];
     }
 
@@ -96,16 +82,16 @@ class WirelessSensorGraph implements GraphDefinition
         $markers = [];
 
         if (isset($e['sensor_limit_low']) && $e['sensor_limit_low'] !== null) {
-            $markers[] = ['type' => 'horizontal_line', 'name' => 'Low critical', 'value' => (float) $e['sensor_limit_low'], 'severity' => 'critical'];
+            $markers[] = $this->marker('Low critical', $e['sensor_limit_low'], 'critical');
         }
         if (isset($e['sensor_limit_low_warn']) && $e['sensor_limit_low_warn'] !== null) {
-            $markers[] = ['type' => 'horizontal_line', 'name' => 'Low warning', 'value' => (float) $e['sensor_limit_low_warn'], 'severity' => 'warning'];
+            $markers[] = $this->marker('Low warning', $e['sensor_limit_low_warn'], 'warning');
         }
         if (isset($e['sensor_limit_warn']) && $e['sensor_limit_warn'] !== null) {
-            $markers[] = ['type' => 'horizontal_line', 'name' => 'High warning', 'value' => (float) $e['sensor_limit_warn'], 'severity' => 'warning'];
+            $markers[] = $this->marker('High warning', $e['sensor_limit_warn'], 'warning');
         }
         if (isset($e['sensor_limit']) && $e['sensor_limit'] !== null) {
-            $markers[] = ['type' => 'horizontal_line', 'name' => 'High critical', 'value' => (float) $e['sensor_limit'], 'severity' => 'critical'];
+            $markers[] = $this->marker('High critical', $e['sensor_limit'], 'critical');
         }
 
         return $markers;
@@ -119,5 +105,25 @@ class WirelessSensorGraph implements GraphDefinition
     public function display(): array
     {
         return ['kind' => 'line', 'stacked' => false, 'area' => true];
+    }
+
+    private function marker(string $name, mixed $value, string $severity): array
+    {
+        $value = (float) $value;
+        $transform = $this->valueTransform();
+        if ($transform !== null) {
+            $value = $transform($value);
+        }
+
+        return ['type' => 'horizontal_line', 'name' => $name, 'value' => $value, 'severity' => $severity];
+    }
+
+    private function valueTransform(): ?callable
+    {
+        return match ($this->sensorClass) {
+            WirelessSensorType::Frequency => fn (float $value): float => $value * 1000000,
+            WirelessSensorType::Distance => fn (float $value): float => $value * 1000,
+            default => null,
+        };
     }
 }

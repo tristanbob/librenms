@@ -35,14 +35,14 @@ class GraphDataUrl
         return self::withQuery("/graph-data/ports/$portId/graphs/$graphType", $query);
     }
 
-    public static function sensor(int $sensorId, string $graphType, array $query = []): string
+    public static function sensor(int $deviceId, int $sensorId, string $graphType, array $query = []): string
     {
-        return self::withQuery("/graph-data/sensors/$sensorId/graphs/$graphType", $query);
+        return self::withQuery("/graph-data/devices/$deviceId/sensors/$sensorId/graphs/$graphType", $query);
     }
 
-    public static function wireless(int $sensorId, string $graphType, array $query = []): string
+    public static function wireless(int $deviceId, int $sensorId, string $graphType, array $query = []): string
     {
-        return self::withQuery("/graph-data/wireless/$sensorId/graphs/$graphType", $query);
+        return self::withQuery("/graph-data/devices/$deviceId/wireless/$sensorId/graphs/$graphType", $query);
     }
 
     private static function withQuery(string $path, array $query): string

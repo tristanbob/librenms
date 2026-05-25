@@ -3,6 +3,10 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
+use LibreNMS\Graph\Definitions\Sensor\SensorGraph;
+use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Wireless\WirelessSensorGraph;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Tests\TestCase;
 
@@ -30,5 +34,27 @@ final class GraphDefinitionRegistryTest extends TestCase
 
         $this->assertTrue($withDefinition->supports('device_poller_perf'));
         $this->assertFalse($empty->supports('device_poller_perf'));
+    }
+
+    public function testResolvesKnownSensorGraphFamilyTypes(): void
+    {
+        $registry = new GraphDefinitionRegistry();
+        $registry->registerResolver(new SensorGraphDefinitionResolver());
+        $registry->registerResolver(new WirelessGraphDefinitionResolver());
+
+        $this->assertTrue($registry->supports('sensor_temperature'));
+        $this->assertTrue($registry->supports('wireless_rssi'));
+        $this->assertInstanceOf(SensorGraph::class, $registry->definitionFor('sensor_temperature'));
+        $this->assertInstanceOf(WirelessSensorGraph::class, $registry->definitionFor('wireless_rssi'));
+    }
+
+    public function testRejectsUnknownSensorGraphFamilyTypes(): void
+    {
+        $registry = new GraphDefinitionRegistry();
+        $registry->registerResolver(new SensorGraphDefinitionResolver());
+        $registry->registerResolver(new WirelessGraphDefinitionResolver());
+
+        $this->assertFalse($registry->supports('sensor_not_real'));
+        $this->assertFalse($registry->supports('wireless_not_real'));
     }
 }

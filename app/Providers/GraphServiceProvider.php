@@ -11,8 +11,8 @@ use LibreNMS\Graph\Definitions\Port\BitsGraph;
 use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
 use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
 use LibreNMS\Graph\Definitions\Port\PacketsGraph;
-use LibreNMS\Graph\Definitions\Sensor\SensorGraph;
-use LibreNMS\Graph\Definitions\Wireless\WirelessSensorGraph;
+use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDefinitionRegistry;
@@ -32,8 +32,8 @@ class GraphServiceProvider extends ServiceProvider
                 ErrorsGraph::class,
                 DiscardsGraph::class,
             ]);
-            $registry->registerPrefix('sensor_',   new SensorGraph());
-            $registry->registerPrefix('wireless_', new WirelessSensorGraph());
+            $registry->registerResolver(new SensorGraphDefinitionResolver());
+            $registry->registerResolver(new WirelessGraphDefinitionResolver());
             return $registry;
         });
 

@@ -59,6 +59,12 @@ if (! $auth) {
         $def = $graphRegistry->definitionFor($vars['type']);
         $echart_data_url = match ($def->entityType()) {
             'port'   => $id ? \LibreNMS\Graph\GraphDataUrl::port((int) $id, $vars['type']) : null,
+            'sensor' => $id && isset($device)
+                            ? \LibreNMS\Graph\GraphDataUrl::sensor((int) $device['device_id'], (int) $id, $vars['type'])
+                            : null,
+            'wireless_sensor' => $id && isset($device)
+                            ? \LibreNMS\Graph\GraphDataUrl::wireless((int) $device['device_id'], (int) $id, $vars['type'])
+                            : null,
             'device' => isset($device)
                             ? \LibreNMS\Graph\GraphDataUrl::device((int) $device['device_id'], $vars['type'])
                             : null,

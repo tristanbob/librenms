@@ -31,6 +31,7 @@ use App\Models\Sensor;
 use App\Models\User;
 use App\Models\WirelessSensor;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDataResult;
 use LibreNMS\Graph\GraphQuery;
@@ -50,7 +51,7 @@ class SensorGraphDataTest extends DBTestCase
     {
         parent::setUp();
 
-        $this->adminUser  = User::factory()->admin()->create();
+        $this->adminUser  = User::factory()->admin()->create(['enabled' => 1]);
         $this->adminToken = ApiToken::generateToken($this->adminUser);
         $this->device     = Device::factory()->create();
 
@@ -78,10 +79,6 @@ class SensorGraphDataTest extends DBTestCase
                     if (! $isSensor && ! $isWireless) {
                         throw new \RuntimeException("Graph type '{$query->graphType}' is not supported by this stub.");
                     }
-
-                    $sensorClass = $isSensor
-                        ? substr($query->graphType, strlen('sensor_'))
-                        : substr($query->graphType, strlen('wireless_'));
 
                     $result = new GraphDataResult(
                         id:       $query->graphType . ':' . $query->entities['sensor_id'],
@@ -184,6 +181,34 @@ class SensorGraphDataTest extends DBTestCase
         ->assertStatus(404);
     }
 
+    public function testSensorEndpointRejectsGraphTypeThatDoesNotMatchSensorClass(): void
+    {
+        $hostname = $this->device->hostname;
+        $sensorId = $this->sensor->sensor_id;
+
+        $this->json(
+            'GET',
+            "/api/v0/devices/{$hostname}/sensors/{$sensorId}/graphs/sensor_voltage/data",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        )
+        ->assertStatus(404);
+    }
+
+    public function testSensorEndpointRejectsUnknownGraphType(): void
+    {
+        $hostname = $this->device->hostname;
+        $sensorId = $this->sensor->sensor_id;
+
+        $this->json(
+            'GET',
+            "/api/v0/devices/{$hostname}/sensors/{$sensorId}/graphs/sensor_not_real/data",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        )
+        ->assertStatus(404);
+    }
+
     public function testSensorEndpointVerifiesSensorBelongsToDevice(): void
     {
         $otherDevice = Device::factory()->create();
@@ -203,6 +228,21 @@ class SensorGraphDataTest extends DBTestCase
             ['X-Auth-Token' => $this->adminToken->token_hash]
         )
         ->assertStatus(404);
+    }
+
+    public function testWebSensorEndpointUsesDeviceRouteContext(): void
+    {
+        $url = GraphDataUrl::sensor($this->device->device_id, $this->sensor->sensor_id, 'sensor_temperature');
+
+        $this->actingAs($this->adminUser)
+            ->json('GET', $url)
+            ->assertStatus(200)
+            ->assertJson([
+                'graph' => [
+                    'id' => "sensor_temperature:{$this->sensor->sensor_id}",
+                    'type' => 'sensor_temperature',
+                ],
+            ]);
     }
 
     public function testWirelessSensorEndpointReturnsSeries(): void
@@ -238,5 +278,83 @@ class SensorGraphDataTest extends DBTestCase
         $data       = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
         $this->assertContains('sensor', $seriesKeys);
+    }
+
+    public function testWirelessClientsEndpointReturnsSeries(): void
+    {
+        $wirelessSensor = WirelessSensor::forceCreate([
+            'device_id'    => $this->device->device_id,
+            'sensor_class' => 'clients',
+            'sensor_type'  => 'dummy',
+            'sensor_index' => 2,
+            'sensor_descr' => 'Client Count',
+            'sensor_oids'  => json_encode(['.1.3.6.2']),
+        ]);
+
+        $hostname = $this->device->hostname;
+        $sensorId = $wirelessSensor->sensor_id;
+
+        $response = $this->json(
+            'GET',
+            "/api/v0/devices/{$hostname}/wireless/{$sensorId}/graphs/wireless_clients/data",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        );
+
+        $response->assertStatus(200)
+            ->assertJson(['status' => 'ok'])
+            ->assertJson([
+                'graph' => [
+                    'id'   => "wireless_clients:{$sensorId}",
+                    'type' => 'wireless_clients',
+                ],
+            ]);
+    }
+
+    public function testWirelessSensorEndpointRejectsGraphTypeThatDoesNotMatchSensorClass(): void
+    {
+        $wirelessSensor = WirelessSensor::forceCreate([
+            'device_id'    => $this->device->device_id,
+            'sensor_class' => 'rssi',
+            'sensor_type'  => 'dummy',
+            'sensor_index' => 3,
+            'sensor_descr' => 'RSSI AP2',
+            'sensor_oids'  => json_encode(['.1.3.6.3']),
+        ]);
+
+        $hostname = $this->device->hostname;
+        $sensorId = $wirelessSensor->sensor_id;
+
+        $this->json(
+            'GET',
+            "/api/v0/devices/{$hostname}/wireless/{$sensorId}/graphs/wireless_clients/data",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        )
+        ->assertStatus(404);
+    }
+
+    public function testWebWirelessEndpointUsesDeviceRouteContext(): void
+    {
+        $wirelessSensor = WirelessSensor::forceCreate([
+            'device_id'    => $this->device->device_id,
+            'sensor_class' => 'rssi',
+            'sensor_type'  => 'dummy',
+            'sensor_index' => 4,
+            'sensor_descr' => 'RSSI AP3',
+            'sensor_oids'  => json_encode(['.1.3.6.4']),
+        ]);
+
+        $url = GraphDataUrl::wireless($this->device->device_id, $wirelessSensor->sensor_id, 'wireless_rssi');
+
+        $this->actingAs($this->adminUser)
+            ->json('GET', $url)
+            ->assertStatus(200)
+            ->assertJson([
+                'graph' => [
+                    'id' => "wireless_rssi:{$wirelessSensor->sensor_id}",
+                    'type' => 'wireless_rssi',
+                ],
+            ]);
     }
 }
