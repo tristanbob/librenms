@@ -24,11 +24,14 @@
  * @author     Peca Nesovanovic <peca.nesovanovic@sattrakt.com>
  */
 
+use App\Facades\LibrenmsConfig;
 use App\Models\DiskIo;
 use App\Models\Mempool;
 use App\Models\Processor;
 use App\Models\Sensor;
 use App\Models\Storage;
+use LibreNMS\Graph\GraphDataUrl;
+use LibreNMS\Util\Url;
 
 /*
 # QFP count for cisco devices
@@ -112,12 +115,42 @@ $metric = basename((string) $vars['metric']);
 if (is_file("includes/html/pages/device/health/$metric.inc.php")) {
     include "includes/html/pages/device/health/$metric.inc.php";
 } else {
+    $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
+    $registry  = $renderer === 'echarts' ? app(\LibreNMS\Graph\GraphDefinitionRegistry::class) : null;
+    $periods   = LibrenmsConfig::get('graphs.mini.normal');
+
     foreach ($datas as $type) {
-        if ($type != 'overview') {
-            $graph_title = $type_text[$type];
-            $graph_array['type'] = 'device_' . $type;
-            include 'includes/html/print-device-graph.php';
+        if ($type === 'overview') {
+            continue;
         }
+
+        $graph_title = $type_text[$type];
+        $graphType   = 'device_' . $type;
+
+        echo '<div class="panel panel-default">';
+        echo '<div class="panel-heading"><h3 class="panel-title">' . e($graph_title) . '</h3></div>';
+        echo '<div class="panel-body"><div class="row">';
+
+        if ($registry !== null && $registry->supports($graphType)) {
+            $to = time();
+            foreach ($periods as $period => $period_text) {
+                $from    = (int) LibrenmsConfig::get("time.$period");
+                $dataUrl = GraphDataUrl::device((int) $device['device_id'], $graphType, ['from' => $from, 'to' => $to]);
+                $linkUrl = Url::generate(['page' => 'device', 'device' => $device['device_id'], 'tab' => 'health', 'metric' => $type]);
+                echo '<div class="col-md-3 col-sm-6 col-xs-12">';
+                echo '<div class="lnms-echart" style="width:100%;height:150px"'
+                    . ' data-graph-url="' . e($dataUrl) . '"'
+                    . ' data-link-url="' . e($linkUrl) . '"></div>';
+                echo '</div>';
+            }
+        } else {
+            $graph_array          = [];
+            $graph_array['type']  = $graphType;
+            $graph_array['device'] = $device['device_id'];
+            include 'includes/html/print-graphrow.inc.php';
+        }
+
+        echo '</div></div></div>';
     }
 }
 

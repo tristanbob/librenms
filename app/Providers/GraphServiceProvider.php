@@ -6,11 +6,14 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use LibreNMS\Data\Store\Rrd;
 use LibreNMS\Graph\Definitions\Device\BitsGraph as DeviceBitsGraph;
+use LibreNMS\Graph\Definitions\Device\DeviceSensorGraphDefinitionResolver;
+use LibreNMS\Graph\Definitions\Device\DiskIoGraph as DeviceDiskIoGraph;
 use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
 use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
 use LibreNMS\Graph\Definitions\Device\PollerModulesPerfGraph;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
+use LibreNMS\Graph\Definitions\Device\StorageGraph as DeviceStorageGraph;
 use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Mempool\UsageGraph as MempoolUsageGraph;
 use LibreNMS\Graph\Definitions\Port\BitsGraph;
@@ -38,6 +41,8 @@ class GraphServiceProvider extends ServiceProvider
                 IcmpPerfGraph::class,
                 DeviceProcessorGraph::class,
                 DeviceMempoolGraph::class,
+                DeviceStorageGraph::class,
+                DeviceDiskIoGraph::class,
                 PollerPerfGraph::class,
                 PollerModulesPerfGraph::class,
                 ProcessorUsageGraph::class,
@@ -50,6 +55,7 @@ class GraphServiceProvider extends ServiceProvider
                 DiscardsGraph::class,
             ]);
             $registry->registerResolver(new DeviceWirelessGraphDefinitionResolver());
+            $registry->registerResolver(new DeviceSensorGraphDefinitionResolver());
             $registry->registerResolver(new SensorGraphDefinitionResolver());
             $registry->registerResolver(new WirelessGraphDefinitionResolver());
             return $registry;
