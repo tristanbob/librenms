@@ -6,6 +6,7 @@
         data-hide-legend="true"
         data-hide-tooltip="true"
         data-sparkline="true"
+        @if($echartsTheme) data-theme="{{ $echartsTheme }}" @endif
         {{ $attributes->filter($filterAttributes)->merge(['class' => 'lnms-echart ' . ($attributes->get('img-class') ?? '')]) }}
     ></div>
 @else

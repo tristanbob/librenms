@@ -28,12 +28,14 @@ class VictoriaMetricsMetricBinding implements MetricBinding
     public const SOURCE = 'victoriametrics';
 
     /**
-     * @param string   $metricName  Prometheus metric name to query
-     * @param string[] $labelKeys   Keys from GraphQuery::$entities to use as MetricsQL label matchers
+     * @param string        $metricName Prometheus metric name to query
+     * @param string[]      $labelKeys  Keys from GraphQuery::$entities to use as MetricsQL label matchers
+     * @param callable|null $transform  Applied to each raw value before storage
      */
     public function __construct(
         public readonly string $metricName,
         public readonly array  $labelKeys = ['device_id'],
+        public readonly mixed  $transform = null,
     ) {}
 
     public function source(): string

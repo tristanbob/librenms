@@ -47,6 +47,7 @@ class Graph extends Component
     private $popup;
     public bool $useEcharts = false;
     public ?string $echartsDataUrl = null;
+    public ?string $echartsTheme = null;
 
     /**
      * Create a new component instance.
@@ -115,6 +116,7 @@ class Graph extends Component
         ];
         $this->echartsDataUrl = $this->getEchartsDataUrl();
         $this->useEcharts = $this->echartsDataUrl !== null;
+        $this->echartsTheme = $this->useEcharts ? json_encode($this->getEchartsTheme()) : null;
 
         return view($view, $data);
     }
@@ -168,6 +170,30 @@ class Graph extends Component
         };
     }
 
+    private function getEchartsTheme(): array
+    {
+        $out = [];
+        $defaults = [
+            'light' => ['back' => 'transparent', 'grid' => '#a5a5a5', 'frame' => '#5e5e5e', 'font' => '#000000'],
+            'dark'  => ['back' => '#2e3338',      'grid' => '#292929', 'frame' => '#5e5e5e', 'font' => '#f8f9f9'],
+        ];
+        foreach (['light' => 'rrdgraph_def_text', 'dark' => 'rrdgraph_def_text_dark'] as $mode => $key) {
+            $def = LibrenmsConfig::get($key, '');
+            preg_match_all('/-c ([A-Z]+)#([0-9A-Fa-f]{6,8})/', $def, $m);
+            $colors = $m[1] ? array_combine($m[1], $m[2]) : [];
+            $fontKey = $mode === 'dark' ? 'rrdgraph_def_text_color_dark' : 'rrdgraph_def_text_color';
+            $fontDefault = $defaults[$mode]['font'];
+            $out[$mode] = [
+                'font'       => '#' . ltrim(LibrenmsConfig::get($fontKey, ltrim($fontDefault, '#')), '#'),
+                'background' => isset($colors['BACK']) ? '#' . substr($colors['BACK'], 0, 6) : $defaults[$mode]['back'],
+                'grid'       => isset($colors['GRID']) ? '#' . $colors['GRID'] : $defaults[$mode]['grid'],
+                'frame'      => isset($colors['FRAME']) ? '#' . $colors['FRAME'] : $defaults[$mode]['frame'],
+            ];
+        }
+
+        return $out;
+    }
+
     private function getEchartsDataUrl(): ?string
     {
         if (LibrenmsConfig::get('graphs.renderer', 'rrd') !== 'echarts' || $this->type === '') {
@@ -179,12 +205,14 @@ class Graph extends Component
             return null;
         }
 
-        $query = [
-            'from' => Time::parseAt($this->from ?: '-1d'),
-            'to' => $this->to === null || $this->to === '' ? time() : Time::parseAt($this->to),
-            'width' => $this->width,
-            'height' => $this->height,
-        ];
+        $query = array_filter([
+            'from'      => Time::parseAt($this->from ?: '-1d'),
+            'to'        => $this->to === null || $this->to === '' ? time() : Time::parseAt($this->to),
+            'width'     => $this->width,
+            'height'    => $this->height,
+            'scale_min' => isset($this->vars['scale_min']) ? (int) $this->vars['scale_min'] : null,
+            'scale_max' => isset($this->vars['scale_max']) ? (int) $this->vars['scale_max'] : null,
+        ], fn ($v) => $v !== null);
 
         $definition = $registry->definitionFor($this->type);
 

@@ -84,6 +84,7 @@ return [
             'ping' => ['name' => 'Ping'],
             'prometheus' => ['name' => 'Datastore: Prometheus'],
             'rrdtool' => ['name' => 'Datastore: RRDTool'],
+            'victoriametrics' => ['name' => 'Datastore: VictoriaMetrics'],
             'snmp' => ['name' => 'SNMP'],
             'dispatcherservice' => ['name' => 'Dispatcher Service'],
             'poller_modules' => ['name' => 'Poller Modules'],
@@ -1101,6 +1102,14 @@ return [
                 'description' => 'Zoom port graphs to port speed',
                 'help' => 'Zoom port graphs so the max is always the port speed, disabled port graphs zoom to traffic',
             ],
+            'renderer' => [
+                'description' => 'Graph renderer',
+                'help' => 'Controls the browser graph renderer. RRD uses the existing image graphs. ECharts uses interactive browser graphs for supported graph types and keeps unsupported graphs on RRD images.',
+                'options' => [
+                    'rrd' => 'RRD (default)',
+                    'echarts' => 'ECharts (experimental)',
+                ],
+            ],
         ],
         'graylog' => [
             'base_uri' => [
@@ -1664,6 +1673,56 @@ return [
         'percentile_value' => [
             'description' => 'Percentile Value',
             'help' => 'The percentile value to use for traffic graphs. 0 means disabled.',
+        ],
+        'victoriametrics' => [
+            'enable' => [
+                'description' => 'Enable VictoriaMetrics writes',
+                'help' => 'Writes poller metric samples to VictoriaMetrics in addition to RRD. This does not make graphs read from VictoriaMetrics by itself.',
+            ],
+            'write_mode' => [
+                'description' => 'Write target',
+                'help' => 'Choose where LibreNMS sends VictoriaMetrics samples. vmagent relay is recommended because vmagent handles remote-write forwarding and buffering. Direct VictoriaMetrics sends samples to a single VictoriaMetrics node.',
+                'options' => [
+                    'vmagent' => 'vmagent relay (recommended)',
+                    'direct' => 'Direct VictoriaMetrics',
+                ],
+            ],
+            'write_host' => [
+                'description' => 'Write hostname',
+                'help' => 'Optional. Hostname or IP address for the selected write target. Leave blank to use 127.0.0.1.',
+            ],
+            'write_port' => [
+                'description' => 'Write port',
+                'help' => 'Optional. Leave blank to use the selected write target default: port 8429 for vmagent relay or port 8428 for direct VictoriaMetrics.',
+            ],
+            'write_path' => [
+                'description' => 'Write URL path',
+                'help' => 'Optional. Leave blank to use /api/v1/import/prometheus. Change this only when a proxy or custom VictoriaMetrics-compatible endpoint requires a different path.',
+            ],
+            'timeout' => [
+                'description' => 'VictoriaMetrics timeout',
+                'help' => 'Maximum number of seconds LibreNMS waits for VictoriaMetrics write and graph query HTTP requests before treating them as failed.',
+            ],
+            'batch_size' => [
+                'description' => 'VictoriaMetrics batch size',
+                'help' => 'Maximum number of metric samples sent in one VictoriaMetrics write request. Lower this if the remote endpoint rejects large requests.',
+            ],
+            'verify_ssl' => [
+                'description' => 'Verify VictoriaMetrics TLS',
+                'help' => 'Verify TLS certificates when connecting to VictoriaMetrics over HTTPS.',
+            ],
+            'debug' => [
+                'description' => 'Debug VictoriaMetrics writes',
+                'help' => 'Logs additional VictoriaMetrics write details for troubleshooting ingestion problems. Leave disabled during normal operation.',
+            ],
+            'query_enabled' => [
+                'description' => 'Use VictoriaMetrics for graph data',
+                'help' => 'Reads supported graph data from VictoriaMetrics instead of RRD. If VictoriaMetrics cannot serve a graph, LibreNMS falls back to RRD.',
+            ],
+            'query_url' => [
+                'description' => 'VictoriaMetrics query URL',
+                'help' => 'Base URL of the VictoriaMetrics instance used for graph data queries. Do not include /api/v1/query_range; LibreNMS adds that path.',
+            ],
         ],
         'permission' => [
             'device_group' => [

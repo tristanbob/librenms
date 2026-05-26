@@ -41,7 +41,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
     {
         parent::__construct($registry);
         $this->queryUrl  = rtrim(LibrenmsConfig::get('victoriametrics.query_url', self::DEFAULT_QUERY_URL), '/');
-        $this->timeout   = (float) LibrenmsConfig::get('victoriametrics.timeout', 2.0);
+        $this->timeout   = (float) LibrenmsConfig::get('victoriametrics.timeout', 10.0);
         $this->verifySsl = (bool) LibrenmsConfig::get('victoriametrics.verify_ssl', true);
     }
 
@@ -93,6 +93,14 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
                 $s = $this->emptySeries($seriesDef);
                 foreach ($raw as [$tsMs, $value]) {
                     if ($value !== null) {
+                        if ($binding->transform !== null) {
+                            $value = ($binding->transform)($value);
+                        }
+
+                        if ($value === null || ! is_finite($value)) {
+                            continue;
+                        }
+
                         $s->addPoint($tsMs + $shiftMs, round($value, 4));
                     }
                 }
@@ -129,6 +137,10 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
 
         $points = [];
         foreach ($raw as [$tsMs, $value]) {
+            if ($value !== null && $binding->transform !== null) {
+                $value = ($binding->transform)($value);
+            }
+
             if ($value !== null && is_finite($value)) {
                 $points[$tsMs] = $value;
             }

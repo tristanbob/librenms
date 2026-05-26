@@ -312,9 +312,13 @@ function get_device_graph_data(Request $request)
         $to     = (int) $request->input('to',    time());
         $width  = (int) $request->input('width', 1200);
         $height = (int) $request->input('height', 300);
+        $options = array_filter([
+            'scale_min' => $request->has('scale_min') ? (int) $request->input('scale_min') : null,
+            'scale_max' => $request->has('scale_max') ? (int) $request->input('scale_max') : null,
+        ], fn ($v) => $v !== null);
 
         try {
-            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('device', $graph_type, ['device_id' => $device_id], $from, $to, $width, $height);
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('device', $graph_type, ['device_id' => $device_id], $from, $to, $width, $height, $options);
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result = $provider->query($query);
 
@@ -342,13 +346,17 @@ function get_port_graph_data(Request $request)
         $to     = (int) $request->input('to',    time());
         $width  = (int) $request->input('width', 1200);
         $height = (int) $request->input('height', 300);
+        $options = array_filter([
+            'scale_min' => $request->has('scale_min') ? (int) $request->input('scale_min') : null,
+            'scale_max' => $request->has('scale_max') ? (int) $request->input('scale_max') : null,
+        ], fn ($v) => $v !== null);
 
         try {
             $query    = \LibreNMS\Graph\GraphQuery::fromRequest(
                 'port',
                 $graph_type,
                 ['device_id' => $device_id, 'port_id' => $port_id, 'port_name' => $port_name],
-                $from, $to, $width, $height
+                $from, $to, $width, $height, $options
             );
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result = $provider->query($query);
@@ -380,6 +388,10 @@ function get_sensor_graph_data(Request $request)
         $to     = (int) $request->input('to',     time());
         $width  = (int) $request->input('width',  1200);
         $height = (int) $request->input('height', 300);
+        $options = array_filter([
+            'scale_min' => $request->has('scale_min') ? (int) $request->input('scale_min') : null,
+            'scale_max' => $request->has('scale_max') ? (int) $request->input('scale_max') : null,
+        ], fn ($v) => $v !== null);
 
         $entities = [
             'device_id'             => $device_id,
@@ -396,7 +408,7 @@ function get_sensor_graph_data(Request $request)
         ];
 
         try {
-            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('sensor', $graph_type, $entities, $from, $to, $width, $height);
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('sensor', $graph_type, $entities, $from, $to, $width, $height, $options);
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result   = $provider->query($query);
 
@@ -572,9 +584,13 @@ function api_entity_graph_data(Request $request, string $entity_type, string $gr
     $to = (int) $request->input('to', time());
     $width = (int) $request->input('width', 1200);
     $height = (int) $request->input('height', 300);
+    $options = array_filter([
+        'scale_min' => $request->has('scale_min') ? (int) $request->input('scale_min') : null,
+        'scale_max' => $request->has('scale_max') ? (int) $request->input('scale_max') : null,
+    ], fn ($v) => $v !== null);
 
     try {
-        $query = \LibreNMS\Graph\GraphQuery::fromRequest($entity_type, $graph_type, $entities, $from, $to, $width, $height);
+        $query = \LibreNMS\Graph\GraphQuery::fromRequest($entity_type, $graph_type, $entities, $from, $to, $width, $height, $options);
         $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
         $result = $provider->query($query);
 

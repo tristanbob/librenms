@@ -52,7 +52,13 @@ use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
  */
 class VictoriaMetrics extends BaseDatastore implements Datastore
 {
-    private const DEFAULT_WRITE_URL = 'http://127.0.0.1:8429/api/v1/import/prometheus';
+    private const DEFAULT_WRITE_MODE = 'vmagent';
+    private const DEFAULT_SCHEME = 'http';
+    private const DEFAULT_VMAGENT_HOST = '127.0.0.1';
+    private const DEFAULT_VMAGENT_PORT = 8429;
+    private const DEFAULT_DIRECT_HOST = '127.0.0.1';
+    private const DEFAULT_DIRECT_PORT = 8428;
+    private const DEFAULT_IMPORT_PATH = '/api/v1/import/prometheus';
     private const FAILURE_BACKOFF_SECONDS = 60;
 
     private array $batch = [];
@@ -66,9 +72,15 @@ class VictoriaMetrics extends BaseDatastore implements Datastore
     public function __construct()
     {
         parent::__construct();
-        $this->writeUrl = LibrenmsConfig::get('victoriametrics.write_url', self::DEFAULT_WRITE_URL);
+        $this->writeUrl = self::resolveWriteUrl(
+            LibrenmsConfig::get('victoriametrics.write_mode', self::DEFAULT_WRITE_MODE),
+            LibrenmsConfig::get('victoriametrics.write_host', ''),
+            LibrenmsConfig::get('victoriametrics.write_port', ''),
+            LibrenmsConfig::get('victoriametrics.write_path', ''),
+            LibrenmsConfig::get('victoriametrics.write_url', '')
+        );
         $this->batchSize = (int) LibrenmsConfig::get('victoriametrics.batch_size', 500);
-        $this->timeout = (float) LibrenmsConfig::get('victoriametrics.timeout', 2.0);
+        $this->timeout = (float) LibrenmsConfig::get('victoriametrics.timeout', 10.0);
         $this->verifySsl = (bool) LibrenmsConfig::get('victoriametrics.verify_ssl', true);
         $this->debug = (bool) LibrenmsConfig::get('victoriametrics.debug', false);
     }
@@ -157,5 +169,71 @@ class VictoriaMetrics extends BaseDatastore implements Datastore
     private function isTemporarilyDisabled(): bool
     {
         return $this->disabledUntil > time();
+    }
+
+    public static function resolveWriteUrl(?string $mode, ?string $host, mixed $port = null, ?string $path = null, ?string $legacyUrl = null): string
+    {
+        $mode = in_array($mode, ['vmagent', 'direct', 'custom'], true) ? $mode : self::DEFAULT_WRITE_MODE;
+        $host = trim((string) $host);
+        $path = trim((string) $path);
+        $legacyUrl = trim((string) $legacyUrl);
+
+        if ($host === '' && $path === '' && $legacyUrl !== '') {
+            return self::resolveLegacyWriteUrl($mode, $legacyUrl);
+        }
+
+        $host = $host === '' ? self::defaultHost($mode) : $host;
+        $path = $path === '' ? self::DEFAULT_IMPORT_PATH : self::normalizePath($path);
+        $configuredPort = self::normalizePort($port);
+        $url = self::ensureScheme($host);
+
+        $parts = parse_url($url);
+        $scheme = $parts['scheme'] ?? self::DEFAULT_SCHEME;
+        $hostname = $parts['host'] ?? $host;
+        $configuredPort ??= $parts['port'] ?? self::defaultPort($mode);
+
+        return "{$scheme}://{$hostname}:{$configuredPort}{$path}";
+    }
+
+    private static function resolveLegacyWriteUrl(string $mode, string $configuredUrl): string
+    {
+        $url = self::ensureScheme($configuredUrl);
+        $path = parse_url($url, PHP_URL_PATH);
+        if ($path === null || $path === '' || $path === '/') {
+            return rtrim($url, '/') . self::DEFAULT_IMPORT_PATH;
+        }
+
+        return rtrim($url, '/');
+    }
+
+    private static function ensureScheme(string $url): string
+    {
+        return preg_match('#^https?://#i', $url) ? $url : 'http://' . $url;
+    }
+
+    private static function normalizePath(string $path): string
+    {
+        return '/' . ltrim($path, '/');
+    }
+
+    private static function normalizePort(mixed $port): ?int
+    {
+        if ($port === null || $port === '') {
+            return null;
+        }
+
+        $port = (int) $port;
+
+        return $port > 0 ? $port : null;
+    }
+
+    private static function defaultHost(string $mode): string
+    {
+        return $mode === 'direct' ? self::DEFAULT_DIRECT_HOST : self::DEFAULT_VMAGENT_HOST;
+    }
+
+    private static function defaultPort(string $mode): int
+    {
+        return $mode === 'direct' ? self::DEFAULT_DIRECT_PORT : self::DEFAULT_VMAGENT_PORT;
     }
 }

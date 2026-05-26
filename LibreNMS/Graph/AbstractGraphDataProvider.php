@@ -66,6 +66,12 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             $def->display()
         ));
         $result->setVariables($variables);
+        if (isset($query->options['scale_min'])) {
+            $result->overrideYAxisMin((int) $query->options['scale_min']);
+        }
+        if (isset($query->options['scale_max'])) {
+            $result->overrideYAxisMax((int) $query->options['scale_max']);
+        }
         $this->fillSeries($result, $def, $device, $query);
         foreach ($def->markers($device, $query) as $marker) {
             if ($marker instanceof GraphMarkerDefinition) {

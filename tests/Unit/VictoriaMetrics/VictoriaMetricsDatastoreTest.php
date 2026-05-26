@@ -18,9 +18,13 @@ final class VictoriaMetricsDatastoreTest extends TestCase
         parent::setUp();
 
         LibrenmsConfig::set('victoriametrics.enable', true);
-        LibrenmsConfig::set('victoriametrics.write_url', 'http://vmagent-fake:8429/api/v1/import/prometheus');
+        LibrenmsConfig::set('victoriametrics.write_mode', 'vmagent');
+        LibrenmsConfig::set('victoriametrics.write_host', 'vmagent-fake');
+        LibrenmsConfig::set('victoriametrics.write_port', '');
+        LibrenmsConfig::set('victoriametrics.write_path', '');
+        LibrenmsConfig::set('victoriametrics.write_url', '');
         LibrenmsConfig::set('victoriametrics.batch_size', 500);
-        LibrenmsConfig::set('victoriametrics.timeout', 2);
+        LibrenmsConfig::set('victoriametrics.timeout', 10);
         LibrenmsConfig::set('victoriametrics.verify_ssl', true);
         LibrenmsConfig::set('victoriametrics.debug', false);
 
@@ -159,9 +163,10 @@ final class VictoriaMetricsDatastoreTest extends TestCase
         $store->terminate();
     }
 
-    public function testPostUrlUsesConfiguredWriteUrl(): void
+    public function testPostUrlUsesConfiguredWriteHostAndPort(): void
     {
-        LibrenmsConfig::set('victoriametrics.write_url', 'http://victoriametrics:8428/api/v1/import/prometheus');
+        LibrenmsConfig::set('victoriametrics.write_host', 'victoriametrics');
+        LibrenmsConfig::set('victoriametrics.write_port', '8428');
         Http::fake(['*' => Http::response('', 204)]);
         $store = new VictoriaMetrics();
 
@@ -169,5 +174,45 @@ final class VictoriaMetricsDatastoreTest extends TestCase
         $store->terminate();
 
         Http::assertSent(fn ($request) => $request->url() === 'http://victoriametrics:8428/api/v1/import/prometheus');
+    }
+
+    public function testWriteUrlDefaultsToVmagentImportEndpoint(): void
+    {
+        $this->assertSame(
+            'http://127.0.0.1:8429/api/v1/import/prometheus',
+            VictoriaMetrics::resolveWriteUrl('vmagent', '', '', '')
+        );
+    }
+
+    public function testWriteUrlDefaultsToDirectVictoriaMetricsImportEndpoint(): void
+    {
+        $this->assertSame(
+            'http://127.0.0.1:8428/api/v1/import/prometheus',
+            VictoriaMetrics::resolveWriteUrl('direct', '', '', '')
+        );
+    }
+
+    public function testWriteUrlAcceptsConfiguredHostAndPort(): void
+    {
+        $this->assertSame(
+            'http://vmagent.example.net:8429/api/v1/import/prometheus',
+            VictoriaMetrics::resolveWriteUrl('vmagent', 'vmagent.example.net', '8429', '')
+        );
+    }
+
+    public function testWriteUrlAcceptsCustomPath(): void
+    {
+        $this->assertSame(
+            'https://metrics.example.net:8429/custom/import',
+            VictoriaMetrics::resolveWriteUrl('vmagent', 'https://metrics.example.net', '', 'custom/import')
+        );
+    }
+
+    public function testLegacyWriteUrlStillWorks(): void
+    {
+        $this->assertSame(
+            'http://proxy.example.net/librenms',
+            VictoriaMetrics::resolveWriteUrl('vmagent', '', '', '', 'http://proxy.example.net/librenms/')
+        );
     }
 }

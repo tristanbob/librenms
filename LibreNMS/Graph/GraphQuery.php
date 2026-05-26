@@ -23,13 +23,15 @@
 
 namespace LibreNMS\Graph;
 
+use LibreNMS\Config as LibrenmsConfig;
+
 class GraphQuery
 {
     private const MIN_WIDTH = 1;
     private const MAX_WIDTH = 5000;
     private const MIN_HEIGHT = 1;
     private const MAX_HEIGHT = 3000;
-    private const MIN_STEP = 300;
+    private const DEFAULT_MIN_STEP = 300;
     private const MAX_RANGE = 63244800; // 2 * 366 days
     private const MAX_POINTS = 10000;
 
@@ -70,7 +72,7 @@ class GraphQuery
             throw new \InvalidArgumentException('Graph query time range is too large.');
         }
 
-        $this->step = $step ?? max(self::MIN_STEP, (int) ceil($range / $this->width));
+        $this->step = $step ?? max(self::configuredMinStep($this->graphType), (int) ceil($range / $this->width));
         if ($this->step < 1) {
             throw new \InvalidArgumentException('Graph query step must be positive.');
         }
@@ -138,5 +140,12 @@ class GraphQuery
             $options,
             $this->step,
         );
+    }
+
+    private static function configuredMinStep(string $graphType): int
+    {
+        $setting = $graphType === 'device_icmp_perf' ? 'ping_rrd_step' : 'rrd.step';
+
+        return max(1, (int) LibrenmsConfig::get($setting, self::DEFAULT_MIN_STEP));
     }
 }

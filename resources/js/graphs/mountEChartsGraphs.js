@@ -111,10 +111,13 @@ export function mountEChartsGraphs() {
             const dark       = isDark();
             const hideLegend = el.dataset.hideLegend === 'true';
 
+            const themeOverrides = el.dataset.theme ? JSON.parse(el.dataset.theme) : null;
+
             chart.setOption(toEChartsOptions(lastPayload, {
                 dark,
-                hideTooltip: el.dataset.hideTooltip === 'true',
-                sparkline:   el.dataset.sparkline    === 'true',
+                hideTooltip:    el.dataset.hideTooltip === 'true',
+                sparkline:      el.dataset.sparkline   === 'true',
+                themeOverrides,
             }), true);
 
             if (legendEl) {
