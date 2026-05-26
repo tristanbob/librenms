@@ -2,12 +2,14 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
+use LibreNMS\Graph\DefaultVariables;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 
 abstract class GraphTemplate implements GraphDefinition
 {
+    use DefaultVariables;
     public function __construct(
         protected readonly string $graphType,
         protected readonly string $title,

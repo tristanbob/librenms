@@ -95,6 +95,21 @@ class GraphQuery
         return new self($scope, $graphType, $from, $to, $width, $height, $entities, $options);
     }
 
+    public function withTimeRange(int $from, int $to): self
+    {
+        return new self(
+            $this->scope,
+            $this->graphType,
+            $from,
+            $to,
+            $this->width,
+            $this->height,
+            $this->entities,
+            $this->options,
+            $this->step,
+        );
+    }
+
     public function withStep(int $step): self
     {
         return new self(

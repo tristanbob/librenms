@@ -2,15 +2,13 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
-use LibreNMS\Graph\GraphExpression;
 use LibreNMS\Graph\GraphMarkerDefinition;
-use LibreNMS\Graph\GraphPlan;
-use LibreNMS\Graph\GraphPlanDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\GraphVariableDefinition;
+use LibreNMS\Graph\RrdMetricBinding;
 
-class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
+class SimpleStatsGraph extends GraphTemplate
 {
     public function __construct(
         string $graphType,
@@ -35,72 +33,73 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
         return $this->graphVariables;
     }
 
-    public function expressions(array $device, GraphQuery $query): GraphPlan
+    public function series(array $device, GraphQuery $query): array
     {
         $timeDiff = $query->to - $query->from;
-        $label = $this->label !== '' ? $this->label : $this->title;
-        $base = $this->expression($query);
+        $label    = $this->label !== '' ? $this->label : $this->title;
+        $scale    = is_numeric($this->transform) ? (float) $this->transform : null;
+        $binding  = fn (?int $step) => new RrdMetricBinding(
+            rrdName:   $this->resolvedRrdName($query),
+            ds:        $this->ds,
+            step:      $step,
+            transform: $scale !== null ? fn ($v) => $v * $scale : null,
+        );
+
         $series = [
             new GraphSeriesDefinition(
-                name: $label,
-                key: $this->key('value'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 0, '663399'),
-                area: true,
+                name:        $label,
+                key:         $this->key('value'),
+                unit:        $this->unit($device, $query),
+                color:       $this->paletteColor($this->palette, 0, '663399'),
+                area:        true,
                 areaOpacity: 0x33 / 0xff,
-                expression: $base,
+                bindings:    [$binding(null)],
             ),
             new GraphSeriesDefinition(
-                name: '1 hour avg',
-                key: $this->key('1h'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 4, '3366BB'),
-                expression: $this->expression($query, 3600),
+                name:     '1 hour avg',
+                key:      $this->key('1h'),
+                unit:     $this->unit($device, $query),
+                color:    $this->paletteColor($this->palette, 4, '3366BB'),
+                bindings: [$binding(3600)],
             ),
         ];
 
         if ($timeDiff >= 129600) {
             $series[] = new GraphSeriesDefinition(
-                name: '1 day avg',
-                key: $this->key('1d'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 5, 'AA3355'),
-                expression: $this->expression($query, 86400),
+                name:     '1 day avg',
+                key:      $this->key('1d'),
+                unit:     $this->unit($device, $query),
+                color:    $this->paletteColor($this->palette, 5, 'AA3355'),
+                bindings: [$binding(86400)],
             );
         }
 
         if ($timeDiff >= 691200) {
             $series[] = new GraphSeriesDefinition(
-                name: '1 week avg',
-                key: $this->key('1w'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 6, '881177'),
-                expression: $this->expression($query, 604800),
+                name:     '1 week avg',
+                key:      $this->key('1w'),
+                unit:     $this->unit($device, $query),
+                color:    $this->paletteColor($this->palette, 6, '881177'),
+                bindings: [$binding(604800)],
             );
         }
 
-        return new GraphPlan($series, $this->percentileMarkers($base));
+        return $series;
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function markers(array $device, GraphQuery $query): array
     {
-        // Plan-based graphs are evaluated via expressions(); series() must not be called.
-        throw new \LogicException('SimpleStatsGraph is a GraphPlanDefinition; use expressions() instead of series().');
-    }
-
-    public function display(): array
-    {
-        return parent::display();
-    }
-
-    private function expression(GraphQuery $query, ?int $step = null): GraphExpression
-    {
-        $expression = GraphExpression::def($this->resolvedRrdName($query), $this->ds, step: $step);
-        if (is_numeric($this->transform)) {
-            $expression = GraphExpression::scale($expression, (float) $this->transform);
+        if (\App\Facades\LibrenmsConfig::get('graph_stat_percentile_disable')) {
+            return [];
         }
 
-        return $expression;
+        $inner = new RrdMetricBinding($this->resolvedRrdName($query), $this->ds);
+
+        return [
+            GraphMarkerDefinition::percentile('25th Percentile', $inner, 25, $this->paletteColor($this->palette, 1, '22CCBB')),
+            GraphMarkerDefinition::percentile('50th Percentile', $inner, 50, $this->paletteColor($this->palette, 2, '00BBCC')),
+            GraphMarkerDefinition::percentile('75th Percentile', $inner, 75, $this->paletteColor($this->palette, 3, '0099CC')),
+        ];
     }
 
     private function resolvedRrdName(GraphQuery $query): string|array
@@ -110,19 +109,6 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
         }
 
         return $this->rrdName;
-    }
-
-    private function percentileMarkers(GraphExpression $expression): array
-    {
-        if (\App\Facades\LibrenmsConfig::get('graph_stat_percentile_disable')) {
-            return [];
-        }
-
-        return [
-            GraphMarkerDefinition::percentile('25th Percentile', $expression, 25, $this->paletteColor($this->palette, 1, '22CCBB')),
-            GraphMarkerDefinition::percentile('50th Percentile', $expression, 50, $this->paletteColor($this->palette, 2, '00BBCC')),
-            GraphMarkerDefinition::percentile('75th Percentile', $expression, 75, $this->paletteColor($this->palette, 3, '0099CC')),
-        ];
     }
 
     private function key(string $suffix): string

@@ -33,6 +33,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class DeviceSensorGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     // Matches the 7-color cycle used by includes/html/graphs/device/sensor.inc.php
     private const COLORS = ['CC0000', '008C00', '4096EE', '73880A', 'D01F3C', '36393D', 'FF0084'];
 

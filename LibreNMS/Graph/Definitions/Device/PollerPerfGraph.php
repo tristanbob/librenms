@@ -32,6 +32,8 @@ use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
 class PollerPerfGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_poller_perf';
 
     private const PALETTE = 'rainbow_stats_purple';

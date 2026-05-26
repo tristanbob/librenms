@@ -30,6 +30,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class DiscardsGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'port_discards';
 
     public function graphType(): string

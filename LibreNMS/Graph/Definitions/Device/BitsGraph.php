@@ -33,6 +33,8 @@ use LibreNMS\Util\Rewrite;
 
 class BitsGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_bits';
 
     private const IN_PALETTE = 'greens';

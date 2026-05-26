@@ -9,6 +9,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class IcmpPerfGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_icmp_perf';
 
     public function graphType(): string { return self::GRAPH_TYPE; }

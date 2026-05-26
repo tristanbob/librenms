@@ -11,6 +11,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class MempoolGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_mempool';
 
     public function graphType(): string { return self::GRAPH_TYPE; }

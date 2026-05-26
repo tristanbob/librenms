@@ -51,12 +51,6 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         array           $device,
         GraphQuery      $query
     ): void {
-        if ($def instanceof GraphPlanDefinition) {
-            throw new NoVmBindingException(
-                "GraphPlanDefinition graphs are evaluated server-side on RRD only; VM expression translation is not implemented for graph type '{$query->graphType}'."
-            );
-        }
-
         $series = $def->series($device, $query);
 
         $hasVmBinding = false;
@@ -73,7 +67,17 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         }
 
         foreach ($series as $seriesDef) {
-            $binding = $seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE);
+            $binding     = $seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE);
+            $seriesQuery = $query;
+            $shiftMs     = 0;
+            if ($binding instanceof ShiftBinding) {
+                $shiftMs     = $binding->offsetSeconds * 1000;
+                $seriesQuery = $query->withTimeRange(
+                    $query->from - $binding->offsetSeconds,
+                    $query->to - $binding->offsetSeconds,
+                );
+                $binding = $binding->inner;
+            }
             if (! $binding instanceof VictoriaMetricsMetricBinding) {
                 $result->addSeries($this->emptySeries($seriesDef));
                 continue;
@@ -82,17 +86,17 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
             try {
                 $raw    = $this->fetchRange(
                     self::buildExpr($binding, $query->entities),
-                    $query->from,
-                    $query->to,
-                    $query->step
+                    $seriesQuery->from,
+                    $seriesQuery->to,
+                    $seriesQuery->step,
                 );
-                $series = $this->emptySeries($seriesDef);
+                $s = $this->emptySeries($seriesDef);
                 foreach ($raw as [$tsMs, $value]) {
                     if ($value !== null) {
-                        $series->addPoint($tsMs, round($value, 4));
+                        $s->addPoint($tsMs + $shiftMs, round($value, 4));
                     }
                 }
-                $result->addSeries($series);
+                $result->addSeries($s);
             } catch (\RuntimeException $e) {
                 Log::debug('VictoriaMetrics graph data fetch failed: ' . $e->getMessage());
                 $result->addWarning("VictoriaMetrics query failed for series '{$seriesDef->key}'; empty returned.");
@@ -101,6 +105,36 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         }
 
         $result->setSource(VictoriaMetricsMetricBinding::SOURCE);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    protected function evaluateBindingPoints(MetricBinding $binding, array $device, GraphQuery $query): array
+    {
+        if (! $binding instanceof VictoriaMetricsMetricBinding) {
+            return [];
+        }
+
+        try {
+            $raw = $this->fetchRange(
+                self::buildExpr($binding, $query->entities),
+                $query->from,
+                $query->to,
+                $query->step,
+            );
+        } catch (\RuntimeException) {
+            return [];
+        }
+
+        $points = [];
+        foreach ($raw as [$tsMs, $value]) {
+            if ($value !== null && is_finite($value)) {
+                $points[$tsMs] = $value;
+            }
+        }
+
+        return $points;
     }
 
     /**
