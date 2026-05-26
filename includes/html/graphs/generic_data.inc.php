@@ -22,6 +22,9 @@ require 'includes/html/graphs/common.inc.php';
 $inverse ??= false;
 $multiplier ??= false;
 $format ??= '';
+$port ??= null;
+$egress_speed ??= 0;
+$ingress_speed ??= 0;
 $previous = $graph_params->visible('previous');
 
 $rrd_filename_out ??= $rrd_filename ?? '';

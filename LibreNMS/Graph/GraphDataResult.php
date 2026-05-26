@@ -58,6 +58,13 @@ class GraphDataResult
 
     public function toArray(): array
     {
+        $yAxis = [
+            'unit' => $this->unit,
+            'scale' => 'linear',
+            'min' => $this->display['yAxisMin'] ?? null,
+            'max' => $this->display['yAxisMax'] ?? null,
+        ];
+
         return [
             'status' => 'ok',
             'graph'  => [
@@ -72,7 +79,7 @@ class GraphDataResult
                 'timezone' => $this->timezone,
                 'display'  => $this->display,
                 'x_axis'     => ['type' => 'time'],
-                'y_axis'     => ['unit' => $this->unit, 'scale' => 'linear', 'min' => null, 'max' => null],
+                'y_axis'     => $yAxis,
                 'series'     => array_map(fn ($s) => $s->toArray(), $this->series),
                 'markers'    => $this->markers,
                 'thresholds' => $this->thresholds,

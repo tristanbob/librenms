@@ -299,6 +299,61 @@ describe('toEChartsOptions', () => {
         expect(result).toBe('3.0');
         expect(result).not.toContain('seconds');
     });
+
+    test('yAxis honors normalized min and max hints', () => {
+        const opts = toEChartsOptions({
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, y_axis: { ...FIXTURE.graph.y_axis, min: 0, max: 100 } },
+        });
+
+        expect(opts.yAxis.min).toBe(0);
+        expect(opts.yAxis.max).toBe(100);
+    });
+
+    test('legacy percentiles render as markLine entries', () => {
+        const opts = toEChartsOptions({
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                display: { ...FIXTURE.graph.display, legacyPercentiles: true },
+                series: [{
+                    ...FIXTURE.graph.series[0],
+                    data: [[1000, 1], [2000, 2], [3000, 3], [4000, 4]],
+                }],
+            },
+        });
+
+        expect(opts.series[0].markLine.data).toHaveLength(3);
+        expect(opts.series[0].markLine.data.map(line => line.name)).toEqual([
+            '25th Percentile',
+            '50th Percentile',
+            '75th Percentile',
+        ]);
+    });
+
+    test('legacy percentile colors come from payload display metadata', () => {
+        const opts = toEChartsOptions({
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                display: {
+                    ...FIXTURE.graph.display,
+                    legacyPercentiles: true,
+                    legacyPercentileColors: ['111111', '222222', '333333'],
+                },
+                series: [{
+                    ...FIXTURE.graph.series[0],
+                    data: [[1000, 1], [2000, 2], [3000, 3]],
+                }],
+            },
+        });
+
+        expect(opts.series[0].markLine.data.map(line => line.lineStyle.color)).toEqual([
+            '#111111',
+            '#222222',
+            '#333333',
+        ]);
+    });
 });
 
 describe('formatNumber', () => {
