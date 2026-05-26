@@ -89,31 +89,7 @@ export function toEChartsOptions(payload, options = {}) {
         };
     });
 
-    const percentileMarkers = [];
-    if (graph.display?.legacyPercentiles && graph.series.length > 0) {
-        const values = graph.series[0].data
-            .map(([, value]) => value)
-            .filter(value => Number.isFinite(value))
-            .sort((a, b) => a - b);
-        const percentile = (pct) => {
-            if (values.length === 0) return null;
-            const idx = (values.length - 1) * pct;
-            const lo = Math.floor(idx);
-            const hi = Math.ceil(idx);
-            return lo === hi ? values[lo] : values[lo] + (values[hi] - values[lo]) * (idx - lo);
-        };
-        const colors = graph.display?.legacyPercentileColors ?? ['22CCBB', '00BBCC', '0099CC'];
-        [
-            ['25th Percentile', 0.25, `#${colors[0] ?? '22CCBB'}`],
-            ['50th Percentile', 0.50, `#${colors[1] ?? '00BBCC'}`],
-            ['75th Percentile', 0.75, `#${colors[2] ?? '0099CC'}`],
-        ].forEach(([name, pct, color]) => {
-            const value = percentile(pct);
-            if (value !== null) percentileMarkers.push({ value, name, color });
-        });
-    }
-
-    if (graph.markers.length > 0 || percentileMarkers.length > 0) {
+    if (graph.markers.length > 0) {
         // Direction-aware severity colors matching RRD sensor/generic.inc.php threshold lines.
         // Wireless sensor limits use 'limit' (semi-transparent red matching #cc000060).
         const SEVERITY_COLOR = {
@@ -129,23 +105,16 @@ export function toEChartsOptions(payload, options = {}) {
         series[0].markLine = {
             symbol: ['none', 'none'],
             label:  { position: 'end', formatter: '{b}', color: t.font },
-            data: [
-                ...graph.markers.map(m => ({
+            data: graph.markers.map(m => ({
                 yAxis:     m.value,
                 name:      m.name,
                 lineStyle: {
-                    color:   SEVERITY_COLOR[m.severity] ?? '#FF0000',
-                    type:    'dashed',
+                    color:   m.color ? resolveColor(m.color) : (SEVERITY_COLOR[m.severity] ?? '#FF0000'),
+                    type:    m.lineStyle ?? 'dashed',
                     width:   1.5,
                     opacity: SEVERITY_OPACITY[m.severity] ?? 1.0,
                 },
-                })),
-                ...percentileMarkers.map(m => ({
-                    yAxis: m.value,
-                    name:  m.name,
-                    lineStyle: { color: m.color, type: 'solid', width: 1, opacity: 1.0 },
-                })),
-            ],
+            })),
         };
     }
 

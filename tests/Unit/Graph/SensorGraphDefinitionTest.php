@@ -194,7 +194,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
     }
 
     #[DataProvider('wirelessAreaFillProvider')]
-    public function testWirelessAreaFillMatchesLegacyScaleMinBehavior(WirelessSensorType $type, bool $expectedArea): void
+    public function testWirelessAreaFillMatchesScaleMinimumBehavior(WirelessSensorType $type, bool $expectedArea): void
     {
         $graph  = new WirelessSensorGraph($type);
         $query  = $this->sensorQuery('wireless_' . $type->value, $type->value);

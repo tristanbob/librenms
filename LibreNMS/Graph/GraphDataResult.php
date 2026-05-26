@@ -34,6 +34,7 @@ class GraphDataResult
     private ?string $emptyReason = null;
     private array   $warnings    = [];
     private array   $display     = [];
+    private array   $variables   = [];
 
     public function __construct(
         public readonly string $id,
@@ -55,6 +56,15 @@ class GraphDataResult
     public function setEmptyReason(?string $reason): void { $this->emptyReason = $reason; }
     public function addWarning(string $warning): void     { $this->warnings[] = $warning; }
     public function setDisplay(array $display): void      { $this->display = $display; }
+    public function setVariables(array $variables): void  { $this->variables = $variables; }
+
+    /**
+     * @return GraphSeries[]
+     */
+    public function series(): array
+    {
+        return $this->series;
+    }
 
     public function toArray(): array
     {
@@ -78,6 +88,7 @@ class GraphDataResult
                 'step'     => $this->step,
                 'timezone' => $this->timezone,
                 'display'  => $this->display,
+                'variables' => $this->variables,
                 'x_axis'     => ['type' => 'time'],
                 'y_axis'     => $yAxis,
                 'series'     => array_map(fn ($s) => $s->toArray(), $this->series),

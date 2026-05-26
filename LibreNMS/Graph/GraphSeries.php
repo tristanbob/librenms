@@ -30,6 +30,7 @@ class GraphSeries
     public float $max   = -INF;
     public float $sum   = 0.0;
     public int   $count = 0;
+    private array $extraStats = [];
 
     public function __construct(
         public readonly string  $name,
@@ -64,7 +65,12 @@ class GraphSeries
             'max'  => $this->count > 0 ? $this->max : null,
             'avg'  => $this->count > 0 ? round($this->sum / $this->count, 4) : null,
             'last' => $last,
-        ];
+        ] + $this->extraStats;
+    }
+
+    public function addStat(string $name, mixed $value): void
+    {
+        $this->extraStats[$name] = $value;
     }
 
     public function toArray(): array

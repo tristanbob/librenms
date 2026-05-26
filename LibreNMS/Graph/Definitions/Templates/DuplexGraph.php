@@ -1,12 +1,12 @@
 <?php
 
-namespace LibreNMS\Graph\Definitions\Legacy;
+namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class DuplexGraph extends LegacyGraph
+class DuplexGraph extends GraphTemplate
 {
     public function __construct(
         string $graphType,

@@ -1,12 +1,12 @@
 <?php
 
-namespace LibreNMS\Graph\Definitions\Legacy;
+namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class DerivedSeriesGraph extends LegacyGraph
+class DerivedSeriesGraph extends GraphTemplate
 {
     /**
      * @param list<array{name:string,key:string,ds:string|array,transform?:mixed,color:string,lineColor?:string,area?:bool,stack?:string,negate?:bool,lineWidth?:float}> $series

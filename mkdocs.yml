@@ -284,6 +284,7 @@ nav:
       - Using Git: Developing/Using-Git.md
       - Validating Code: Developing/Validating-Code.md
       - Code Structure: Developing/Code-Structure.md
+      - Graph Data Architecture: Developing/Graph-Data-Architecture.md
       - Fetching SNMP Data: Developing/Using-SnmpQuery.md
       - Creating Documentation: Developing/Creating-Documentation.md
       - Component: Extensions/Component.md
