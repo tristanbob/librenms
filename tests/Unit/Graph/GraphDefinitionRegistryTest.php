@@ -4,6 +4,7 @@ namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\Definitions\Device\BitsGraph;
 use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
+use LibreNMS\Graph\Definitions\Device\LegacyDeviceGraphCatalog;
 use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
 use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
 use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
@@ -94,5 +95,22 @@ final class GraphDefinitionRegistryTest extends TestCase
         $this->assertInstanceOf(MempoolUsageGraph::class, $registry->definitionFor('mempool_usage'));
         $this->assertInstanceOf(StorageUsageGraph::class, $registry->definitionFor('storage_usage'));
         $this->assertInstanceOf(TonerUsageGraph::class, $registry->definitionFor('toner_usage'));
+    }
+
+    public function testResolvesLegacyDeviceGraphCatalogTypes(): void
+    {
+        $registry = new GraphDefinitionRegistry(LegacyDeviceGraphCatalog::definitions());
+
+        foreach ([
+            'device_availability',
+            'device_hr_processes',
+            'device_ipsystemstats_ipv4',
+            'device_netstat_tcp',
+            'device_ucd_cpu',
+            'device_uptime',
+        ] as $type) {
+            $this->assertTrue($registry->supports($type), "$type should be registered");
+            $this->assertSame($type, $registry->definitionFor($type)->graphType());
+        }
     }
 }

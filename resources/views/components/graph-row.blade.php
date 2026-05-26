@@ -14,7 +14,9 @@
                 :device="$device"
                 :legend="$attributes->get('legend', 'no')"
                 :height="$attributes->get('height', 150)"
-                :vars="array_merge($graph, $attributes->get('vars', []))"
+                :from="$graph['from'] ?? '-1d'"
+                :to="$graph['to'] ?? null"
+                :vars="array_merge(array_diff_key($graph, ['from' => 0, 'to' => 0]), $attributes->get('vars', []))"
                 :img-class="$responsive ? 'tw:w-full tw:h-auto' : null"
         ></x-graph>
     @endforeach
