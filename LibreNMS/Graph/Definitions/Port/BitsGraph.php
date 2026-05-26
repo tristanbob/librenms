@@ -23,7 +23,9 @@
 
 namespace LibreNMS\Graph\Definitions\Port;
 
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -115,7 +117,48 @@ class BitsGraph implements GraphDefinition
 
     public function markers(array $device, GraphQuery $query): array
     {
-        return [];
+        $percentile = (float) LibrenmsConfig::get('percentile_value', 95);
+        if ($percentile <= 0 || $percentile > 100) {
+            return [];
+        }
+
+        $portId = $query->entities['port_id'];
+        $rrdName = "port-id$portId";
+        $percentileLabel = rtrim(rtrim((string) $percentile, '0'), '.');
+
+        return [
+            GraphMarkerDefinition::percentile(
+                "{$percentileLabel}th percentile in",
+                new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: fn ($v) => $v * 8),
+                $percentile,
+                'aa0000',
+            ),
+            GraphMarkerDefinition::percentile(
+                "{$percentileLabel}th percentile in",
+                new VictoriaMetricsMetricBinding(
+                    metricName: 'librenms_port_if_in_bits_per_second',
+                    labelKeys:  ['device_id', 'port_id'],
+                ),
+                $percentile,
+                'aa0000',
+            ),
+            GraphMarkerDefinition::percentile(
+                "{$percentileLabel}th percentile out",
+                new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: fn ($v) => $v * -8),
+                $percentile,
+                'aa0000',
+            ),
+            GraphMarkerDefinition::percentile(
+                "{$percentileLabel}th percentile out",
+                new VictoriaMetricsMetricBinding(
+                    metricName: 'librenms_port_if_out_bits_per_second',
+                    labelKeys:  ['device_id', 'port_id'],
+                    transform:  fn ($v) => $v * -1,
+                ),
+                $percentile,
+                'aa0000',
+            ),
+        ];
     }
 
 }

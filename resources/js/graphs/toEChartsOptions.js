@@ -60,7 +60,10 @@ function buildXAxis(t, graph) {
 
 export function toEChartsOptions(payload, options = {}) {
     const graph = payload.graph;
-    const t     = THEME[options.dark ? 'dark' : 'light'];
+    const mode  = options.dark ? 'dark' : 'light';
+    const t     = options.themeOverrides
+        ? { ...THEME[mode], ...options.themeOverrides[mode] }
+        : THEME[mode];
     const defaultKind = ['line', 'bar'].includes(graph.display?.kind) ? graph.display.kind : 'line';
 
     // Renderer token used by PHP graph definitions for the legacy sensor line color.
@@ -127,7 +130,7 @@ export function toEChartsOptions(payload, options = {}) {
 
     const yAxes = graph.y_axes ?? [{ unit: graph.unit, min: null, max: null }];
     const buildYAxis = (axis, isPrimary) => ({
-        type:         'value',
+        type:         axis.scale === 'log' ? 'log' : 'value',
         name:         axis.unit.charAt(0).toUpperCase() + axis.unit.slice(1),
         nameRotate:   90,
         nameLocation: 'middle',

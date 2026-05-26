@@ -24,7 +24,7 @@
 
 <template>
     <div :class="['form-group', 'row', 'has-feedback', setting.class, feedback]">
-        <label :for="setting.name" class="col-sm-5 col-md-3 col-form-label" v-tooltip="{ content: setting.name }">
+        <label :for="setting.name" class="col-sm-5 col-md-3 col-form-label" v-tooltip="{ content: getDescription() }">
             {{ getDescription() }}
             <span v-if="setting.units">({{ getUnits() }})</span>
         </label>
@@ -116,7 +116,13 @@ export default {
             },
             getDescription() {
                 let key = this.prefix + '.settings.' + this.setting.name + '.description';
-                return (this.$te(key) || this.$te(key, this.$i18n.fallbackLocale)) ? this.$t(key) : this.setting.name;
+                return (this.$te(key) || this.$te(key, this.$i18n.fallbackLocale)) ? this.$t(key) : this.friendlySettingName();
+            },
+            friendlySettingName() {
+                return _.startCase(this.setting.name.replace(/[._-]+/g, ' '))
+                    .replace('Victoriametrics', 'VictoriaMetrics')
+                    .replace('Rrd', 'RRD')
+                    .replace('Url', 'URL');
             },
             getHelp() {
                 let help = this.$t(this.prefix + '.settings.' + this.setting.name + '.help');

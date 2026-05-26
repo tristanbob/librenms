@@ -387,6 +387,52 @@ describe('toEChartsOptions', () => {
             '#333333',
         ]);
     });
+
+    test('yAxis uses log type when axis.scale is log', () => {
+        const opts = toEChartsOptions({
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, y_axes: [{ unit: 'ratio', scale: 'log', min: 0.0001, max: null }] },
+        });
+        expect(opts.yAxis[0].type).toBe('log');
+    });
+
+    test('yAxis uses value type when axis.scale is linear', () => {
+        const opts = toEChartsOptions({
+            ...FIXTURE,
+            graph: { ...FIXTURE.graph, y_axes: [{ unit: 'seconds', scale: 'linear', min: null, max: null }] },
+        });
+        expect(opts.yAxis[0].type).toBe('value');
+    });
+
+    test('yAxis uses value type when axis.scale is absent', () => {
+        const opts = toEChartsOptions(FIXTURE);
+        expect(opts.yAxis[0].type).toBe('value');
+    });
+
+    test('themeOverrides replaces individual THEME fields for light mode', () => {
+        const overrides = {
+            light: { font: '#ff0000', grid: '#aabbcc', frame: '#5e5e5e', background: 'transparent' },
+            dark:  { font: '#f8f9f9', grid: '#292929', frame: '#5e5e5e', background: '#2e3338' },
+        };
+        const opts = toEChartsOptions(FIXTURE, { dark: false, themeOverrides: overrides });
+        expect(opts.xAxis.axisLabel.color).toBe('#ff0000');
+        expect(opts.xAxis.splitLine.lineStyle.color).toBe('#aabbcc');
+    });
+
+    test('themeOverrides applies dark mode colors when dark is true', () => {
+        const overrides = {
+            light: { font: '#000000', grid: '#a5a5a5', frame: '#5e5e5e', background: 'transparent' },
+            dark:  { font: '#ccddee', grid: '#112233', frame: '#5e5e5e', background: '#2e3338' },
+        };
+        const opts = toEChartsOptions(FIXTURE, { dark: true, themeOverrides: overrides });
+        expect(opts.xAxis.axisLabel.color).toBe('#ccddee');
+        expect(opts.xAxis.splitLine.lineStyle.color).toBe('#112233');
+    });
+
+    test('no themeOverrides uses hardcoded THEME defaults', () => {
+        const opts = toEChartsOptions(FIXTURE, { dark: false });
+        expect(opts.xAxis.axisLabel.color).toBe('#000000');
+    });
 });
 
 describe('formatNumber', () => {

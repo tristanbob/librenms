@@ -4410,9 +4410,9 @@
                 "rrd": "RRD (default)",
                 "echarts": "ECharts (experimental)"
             },
-            "group": "graphs",
-            "section": "rendering",
-            "order": 10
+            "group": "webui",
+            "section": "graph",
+            "order": 9
         },
         "graphs.mini.normal": {
             "default": {
@@ -6458,68 +6458,89 @@
             "section": "victoriametrics",
             "order": 1
         },
-        "victoriametrics.write_url": {
-            "default": "http://127.0.0.1:8429/api/v1/import/prometheus",
-            "type": "text",
-            "group": "poller",
-            "section": "victoriametrics",
-            "order": 2
-        },
-        "victoriametrics.timeout": {
-            "default": 2,
-            "type": "integer",
+        "victoriametrics.write_mode": {
+            "default": "vmagent",
+            "type": "select",
+            "options": {
+                "vmagent": "vmagent relay (recommended)",
+                "direct": "Direct VictoriaMetrics"
+            },
             "group": "poller",
             "section": "victoriametrics",
             "order": 3
+        },
+        "victoriametrics.write_host": {
+            "default": "",
+            "type": "text",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 4
+        },
+        "victoriametrics.write_port": {
+            "default": "",
+            "type": "text",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 5
+        },
+        "victoriametrics.write_path": {
+            "default": "",
+            "type": "text",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 6
+        },
+        "victoriametrics.timeout": {
+            "default": 10,
+            "type": "integer",
+            "group": "poller",
+            "section": "victoriametrics",
+            "order": 7
         },
         "victoriametrics.batch_size": {
             "default": 500,
             "type": "integer",
             "group": "poller",
             "section": "victoriametrics",
-            "order": 4
+            "order": 8
         },
         "victoriametrics.verify_ssl": {
             "default": true,
             "type": "boolean",
             "group": "poller",
             "section": "victoriametrics",
-            "order": 5
+            "order": 9
         },
         "victoriametrics.debug": {
             "default": false,
             "type": "boolean",
             "group": "poller",
             "section": "victoriametrics",
-            "order": 6
+            "order": 10
         },
         "victoriametrics.query_enabled": {
             "default": false,
             "type": "boolean",
             "group": "poller",
             "section": "victoriametrics",
-            "order": 7
+            "order": 2,
+            "when": {
+                "setting": "victoriametrics.enable",
+                "operator": "equals",
+                "value": true
+            }
         },
         "victoriametrics.query_url": {
             "default": "http://127.0.0.1:8428",
             "type": "text",
             "group": "poller",
             "section": "victoriametrics",
-            "order": 8
-        },
-        "victoriametrics.compare_with_rrd": {
-            "default": false,
-            "type": "boolean",
-            "group": "poller",
-            "section": "victoriametrics",
-            "order": 9
-        },
-        "victoriametrics.compare_tolerance_percent": {
-            "default": 2.0,
-            "type": "float",
-            "group": "poller",
-            "section": "victoriametrics",
-            "order": 10
+            "order": 11,
+            "when": {
+                "setting": "victoriametrics.query_enabled",
+                "operator": "equals",
+                "value": true
+            }
         },
         "public_status": {
             "default": false,

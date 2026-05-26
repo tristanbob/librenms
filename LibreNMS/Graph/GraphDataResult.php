@@ -55,6 +55,8 @@ class GraphDataResult
     public function addWarning(string $warning): void     { $this->warnings[] = $warning; }
     public function setDisplay(array $display): void      { $this->display = $display; }
     public function setVariables(array $variables): void  { $this->variables = $variables; }
+    public function overrideYAxisMin(int $min): void      { $this->display['yAxisMin'] = $min; }
+    public function overrideYAxisMax(int $max): void      { $this->display['yAxisMax'] = $max; }
 
     /**
      * @return GraphSeries[]
@@ -73,7 +75,7 @@ class GraphDataResult
         } else {
             $yAxes = [[
                 'unit'  => $this->unit,
-                'scale' => 'linear',
+                'scale' => $this->display['yAxisScale'] ?? 'linear',
                 'min'   => $this->display['yAxisMin'] ?? null,
                 'max'   => $this->display['yAxisMax'] ?? null,
             ]];

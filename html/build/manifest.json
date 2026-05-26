@@ -26,7 +26,7 @@
     "isDynamicEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-C_lJ559E.js",
+    "file": "assets/app-BiMYO6Gf.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -34,7 +34,7 @@
       "node_modules/echarts/index.js"
     ],
     "css": [
-      "assets/app-rVcfIy-N.css"
+      "assets/app-BCmG2NT3.css"
     ],
     "assets": [
       "assets/glyphicons-halflings-regular-BUJKDMgK.eot",
