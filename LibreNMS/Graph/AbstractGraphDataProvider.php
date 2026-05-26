@@ -66,10 +66,6 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             $def->display()
         ));
         $result->setVariables($variables);
-        foreach ($def->thresholds($device, $query) as $threshold) {
-            $result->addThreshold($threshold);
-        }
-
         $this->fillSeries($result, $def, $device, $query);
         if (! $def instanceof GraphPlanDefinition) {
             foreach ($def->markers($device, $query) as $marker) {
@@ -80,6 +76,10 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         return $result;
     }
 
+    /**
+     * @param array{device_id: int, hostname: string, os: string, sysName?: string,
+     *             display?: string, location_id?: int} $device  Eloquent Device model as array
+     */
     abstract protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
@@ -102,6 +102,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             lineOpacity: $seriesDef->lineOpacity,
             lineWidth:   $seriesDef->lineWidth,
             negate:      $seriesDef->negate,
+            yAxisIndex:  $seriesDef->yAxisIndex,
         );
     }
 }

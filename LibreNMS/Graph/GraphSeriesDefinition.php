@@ -46,6 +46,7 @@ class GraphSeriesDefinition
         public readonly float $lineOpacity = 1.0,
         public readonly float $lineWidth = 1.25,
         public readonly bool $negate = false,
+        public readonly int $yAxisIndex = 0,
         public readonly ?GraphExpression $expression = null,
         array $bindings = [],
     ) {

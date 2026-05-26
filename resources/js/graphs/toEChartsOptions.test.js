@@ -15,7 +15,7 @@ const FIXTURE = {
         step:     300,
         display:  { renderer: 'timeseries', kind: 'line', stacked: false, area: true },
         x_axis:   { type: 'time' },
-        y_axis:   { unit: 'seconds', scale: 'linear', min: null, max: null },
+        y_axes:   [{ unit: 'seconds', scale: 'linear', min: null, max: null }],
         series: [{
             name:  'Poller time',
             key:   'poller_time',
@@ -26,7 +26,6 @@ const FIXTURE = {
             stats: { min: 10, max: 15, avg: 12.5, last: 12.5 },
         }],
         markers:    [],
-        thresholds: [],
         meta: { source: 'rrd', fallback_used: false, generated_at: 1003600 },
     },
 };
@@ -99,13 +98,28 @@ describe('toEChartsOptions', () => {
             },
         };
         const opts = toEChartsOptions(withMarker);
-        expect(opts.series[0].markLine.data).toHaveLength(1);
-        expect(opts.series[0].markLine.data[0].yAxis).toBe(5);
+        expect(opts.series[opts.series.length - 1].markLine.data).toHaveLength(1);
+        expect(opts.series[opts.series.length - 1].markLine.data[0].yAxis).toBe(5);
     });
 
     test('no markLine when markers array is empty', () => {
         const opts = toEChartsOptions(FIXTURE);
-        expect(opts.series[0].markLine).toBeUndefined();
+        expect(opts.series[opts.series.length - 1].markLine).toBeUndefined();
+    });
+
+    test('markers render without crash when all data series are empty', () => {
+        const emptyData = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                series:  [],
+                markers: [{ value: 80, name: 'High critical', severity: 'critical' }],
+            },
+        };
+        const opts = toEChartsOptions(emptyData);
+        const markerSeries = opts.series[opts.series.length - 1];
+        expect(markerSeries.markLine.data).toHaveLength(1);
+        expect(markerSeries.data).toEqual([]);
     });
 
     test('warning markers use orange color', () => {
@@ -114,7 +128,7 @@ describe('toEChartsOptions', () => {
             graph: { ...FIXTURE.graph, markers: [{ value: 70, name: 'High warning', severity: 'warning' }] },
         };
         const opts = toEChartsOptions(withWarning);
-        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF8800');
+        expect(opts.series[opts.series.length - 1].markLine.data[0].lineStyle.color).toBe('#FF8800');
     });
 
     test('critical markers use red color', () => {
@@ -123,7 +137,7 @@ describe('toEChartsOptions', () => {
             graph: { ...FIXTURE.graph, markers: [{ value: 80, name: 'High critical', severity: 'critical' }] },
         };
         const opts = toEChartsOptions(withCritical);
-        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF0000');
+        expect(opts.series[opts.series.length - 1].markLine.data[0].lineStyle.color).toBe('#FF0000');
     });
 
     test('mixed severity markers each get their own color', () => {
@@ -140,7 +154,7 @@ describe('toEChartsOptions', () => {
             },
         };
         const opts = toEChartsOptions(withMixed);
-        const colors = opts.series[0].markLine.data.map(d => d.lineStyle.color);
+        const colors = opts.series[opts.series.length - 1].markLine.data.map(d => d.lineStyle.color);
         expect(colors).toEqual(['#FF0000', '#FF8800', '#FF8800', '#FF0000']);
     });
 
@@ -158,7 +172,7 @@ describe('toEChartsOptions', () => {
             },
         };
         const opts = toEChartsOptions(withSensorMarkers);
-        const colors = opts.series[0].markLine.data.map(d => d.lineStyle.color);
+        const colors = opts.series[opts.series.length - 1].markLine.data.map(d => d.lineStyle.color);
         expect(colors).toEqual(['#00008b', '#005bdf', '#ffa420', '#ff0000']);
     });
 
@@ -168,7 +182,7 @@ describe('toEChartsOptions', () => {
             graph: { ...FIXTURE.graph, markers: [{ value: 100, name: 'High limit', severity: 'limit' }] },
         };
         const opts = toEChartsOptions(withLimit);
-        const line = opts.series[0].markLine.data[0].lineStyle;
+        const line = opts.series[opts.series.length - 1].markLine.data[0].lineStyle;
         expect(line.color).toBe('#cc0000');
         expect(line.opacity).toBeCloseTo(0.376, 2);
     });
@@ -179,7 +193,7 @@ describe('toEChartsOptions', () => {
             graph: { ...FIXTURE.graph, markers: [{ value: 80, name: 'High critical', severity: 'high_critical' }] },
         };
         const opts = toEChartsOptions(withCritical);
-        expect(opts.series[0].markLine.data[0].lineStyle.opacity).toBe(1.0);
+        expect(opts.series[opts.series.length - 1].markLine.data[0].lineStyle.opacity).toBe(1.0);
     });
 
     test('theme-ink color in light mode resolves to legacy sensor line color #272b30', () => {
@@ -244,7 +258,7 @@ describe('toEChartsOptions', () => {
             graph: { ...FIXTURE.graph, markers: [{ value: 5, name: 'Threshold' }] },
         };
         const opts = toEChartsOptions(withNoSeverity);
-        expect(opts.series[0].markLine.data[0].lineStyle.color).toBe('#FF0000');
+        expect(opts.series[opts.series.length - 1].markLine.data[0].lineStyle.color).toBe('#FF0000');
     });
 
     test('dark mode applies exact RRD dark background color', () => {
@@ -295,7 +309,7 @@ describe('toEChartsOptions', () => {
     test('yAxis tick formatter uses formatNumber (no unit)', () => {
         const opts = toEChartsOptions(FIXTURE);
         // Should return a number + optional SI prefix, no unit word
-        const result = opts.yAxis.axisLabel.formatter(3.0);
+        const result = opts.yAxis[0].axisLabel.formatter(3.0);
         expect(result).toBe('3.0');
         expect(result).not.toContain('seconds');
     });
@@ -303,11 +317,34 @@ describe('toEChartsOptions', () => {
     test('yAxis honors normalized min and max hints', () => {
         const opts = toEChartsOptions({
             ...FIXTURE,
-            graph: { ...FIXTURE.graph, y_axis: { ...FIXTURE.graph.y_axis, min: 0, max: 100 } },
+            graph: { ...FIXTURE.graph, y_axes: [{ unit: 'seconds', scale: 'linear', min: 0, max: 100 }] },
         });
 
-        expect(opts.yAxis.min).toBe(0);
-        expect(opts.yAxis.max).toBe(100);
+        expect(opts.yAxis[0].min).toBe(0);
+        expect(opts.yAxis[0].max).toBe(100);
+    });
+
+    test('dual-axis graph produces two yAxis entries and assigns yAxisIndex to series', () => {
+        const dualAxis = {
+            ...FIXTURE,
+            graph: {
+                ...FIXTURE.graph,
+                y_axes: [
+                    { unit: 'ms', scale: 'linear', min: null, max: null },
+                    { unit: '%',  scale: 'linear', min: 0,    max: 100  },
+                ],
+                series: [
+                    { ...FIXTURE.graph.series[0], name: 'RTT', yAxisIndex: 0 },
+                    { ...FIXTURE.graph.series[0], name: 'Loss', yAxisIndex: 1 },
+                ],
+            },
+        };
+        const opts = toEChartsOptions(dualAxis);
+        expect(opts.yAxis).toHaveLength(2);
+        expect(opts.yAxis[0].name).toBe('Ms');
+        expect(opts.yAxis[1].name).toBe('%');
+        expect(opts.series[0].yAxisIndex).toBe(0);
+        expect(opts.series[1].yAxisIndex).toBe(1);
     });
 
     test('server-side percentile markers render as markLine entries', () => {
@@ -323,8 +360,8 @@ describe('toEChartsOptions', () => {
             },
         });
 
-        expect(opts.series[0].markLine.data).toHaveLength(3);
-        expect(opts.series[0].markLine.data.map(line => line.name)).toEqual([
+        expect(opts.series[opts.series.length - 1].markLine.data).toHaveLength(3);
+        expect(opts.series[opts.series.length - 1].markLine.data.map(line => line.name)).toEqual([
             '25th Percentile',
             '50th Percentile',
             '75th Percentile',
@@ -344,7 +381,7 @@ describe('toEChartsOptions', () => {
             },
         });
 
-        expect(opts.series[0].markLine.data.map(line => line.lineStyle.color)).toEqual([
+        expect(opts.series[opts.series.length - 1].markLine.data.map(line => line.lineStyle.color)).toEqual([
             '#111111',
             '#222222',
             '#333333',

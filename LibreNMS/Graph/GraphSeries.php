@@ -45,6 +45,7 @@ class GraphSeries
         public readonly float   $lineOpacity = 1.0,
         public readonly float   $lineWidth   = 1.25,
         public readonly bool    $negate      = false,
+        public readonly int     $yAxisIndex  = 0,
     ) {}
 
     public function addPoint(int $timestampMs, float $value): void
@@ -81,6 +82,7 @@ class GraphSeries
             'type'  => $this->type,
             'unit'  => $this->unit,
             'data'  => $this->data,
+            'yAxisIndex' => $this->yAxisIndex,
             'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color, 'lineColor' => $this->lineColor, 'areaOpacity' => $this->areaOpacity, 'lineOpacity' => $this->lineOpacity, 'lineWidth' => $this->lineWidth, 'negate' => $this->negate],
             'stats' => $this->stats(),
         ];

@@ -149,4 +149,36 @@ class GraphDataTest extends DBTestCase
 
         LibrenmsConfig::set('victoriametrics.query_enabled', false);
     }
+
+    public function testGraphDataSetsCacheControlForPastTimeRange(): void
+    {
+        $from = time() - 7200;
+        $to   = time() - 3600;
+
+        $response = $this->json(
+            'GET',
+            "/api/v0/devices/{$this->device->hostname}/graphs/device_poller_perf/data?from={$from}&to={$to}",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        );
+
+        $response->assertStatus(200);
+        $this->assertEquals('public, max-age=300', $response->headers->get('Cache-Control'));
+    }
+
+    public function testGraphDataSetsCacheControlNoStoreForLiveTimeRange(): void
+    {
+        $from = time() - 3600;
+        $to   = time();
+
+        $response = $this->json(
+            'GET',
+            "/api/v0/devices/{$this->device->hostname}/graphs/device_poller_perf/data?from={$from}&to={$to}",
+            [],
+            ['X-Auth-Token' => $this->adminToken->token_hash]
+        );
+
+        $response->assertStatus(200);
+        $this->assertEquals('no-store', $response->headers->get('Cache-Control'));
+    }
 }
