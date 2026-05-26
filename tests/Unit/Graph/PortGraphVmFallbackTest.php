@@ -4,8 +4,8 @@
  * PortGraphVmFallbackTest.php
  *
  * Verifies that when VictoriaMetrics query is enabled, graph types that have no
- * VM bindings (port_packets, port_errors, port_discards) trigger the RuntimeException
- * guard in VictoriaMetricsGraphDataProvider and GraphDataBackendSelector falls back to RRD.
+ * VM bindings (port_packets, port_errors, port_discards) are handled by RRD
+ * without marking the response as a VictoriaMetrics failure fallback.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,11 +100,11 @@ final class PortGraphVmFallbackTest extends DBTestCase
         $arr    = $result->toArray();
 
         $this->assertSame('rrd', $arr['graph']['meta']['source'],
-            "Expected RRD fallback source for $graphType");
-        $this->assertTrue($arr['graph']['meta']['fallback_used'],
-            "Expected fallback_used=true for $graphType when VM has no bindings");
-        $this->assertNotEmpty($arr['graph']['meta']['warnings'],
-            "Expected a warning message when VM fallback fires for $graphType");
+            "Expected RRD source for $graphType");
+        $this->assertFalse($arr['graph']['meta']['fallback_used'],
+            "Expected fallback_used=false for $graphType when VM has no bindings");
+        $this->assertEmpty($arr['graph']['meta']['warnings'],
+            "Expected no warning when $graphType has no VM bindings");
     }
 
     public static function portGraphTypesWithoutVmBindings(): array

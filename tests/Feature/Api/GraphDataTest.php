@@ -163,7 +163,8 @@ class GraphDataTest extends DBTestCase
         );
 
         $response->assertStatus(200);
-        $this->assertEquals('public, max-age=300', $response->headers->get('Cache-Control'));
+        $this->assertTrue($response->headers->hasCacheControlDirective('public'));
+        $this->assertEquals('300', $response->headers->getCacheControlDirective('max-age'));
     }
 
     public function testGraphDataSetsCacheControlNoStoreForLiveTimeRange(): void
@@ -179,6 +180,6 @@ class GraphDataTest extends DBTestCase
         );
 
         $response->assertStatus(200);
-        $this->assertEquals('no-store', $response->headers->get('Cache-Control'));
+        $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
     }
 }
