@@ -21,13 +21,15 @@ final class DeviceGraphDefinitionTest extends TestCase
         $this->assertContains('device_uptime', $types);
     }
 
-    public function testAvailabilityUsesRequestedDurationForExpressionPlan(): void
+    public function testAvailabilityUsesRequestedDurationForRrdBinding(): void
     {
         $graph = $this->definition('device_availability');
         $query = new GraphQuery('device', 'device_availability', 1000000, 1003600, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
-        $plan = $graph->expressions($this->device(), $query);
+        $series = $graph->series($this->device(), $query);
+        $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
 
-        $this->assertSame(['availability', 172800], $plan->series[0]->expression->arguments['rrdName']);
+        $this->assertInstanceOf(RrdMetricBinding::class, $binding);
+        $this->assertSame(['availability', 172800], $binding->rrdName);
     }
 
     public function testSimpleStatsAddsRollupsByTimeRange(): void

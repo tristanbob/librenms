@@ -104,6 +104,90 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
         }
     }
 
+    /**
+     * @inheritDoc
+     */
+    protected function evaluateBindingPoints(MetricBinding $binding, array $device, GraphQuery $query): array
+    {
+        if ($binding instanceof ShiftBinding) {
+            $binding = $binding->inner;
+        }
+
+        if (! $binding instanceof RrdMetricBinding) {
+            return [];
+        }
+
+        $step          = $binding->step ?? $query->step;
+        $consolidation = strtoupper($binding->consolidation);
+        $rrdFile       = $this->rrd->name($device['hostname'], $binding->rrdName);
+        $stepQuery     = $step !== $query->step
+            ? $query->withStep($step)
+            : $query;
+
+        try {
+            $allData = $this->fetchRrdData($rrdFile, $stepQuery, $consolidation);
+        } catch (\RuntimeException) {
+            return [];
+        }
+
+        $points = [];
+        foreach ($this->pointsForBinding($allData, $binding) as [$tsMs, $value]) {
+            $points[$tsMs] = $value;
+        }
+
+        return $points;
+    }
+
+    /**
+     * @param array<string, list<array{int, float|null}>> $allData
+     * @return list<array{int, float}>
+     */
+    private function pointsForBinding(array $allData, RrdMetricBinding $binding): array
+    {
+        if (is_string($binding->ds)) {
+            $points = [];
+            foreach ($allData[$binding->ds] ?? [] as [$tsMs, $value]) {
+                if ($value === null || ! is_finite($value)) {
+                    continue;
+                }
+
+                if ($binding->transform !== null) {
+                    $value = ($binding->transform)($value);
+                }
+
+                if ($value !== null && is_finite($value)) {
+                    $points[] = [$tsMs, (float) $value];
+                }
+            }
+
+            return $points;
+        }
+
+        $dsNames = $binding->ds;
+        $firstDs = reset($dsNames);
+        if (! is_string($firstDs)) {
+            return [];
+        }
+
+        $points = [];
+        foreach ($allData[$firstDs] ?? [] as $i => [$tsMs]) {
+            $values = [];
+            foreach ($dsNames as $ds) {
+                $value = $allData[$ds][$i][1] ?? null;
+                if ($value === null || ! is_finite($value)) {
+                    continue 2;
+                }
+                $values[$ds] = $value;
+            }
+
+            $value = $binding->transform !== null ? ($binding->transform)($values) : null;
+            if ($value !== null && is_finite($value)) {
+                $points[] = [$tsMs, (float) $value];
+            }
+        }
+
+        return $points;
+    }
 
     /**
      * Fetch all data sources from one RRD file for the given time range.
