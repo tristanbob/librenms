@@ -43,6 +43,13 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
 
         $device = Device::findOrFail($deviceId)->toArray();
         $def    = $this->registry->definitionFor($query->graphType);
+        $variables = [];
+        if ($def instanceof GraphPlanDefinition) {
+            foreach ($def->variables() as $variable) {
+                $variables[$variable->name] = $variable->resolve($query->options);
+            }
+            $query = $query->withOptions($variables + $query->options);
+        }
 
         $result = new GraphDataResult(
             id:       $def->id($device, $query),
@@ -58,14 +65,17 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             ['renderer' => 'timeseries', 'legend' => true, 'tooltip' => true],
             $def->display()
         ));
-        foreach ($def->markers($device, $query) as $marker) {
-            $result->addMarker($marker);
-        }
+        $result->setVariables($variables);
         foreach ($def->thresholds($device, $query) as $threshold) {
             $result->addThreshold($threshold);
         }
 
         $this->fillSeries($result, $def, $device, $query);
+        if (! $def instanceof GraphPlanDefinition) {
+            foreach ($def->markers($device, $query) as $marker) {
+                $result->addMarker($marker);
+            }
+        }
 
         return $result;
     }

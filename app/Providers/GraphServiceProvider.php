@@ -9,7 +9,7 @@ use LibreNMS\Graph\Definitions\Device\BitsGraph as DeviceBitsGraph;
 use LibreNMS\Graph\Definitions\Device\DeviceSensorGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Device\DiskIoGraph as DeviceDiskIoGraph;
 use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
-use LibreNMS\Graph\Definitions\Device\LegacyDeviceGraphCatalog;
+use LibreNMS\Graph\Definitions\Device\DeviceGraphCatalog;
 use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
 use LibreNMS\Graph\Definitions\Device\PollerModulesPerfGraph;
 use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
@@ -55,7 +55,7 @@ class GraphServiceProvider extends ServiceProvider
                 ErrorsGraph::class,
                 DiscardsGraph::class,
             ]);
-            foreach (LegacyDeviceGraphCatalog::definitions() as $definition) {
+            foreach (DeviceGraphCatalog::definitions() as $definition) {
                 $registry->register($definition);
             }
             $registry->registerResolver(new DeviceWirelessGraphDefinitionResolver());

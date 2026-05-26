@@ -4,7 +4,7 @@ namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\Definitions\Device\BitsGraph;
 use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
-use LibreNMS\Graph\Definitions\Device\LegacyDeviceGraphCatalog;
+use LibreNMS\Graph\Definitions\Device\DeviceGraphCatalog;
 use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
 use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
 use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
@@ -97,9 +97,9 @@ final class GraphDefinitionRegistryTest extends TestCase
         $this->assertInstanceOf(TonerUsageGraph::class, $registry->definitionFor('toner_usage'));
     }
 
-    public function testResolvesLegacyDeviceGraphCatalogTypes(): void
+    public function testResolvesDeviceGraphCatalogTypes(): void
     {
-        $registry = new GraphDefinitionRegistry(LegacyDeviceGraphCatalog::definitions());
+        $registry = new GraphDefinitionRegistry(DeviceGraphCatalog::definitions());
 
         foreach ([
             'device_availability',

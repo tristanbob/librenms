@@ -1,12 +1,12 @@
 <?php
 
-namespace LibreNMS\Graph\Definitions\Legacy;
+namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class StackedAreaGraph extends LegacyGraph
+class StackedAreaGraph extends GraphTemplate
 {
     /**
      * @param list<array{ds:string,label:string,invert?:bool,color?:string}> $series

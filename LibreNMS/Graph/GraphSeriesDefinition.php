@@ -27,6 +27,8 @@ class GraphSeriesDefinition
 {
     /** @var array<string, MetricBinding> */
     private array $bindings = [];
+    /** @var MetricBinding[] */
+    private array $bindingList = [];
 
     /**
      * @param MetricBinding[] $bindings
@@ -44,15 +46,29 @@ class GraphSeriesDefinition
         public readonly float $lineOpacity = 1.0,
         public readonly float $lineWidth = 1.25,
         public readonly bool $negate = false,
+        public readonly ?GraphExpression $expression = null,
         array $bindings = [],
     ) {
         foreach ($bindings as $binding) {
-            $this->bindings[$binding->source()] = $binding;
+            $this->bindingList[] = $binding;
+            $this->bindings[$binding->source()] ??= $binding;
         }
     }
 
     public function binding(string $source): ?MetricBinding
     {
         return $this->bindings[$source] ?? null;
+    }
+
+    /**
+     * @return MetricBinding[]
+     */
+    public function bindings(?string $source = null): array
+    {
+        if ($source === null) {
+            return $this->bindingList;
+        }
+
+        return array_values(array_filter($this->bindingList, fn (MetricBinding $binding) => $binding->source() === $source));
     }
 }

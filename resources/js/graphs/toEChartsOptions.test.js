@@ -310,16 +310,16 @@ describe('toEChartsOptions', () => {
         expect(opts.yAxis.max).toBe(100);
     });
 
-    test('legacy percentiles render as markLine entries', () => {
+    test('server-side percentile markers render as markLine entries', () => {
         const opts = toEChartsOptions({
             ...FIXTURE,
             graph: {
                 ...FIXTURE.graph,
-                display: { ...FIXTURE.graph.display, legacyPercentiles: true },
-                series: [{
-                    ...FIXTURE.graph.series[0],
-                    data: [[1000, 1], [2000, 2], [3000, 3], [4000, 4]],
-                }],
+                markers: [
+                    { type: 'horizontal_line', name: '25th Percentile', value: 1.75, color: '111111', lineStyle: 'solid' },
+                    { type: 'horizontal_line', name: '50th Percentile', value: 2.5, color: '222222', lineStyle: 'solid' },
+                    { type: 'horizontal_line', name: '75th Percentile', value: 3.25, color: '333333', lineStyle: 'solid' },
+                ],
             },
         });
 
@@ -331,20 +331,16 @@ describe('toEChartsOptions', () => {
         ]);
     });
 
-    test('legacy percentile colors come from payload display metadata', () => {
+    test('marker colors come from normalized payload metadata', () => {
         const opts = toEChartsOptions({
             ...FIXTURE,
             graph: {
                 ...FIXTURE.graph,
-                display: {
-                    ...FIXTURE.graph.display,
-                    legacyPercentiles: true,
-                    legacyPercentileColors: ['111111', '222222', '333333'],
-                },
-                series: [{
-                    ...FIXTURE.graph.series[0],
-                    data: [[1000, 1], [2000, 2], [3000, 3]],
-                }],
+                markers: [
+                    { type: 'horizontal_line', name: '25th Percentile', value: 1.75, color: '111111', lineStyle: 'solid' },
+                    { type: 'horizontal_line', name: '50th Percentile', value: 2.5, color: '222222', lineStyle: 'solid' },
+                    { type: 'horizontal_line', name: '75th Percentile', value: 3.25, color: '333333', lineStyle: 'solid' },
+                ],
             },
         });
 

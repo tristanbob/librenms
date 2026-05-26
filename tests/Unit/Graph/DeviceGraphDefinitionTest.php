@@ -3,16 +3,16 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use App\Facades\LibrenmsConfig;
-use LibreNMS\Graph\Definitions\Device\LegacyDeviceGraphCatalog;
+use LibreNMS\Graph\Definitions\Device\DeviceGraphCatalog;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Tests\TestCase;
 
-final class LegacyDeviceGraphDefinitionTest extends TestCase
+final class DeviceGraphDefinitionTest extends TestCase
 {
     public function testCatalogSupportsAllRemainingDevDeviceGraphs(): void
     {
-        $types = array_map(fn ($definition) => $definition->graphType(), LegacyDeviceGraphCatalog::definitions());
+        $types = array_map(fn ($definition) => $definition->graphType(), DeviceGraphCatalog::definitions());
 
         $this->assertContains('device_availability', $types);
         $this->assertContains('device_netstat_tcp', $types);
@@ -21,7 +21,16 @@ final class LegacyDeviceGraphDefinitionTest extends TestCase
         $this->assertContains('device_uptime', $types);
     }
 
-    public function testSimpleStatsAddsLegacyRollupsByTimeRange(): void
+    public function testAvailabilityUsesRequestedDurationForExpressionPlan(): void
+    {
+        $graph = $this->definition('device_availability');
+        $query = new GraphQuery('device', 'device_availability', 1000000, 1003600, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
+        $plan = $graph->expressions($this->device(), $query);
+
+        $this->assertSame(['availability', 172800], $plan->series[0]->expression->arguments['rrdName']);
+    }
+
+    public function testSimpleStatsAddsRollupsByTimeRange(): void
     {
         $graph = $this->definition('device_hr_processes');
 
@@ -43,7 +52,7 @@ final class LegacyDeviceGraphDefinitionTest extends TestCase
         $this->assertEquals(2.0, ($binding->transform)(172800));
     }
 
-    public function testStackedConfigControlsLegacyInvertedSeries(): void
+    public function testStackedConfigControlsInvertedSeries(): void
     {
         LibrenmsConfig::set('webui.graph_stacked', false);
         $tcp = $this->definition('device_netstat_tcp')->series($this->device(), $this->query('device_netstat_tcp'));
@@ -54,7 +63,7 @@ final class LegacyDeviceGraphDefinitionTest extends TestCase
         $this->assertFalse($tcp[1]->negate);
     }
 
-    public function testUcdCpuDefinesLegacyStackedPercentSeries(): void
+    public function testUcdCpuDefinesStackedPercentSeries(): void
     {
         $series = $this->definition('device_ucd_cpu')->series($this->device(), $this->query('device_ucd_cpu'));
 
@@ -78,7 +87,7 @@ final class LegacyDeviceGraphDefinitionTest extends TestCase
 
     private function definition(string $type): \LibreNMS\Graph\GraphDefinition
     {
-        foreach (LegacyDeviceGraphCatalog::definitions() as $definition) {
+        foreach (DeviceGraphCatalog::definitions() as $definition) {
             if ($definition->graphType() === $type) {
                 return $definition;
             }

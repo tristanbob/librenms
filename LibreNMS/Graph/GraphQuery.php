@@ -100,4 +100,19 @@ class GraphQuery
             $step,
         );
     }
+
+    public function withOptions(array $options): self
+    {
+        return new self(
+            $this->scope,
+            $this->graphType,
+            $this->from,
+            $this->to,
+            $this->width,
+            $this->height,
+            $this->entities,
+            $options,
+            $this->step,
+        );
+    }
 }

@@ -1,12 +1,12 @@
 <?php
 
-namespace LibreNMS\Graph\Definitions\Legacy;
+namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 
-abstract class LegacyGraph implements GraphDefinition
+abstract class GraphTemplate implements GraphDefinition
 {
     public function __construct(
         protected readonly string $graphType,
