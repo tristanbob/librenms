@@ -228,6 +228,7 @@ nav:
       - OpenTSDB: Extensions/metrics/OpenTSDB.md
       - Prometheus: Extensions/metrics/Prometheus.md
       - Kafka: Extensions/metrics/Kafka.md
+      - VictoriaMetrics: Extensions/metrics/VictoriaMetrics.md
 
   - Alerting:
     - Introduction: Alerting/index.md

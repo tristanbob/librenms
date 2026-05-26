@@ -286,6 +286,27 @@ return [
         'enabled' => ':count plugin enabled|:count plugins enabled',
         'failed' => 'Failed to enable plugin(s)',
     ],
+    'victoriametrics:migrate-rrd' => [
+        'description'  => 'Backfill VictoriaMetrics with historical data from RRD files (one-time migration)',
+        'starting'     => 'Migrating RRD history to VictoriaMetrics at :url',
+        'dry_run'      => 'DRY RUN — samples will be counted but not posted to VictoriaMetrics',
+        'counters_note' => 'Counter synthesis enabled: INERRORS, OUTERRORS, INDISCARDS, OUTDISCARDS will be written as approximate cumulative counters',
+        'no_devices'   => 'No devices matched the given device spec',
+        'device'       => 'Device :hostname',
+        'complete'     => 'Migration complete — :samples samples, :batches batches sent, :failed failed',
+        'arguments'    => [],
+        'options' => [
+            'device'     => 'Hostname, device_id, wildcard (*), or all (default: all)',
+            'start'      => 'Unix timestamp of earliest data to migrate (default: all available)',
+            'end'        => 'Unix timestamp of latest data to migrate (default: now)',
+            'resolution' => 'RRD fetch resolution in seconds; must match an RRA step (default: 300)',
+            'counters'   => 'Also synthesize counter metrics (errors, discards) via cumulative integration',
+            'url'        => 'VictoriaMetrics write URL override (default: http://127.0.0.1:8428/api/v1/import/prometheus)',
+            'batch-size' => 'Number of Prometheus text lines per HTTP POST (default: 10000)',
+            'timeout'    => 'HTTP timeout in seconds per POST (default: 30)',
+            'dry-run'    => 'Parse RRDs and count samples without posting to VictoriaMetrics',
+        ],
+    ],
     'port:tune' => [
         'description' => 'Tune port rrd files to limit the max transfer rate based on ifSpeed',
         'arguments' => [
