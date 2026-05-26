@@ -30,6 +30,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class ErrorsGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'port_errors';
 
     public function graphType(): string

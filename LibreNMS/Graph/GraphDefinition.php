@@ -69,4 +69,12 @@ interface GraphDefinition
      * Keys: kind ('line'|'bar'), stacked (bool), area (bool)
      */
     public function display(): array;
+
+    /**
+     * Typed request parameters with defaults and validation bounds.
+     * Resolved from GraphQuery::$options before series/markers are evaluated.
+     *
+     * @return GraphVariableDefinition[]
+     */
+    public function variables(): array;
 }

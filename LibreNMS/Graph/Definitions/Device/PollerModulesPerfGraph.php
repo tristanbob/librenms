@@ -32,6 +32,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class PollerModulesPerfGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_poller_modules_perf';
 
     public function graphType(): string

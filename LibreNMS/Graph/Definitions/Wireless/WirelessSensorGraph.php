@@ -31,6 +31,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     private bool $transformComputed = false;
     /** @var callable|null */
     private $transform = null;

@@ -6,15 +6,15 @@ class GraphMarkerDefinition
 {
     public function __construct(
         public readonly string $name,
-        public readonly GraphExpression|float|int $value,
+        public readonly PercentileBinding|TotalBinding|float|int $value,
         public readonly string $type = 'horizontal_line',
         public readonly ?string $severity = null,
         public readonly ?string $color = null,
         public readonly string $lineStyle = 'solid',
     ) {}
 
-    public static function percentile(string $name, GraphExpression $expression, float $percentile, ?string $color = null): self
+    public static function percentile(string $name, MetricBinding $inner, float $percentile, ?string $color = null): self
     {
-        return new self($name, GraphExpression::percentile($expression, $percentile), color: $color);
+        return new self($name, new PercentileBinding($inner, $percentile), color: $color);
     }
 }

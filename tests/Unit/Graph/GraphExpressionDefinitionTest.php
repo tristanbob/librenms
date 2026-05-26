@@ -3,10 +3,11 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\Definitions\Device\DeviceStatsGraphCatalog;
-use LibreNMS\Graph\GraphExpression;
-use LibreNMS\Graph\GraphPlanDefinition;
+use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphVariableDefinition;
+use LibreNMS\Graph\PercentileBinding;
+use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Tests\TestCase;
 
 final class GraphExpressionDefinitionTest extends TestCase
@@ -26,27 +27,34 @@ final class GraphExpressionDefinitionTest extends TestCase
     public function testAvailabilityDeclaresDurationVariableAndUsesItForRrdName(): void
     {
         $graph = $this->definition('device_availability');
-        $this->assertInstanceOf(GraphPlanDefinition::class, $graph);
-        $this->assertSame(['duration'], array_map(fn ($variable) => $variable->name, $graph->variables()));
+
+        $variableNames = array_map(fn ($v) => $v->name, $graph->variables());
+        $this->assertSame(['duration'], $variableNames);
 
         $query = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
-        $plan = $graph->expressions(['device_id' => 1, 'hostname' => 'router1'], $query);
-        $expression = $plan->series[0]->expression;
+        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
 
-        $this->assertInstanceOf(GraphExpression::class, $expression);
-        $this->assertSame('def', $expression->type);
-        $this->assertSame(['availability', 172800], $expression->arguments['rrdName']);
+        $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
+        $this->assertInstanceOf(RrdMetricBinding::class, $binding);
+        $this->assertSame(['availability', 172800], $binding->rrdName);
     }
 
-    public function testSimpleStatsEmitServerSidePercentileMarkers(): void
+    public function testSimpleStatsEmitPercentileMarkers(): void
     {
         $graph = $this->definition('device_hr_processes');
-        $this->assertInstanceOf(GraphPlanDefinition::class, $graph);
 
-        $query = new GraphQuery('device', 'device_hr_processes', 1000, 2000, 1200, 300, ['device_id' => 1]);
-        $plan = $graph->expressions(['device_id' => 1, 'hostname' => 'router1'], $query);
+        $query   = new GraphQuery('device', 'device_hr_processes', 1000, 2000, 1200, 300, ['device_id' => 1]);
+        $markers = $graph->markers(['device_id' => 1, 'hostname' => 'router1'], $query);
 
-        $this->assertSame(['25th Percentile', '50th Percentile', '75th Percentile'], array_map(fn ($marker) => $marker->name, $plan->markers));
+        $this->assertCount(3, $markers);
+        $this->assertContainsOnlyInstancesOf(GraphMarkerDefinition::class, $markers);
+
+        $names = array_map(fn ($m) => $m->name, $markers);
+        $this->assertSame(['25th Percentile', '50th Percentile', '75th Percentile'], $names);
+
+        foreach ($markers as $marker) {
+            $this->assertInstanceOf(PercentileBinding::class, $marker->value);
+        }
     }
 
     private function definition(string $type): \LibreNMS\Graph\GraphDefinition

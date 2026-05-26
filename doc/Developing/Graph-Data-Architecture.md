@@ -1,101 +1,286 @@
 # Graph Data Architecture
 
-LibreNMS graph modernization is built around one rule: LibreNMS owns graph
-semantics, metric backends provide samples, and renderers draw normalized graph
-payloads.
+LibreNMS separates graph concerns into three layers: definitions describe what a
+graph means, backends fetch metric samples, and the renderer draws the result.
+This separation means a graph definition written once works with any supported
+metric backend and any renderer.
+
+---
 
 ## Definition Layer
 
-Graph definitions describe a graph in LibreNMS terms — not renderer options or
-raw RRDtool commands.
+Every graph type implements `GraphDefinition`. A definition is a plain PHP class
+with no framework dependencies; it declares what data a graph needs and how it
+should be presented, without knowing how that data is fetched or drawn.
 
-Two interfaces exist:
+### Interface at a Glance
 
-**`GraphDefinition`** — binding-based. Each series declares one or more
-`RrdMetricBinding` (or `VictoriaMetricsMetricBinding`) entries. The backend
-reads the named data sources and calls an optional per-series transform. This
-interface works with both RRD and VictoriaMetrics and is the correct choice for
-any graph that should support both backends.
+| Method | Returns | Purpose |
+|--------|---------|---------|
+| `graphType()` | `string` | Unique graph type key, e.g. `device_icmp_perf` |
+| `id()` | `string` | Unique instance identifier (type + entity IDs) |
+| `title()` | `string` | Display title |
+| `subtitle()` | `string` | Display subtitle (usually hostname or entity name) |
+| `unit()` | `string` | Primary unit label, e.g. `bps`, `ms`, `%` |
+| `entityType()` | `string` | Owning entity: `device`, `port`, `sensor`, etc. |
+| `variables()` | `GraphVariableDefinition[]` | Typed request parameters (default: `[]`) |
+| `series()` | `GraphSeriesDefinition[]` | Data series to render |
+| `markers()` | `array` | Horizontal reference lines |
+| `display()` | `array` | Renderer hints (kind, area, stacked, y-axes) |
 
-**`GraphPlanDefinition extends GraphDefinition`** — expression-based. Each
-series declares an expression tree (`def`, `scale`, `sum`, `divide`, `percent`,
-`negate`, `percentile`, `total`, `shift`). The expression tree is evaluated
-server-side by the RRD provider only. VictoriaMetrics does not implement
-expression translation; any `GraphPlanDefinition` always uses RRD.
+### Series and Metric Bindings
 
-`GraphPlanDefinition` is appropriate when a series requires derived values that
-cannot be expressed as a single metric binding (e.g., multi-DS math or
-time-shifted averages). For straightforward one-to-one metric mappings, prefer
-`GraphDefinition`.
+Each `GraphSeriesDefinition` carries one or more `MetricBinding` entries — one
+per supported backend. At query time the active backend picks the binding whose
+`source()` matches its own identifier and ignores the rest. This means a single
+definition can support RRD today and VictoriaMetrics tomorrow without branching.
 
-A graph plan may also declare:
+```php
+new GraphSeriesDefinition(
+    name:     'In',
+    key:      'port_bits_in',
+    unit:     'bps',
+    bindings: [
+        new RrdMetricBinding(rrdName: 'port-id', ds: 'INOCTETS', transform: fn ($v) => $v * 8),
+        new VictoriaMetricsMetricBinding('ifInOctets', labelKeys: ['port_id']),
+    ],
+)
+```
 
-- typed variables, such as `duration`, `previous`, `inverse`, or `reducefactor`
-- markers, such as thresholds and percentile lines
-- renderer hints, such as area fill, stack group, line color, and y-axis bounds
+To add VictoriaMetrics support to an existing RRD-only graph, add a
+`VictoriaMetricsMetricBinding` to each series — no other code changes required.
+
+#### Multi-DS Math
+
+When a series value requires arithmetic across multiple RRD data sources, pass
+an array of DS names and a `transform` callable:
+
+```php
+new RrdMetricBinding(
+    rrdName:   'icmp-perf',
+    ds:        ['xmt', 'rcv'],
+    transform: fn (array $v) => $v['xmt'] > 0
+        ? (($v['xmt'] - $v['rcv']) / $v['xmt'] * 100)
+        : null,
+)
+```
+
+The same approach works for VictoriaMetrics if a single metric provides the
+value directly; more complex multi-metric math requires separate series.
+
+#### Stepped Averages
+
+`RrdMetricBinding` accepts an optional `step` parameter. Requesting data at a
+coarser step (e.g. 3600 s, 86400 s) produces smoothed average series alongside
+the raw data — useful for long-window graphs where individual samples are noisy.
+
+### Window-Level Aggregation Bindings
+
+Three binding wrappers compute values that span the entire query window rather
+than producing a point-per-timestamp time series.
+
+**`PercentileBinding(MetricBinding $inner, float $percentile)`**
+Wraps any binding and computes the Nth percentile over all non-null samples in
+the window. Used as a `GraphMarkerDefinition` value to render a horizontal
+reference line (e.g. "95th percentile = 42 Mbps"). Both backends fetch the inner
+binding's data and compute the percentile application-side.
+
+**`TotalBinding(MetricBinding $inner)`**
+Same pattern; sums all samples to produce a total-usage value. Intended for
+billing-style graphs.
+
+**`ShiftBinding(MetricBinding $inner, int $offsetSeconds)`**
+Used in a series binding (not a marker). Both backends fetch data from the time
+range `[from − offset, to − offset]` and return the timestamps advanced forward
+by `+offset`, so the series aligns with the current window. This produces a
+"current vs. same period last week" overlay.
+
+```php
+// 95th-percentile marker
+GraphMarkerDefinition::percentile('95th Percentile', $binding, 95, color: 'FF8800')
+
+// Previous-week overlay series
+new GraphSeriesDefinition(
+    name:     'Last week',
+    bindings: [new ShiftBinding(new RrdMetricBinding(...), offsetSeconds: 604800)],
+)
+```
+
+### Variables
+
+`variables()` returns `GraphVariableDefinition` objects that declare typed,
+validated request parameters. Variables are resolved from the HTTP request before
+`series()` or `markers()` are called, and are available via `$query->options`.
+
+```php
+public function variables(): array
+{
+    return [
+        GraphVariableDefinition::integer('duration', default: 86400, min: 1, max: 604800),
+    ];
+}
+```
+
+Supported types: `integer` (with optional min/max clamping), `boolean`, and
+`string` (with an allowed-values list).
+
+### Markers
+
+`markers()` returns horizontal reference lines. Each entry is either a plain
+array (for static threshold values already known at definition time) or a
+`GraphMarkerDefinition` object (for computed values such as percentiles):
+
+```php
+public function markers(array $device, GraphQuery $query): array
+{
+    return [
+        // Static threshold from database
+        ['type' => 'horizontal_line', 'name' => 'Warning', 'value' => $device['warn_limit'], 'severity' => 'warning'],
+
+        // Computed percentile
+        GraphMarkerDefinition::percentile('95th Percentile', new RrdMetricBinding(...), 95),
+    ];
+}
+```
+
+The backend evaluates `GraphMarkerDefinition` values (fetching the inner binding
+and computing the aggregation) before they are serialized to the API response.
+
+### Display Hints
+
+`display()` returns a map of renderer hints. Common keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `kind` | `'line'`\|`'bar'` | Default series type |
+| `area` | `bool` | Fill under line series |
+| `stacked` | `bool` | Stack series vertically |
+| `legend` | `bool` | Show series legend |
+| `y_axes` | `array` | Per-axis unit, scale, min, max (see below) |
+| `yAxisMin` / `yAxisMax` | `float\|null` | Single-axis bounds shorthand |
+
+#### Multi-Y-Axis
+
+When a graph plots series with incompatible units (e.g. latency in ms and loss
+in %), declare multiple axes in `display()` and set `yAxisIndex` on the series
+that should use the non-primary axis:
+
+```php
+public function display(): array
+{
+    return [
+        'y_axes' => [
+            ['unit' => 'ms', 'scale' => 'linear', 'min' => null, 'max' => null],
+            ['unit' => '%',  'scale' => 'linear', 'min' => 0,    'max' => 100],
+        ],
+    ];
+}
+
+// In series():
+new GraphSeriesDefinition(name: 'Loss', yAxisIndex: 1, ...)
+```
+
+Single-axis graphs may omit `y_axes`; the backend synthesises a one-element
+array from the top-level `unit` field.
+
+---
 
 ## Backend Layer
 
-`GraphDataBackendSelector` dispatches each query to VictoriaMetrics or RRD.
-When VictoriaMetrics is enabled and the definition has no VM bindings (or is a
-`GraphPlanDefinition`), a `NoVmBindingException` is raised and the selector
-silently falls back to RRD — no warning is added to the response. An unexpected
-VM failure (network error, parse error, etc.) raises `RuntimeException`, which
-sets `meta.fallback_used = true` and adds a user-visible warning.
+`GraphDataBackendSelector` selects the active backend (RRD or VictoriaMetrics)
+and calls `query()` on it. The selected backend:
 
-Missing RRD files or missing data sources must become structured payload
-warnings rather than silent empty graphs.
+1. Resolves graph variables from the request.
+2. Iterates `series()` and evaluates each binding whose `source()` matches.
+3. Evaluates `markers()`, resolving any `GraphMarkerDefinition` values.
+4. Returns a `GraphDataResult` serialized to the JSON API response.
+
+### RRD Backend
+
+Groups series by RRD file, step, and consolidation function to minimise
+`rrdtool fetch` invocations. Missing RRD files and missing data sources produce
+structured warnings in `meta.warnings` rather than silent empty graphs.
+
+### VictoriaMetrics Backend
+
+Constructs a MetricsQL selector from the `VictoriaMetricsMetricBinding` and
+queries `/api/v1/query_range`. If a definition has no VM bindings, a
+`NoVmBindingException` is thrown and the selector silently falls back to RRD
+with no user-visible warning. An unexpected VM failure (connection error, HTTP
+error, malformed response) sets `meta.fallback_used = true` and adds a
+user-visible warning.
+
+---
+
+## API Response Shape
+
+```json
+{
+  "status": "ok",
+  "graph": {
+    "id":       "device_icmp_perf:42",
+    "type":     "device_icmp_perf",
+    "title":    "Ping Response",
+    "subtitle": "router1.example.com",
+    "unit":     "ms",
+    "from":     1700000000,
+    "to":       1700086400,
+    "step":     300,
+    "display":  { "kind": "line", "area": true, "legend": true },
+    "variables": { "duration": 86400 },
+    "y_axes":   [{ "unit": "ms", "scale": "linear", "min": null, "max": null }],
+    "series":   [{ "name": "RTT", "key": "icmp_avg", "data": [[...], ...], "stats": {...} }],
+    "markers":  [{ "type": "horizontal_line", "name": "Warning", "value": 150.0 }],
+    "meta":     { "source": "rrd", "fallback_used": false, "warnings": [] }
+  }
+}
+```
+
+### Caching
+
+The response carries `Cache-Control` headers based on whether the time window is
+in the past:
+
+- Completed range (`to < now − 60 s`): `Cache-Control: public, max-age=300`
+- Live/current window: `Cache-Control: no-store`
+
+---
 
 ## Renderer Layer
 
-The browser receives normalized LibreNMS graph data. ECharts translates that
-payload into chart options; it does not compute graph semantics such as
-percentiles, totals, thresholds, billing math, or graph-variable behavior.
+The frontend receives the normalized JSON payload above and renders it with
+ECharts. The renderer is responsible only for visual presentation — it does not
+re-compute percentiles, totals, thresholds, or any other graph semantics.
 
-**Negate** (`series.style.negate`) is a display-layer concern. Data is stored
-and fetched as positive values; the renderer flips the sign for visualization
-(e.g., showing outbound traffic below zero on duplex graphs). This matches
-legacy RRDtool's graph-layer CDEF behavior.
+### Negate
 
-**Multi-Y-axis.** When a graph needs two incompatible units on separate axes,
-the definition's `display()` method returns a `y_axes` key — an array of axis
-objects, each with `unit`, `scale`, `min`, and `max`. Series that belong to the
-secondary axis set `yAxisIndex: 1` (or higher) in their `GraphSeriesDefinition`.
-The API response always carries `graph.y_axes` (an array); single-axis graphs
-produce a one-element array derived from the top-level `unit`.
+`series.style.negate` is a display-layer flag. The underlying data is stored and
+fetched as positive values; the renderer negates the sign at draw time to show a
+series below zero (e.g. outbound traffic on a duplex graph).
 
-## API Response Caching
+### Tooltip
 
-The graph data API sets `Cache-Control` headers based on whether the requested
-time window has already passed:
+The tooltip formatter reads per-axis units from `y_axes` so that a dual-axis
+graph shows the correct unit next to each series value.
 
-- **Completed time range** (`to < now − 60 s`): `Cache-Control: public, max-age=300`
-- **Live/current window**: `Cache-Control: no-store`
+---
 
-This allows CDNs and browser caches to reuse responses for historical queries
-while always fetching fresh data for current-time graphs.
+## Adding a New Graph Type
 
-## Migration Guidance
+1. Create a class implementing `GraphDefinition` in the appropriate namespace
+   under `LibreNMS/Graph/Definitions/`.
+2. Implement `series()` with `RrdMetricBinding` entries. Add
+   `VictoriaMetricsMetricBinding` entries for any series that have a direct VM
+   metric equivalent.
+3. Implement `markers()` for threshold lines. Use `GraphMarkerDefinition::percentile()`
+   for computed reference lines.
+4. Implement `variables()` for any configurable request parameters.
+5. Register the class in `GraphServiceProvider`.
+6. Add unit tests covering variables, series bindings, marker values, and a
+   representative API response snapshot.
 
-A graph is considered **migrated** when it has a registered `GraphDefinition`
-(or `GraphPlanDefinition`) class whose `graphType()` key resolves through the
-registry. The legacy image endpoint continues to exist and serves graphs that
-are not yet registered — there is no cutover date and no flag to flip.
-
-When migrating a legacy graph:
-
-1. Keep the existing image endpoint unchanged.
-2. Preserve the existing graph type name and permission checks.
-3. Choose `GraphDefinition` for metric-binding graphs (VM-compatible) or
-   `GraphPlanDefinition` for expression-based graphs (RRD-only).
-4. For `GraphPlanDefinition`: declare graph-specific request variables with
-   defaults and bounds, then model RRD data and derived values as graph
-   expressions.
-5. Emit thresholds, percentiles, totals, and other reference lines as markers
-   in the normalized payload.
-6. Add tests for variables, RRD names, data sources, expressions, warnings, and
-   representative API output.
-
-Semantic parity is the target. The ECharts graph should match the legacy graph's
-data, graph variables, thresholds, permissions, and major visual behavior;
-pixel-perfect RRDtool image reproduction is not required.
+The legacy RRDtool image endpoint for the same graph type continues to work
+unchanged. Both endpoints coexist; there is no flag to flip and no cutover date.
+Semantic parity — matching data, variables, thresholds, and major visual
+behaviour — is the goal. Pixel-perfect reproduction of RRDtool images is not
+required.

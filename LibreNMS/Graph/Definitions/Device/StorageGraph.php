@@ -31,6 +31,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class StorageGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_storage';
 
     // Matches the iter-based 7-color cycle in includes/html/graphs/device/storage.inc.php

@@ -9,6 +9,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class UsageGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'toner_usage';
 
     public function graphType(): string { return self::GRAPH_TYPE; }

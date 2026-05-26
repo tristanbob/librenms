@@ -44,10 +44,10 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         $device = Device::findOrFail($deviceId)->toArray();
         $def    = $this->registry->definitionFor($query->graphType);
         $variables = [];
-        if ($def instanceof GraphPlanDefinition) {
-            foreach ($def->variables() as $variable) {
-                $variables[$variable->name] = $variable->resolve($query->options);
-            }
+        foreach ($def->variables() as $variable) {
+            $variables[$variable->name] = $variable->resolve($query->options);
+        }
+        if ($variables !== []) {
             $query = $query->withOptions($variables + $query->options);
         }
 
@@ -67,10 +67,23 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         ));
         $result->setVariables($variables);
         $this->fillSeries($result, $def, $device, $query);
-        if (! $def instanceof GraphPlanDefinition) {
-            foreach ($def->markers($device, $query) as $marker) {
-                $result->addMarker($marker);
+        foreach ($def->markers($device, $query) as $marker) {
+            if ($marker instanceof GraphMarkerDefinition) {
+                $value = $this->resolveMarkerValue($marker->value, $device, $query);
+                if ($value === null || ! is_finite($value)) {
+                    continue;
+                }
+                $result->addMarker(array_filter([
+                    'type'      => $marker->type,
+                    'name'      => $marker->name,
+                    'value'     => round($value, 4),
+                    'severity'  => $marker->severity,
+                    'color'     => $marker->color,
+                    'lineStyle' => $marker->lineStyle,
+                ], fn ($v) => $v !== null));
+                continue;
             }
+            $result->addMarker($marker);
         }
 
         return $result;
@@ -86,6 +99,54 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         array           $device,
         GraphQuery      $query
     ): void;
+
+    /**
+     * Fetch all data points for a single metric binding as an associative array
+     * keyed by timestamp ms. Returns only finite, non-null values.
+     * Used internally to evaluate PercentileBinding and TotalBinding marker values.
+     *
+     * @return array<int, float>
+     */
+    abstract protected function evaluateBindingPoints(
+        MetricBinding $binding,
+        array $device,
+        GraphQuery $query,
+    ): array;
+
+    /**
+     * Resolve a GraphMarkerDefinition value to a concrete float.
+     * Handles PercentileBinding and TotalBinding by fetching the inner binding's
+     * data points and computing the aggregation application-side.
+     */
+    protected function resolveMarkerValue(
+        PercentileBinding|TotalBinding|float|int $value,
+        array $device,
+        GraphQuery $query,
+    ): ?float {
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        $points = array_values($this->evaluateBindingPoints($value->inner, $device, $query));
+        if ($points === []) {
+            return null;
+        }
+
+        if ($value instanceof PercentileBinding) {
+            sort($points, SORT_NUMERIC);
+            $idx = (count($points) - 1) * ($value->percentile / 100);
+            $lo  = (int) floor($idx);
+            $hi  = (int) ceil($idx);
+
+            return $lo === $hi ? $points[$lo] : $points[$lo] + ($points[$hi] - $points[$lo]) * ($idx - $lo);
+        }
+
+        if ($value instanceof TotalBinding) {
+            return array_sum($points);
+        }
+
+        return null;
+    }
 
     protected function emptySeries(GraphSeriesDefinition $seriesDef): GraphSeries
     {

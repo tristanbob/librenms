@@ -32,6 +32,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class DiskIoGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'device_diskio';
 
     // Matches graph_colours.greens / graph_colours.blues from config_definitions.json

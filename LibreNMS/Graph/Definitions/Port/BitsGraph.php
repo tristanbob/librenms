@@ -31,6 +31,8 @@ use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
 class BitsGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     public const GRAPH_TYPE = 'port_bits';
 
     public function graphType(): string

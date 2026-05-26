@@ -33,6 +33,8 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph implements GraphDefinition
 {
+    use \LibreNMS\Graph\DefaultVariables;
+
     private const PREFIX = 'device_wireless_';
 
     public function __construct(private readonly WirelessSensorType $sensorClass) {}
