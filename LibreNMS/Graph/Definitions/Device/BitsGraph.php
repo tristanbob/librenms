@@ -125,11 +125,6 @@ class BitsGraph implements GraphDefinition
         return [];
     }
 
-    public function thresholds(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
     /**
      * Mirrors includes/html/graphs/device/bits.inc.php so the JSON graph includes
      * the same non-disabled, non-deleted ports as the legacy RRD image graph.

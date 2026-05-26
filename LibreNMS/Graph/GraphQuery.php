@@ -35,6 +35,15 @@ class GraphQuery
 
     public readonly int $step;
 
+    /**
+     * @param array{device_id: int, port_id?: int, port_name?: string, sensor_id?: int,
+     *             sensor_class?: string, sensor_type?: string, sensor_index?: int|string,
+     *             sensor_descr?: string, poller_type?: string, mempool_id?: int,
+     *             processor_id?: int, storage_id?: int, bill_id?: int} $entities
+     *        Entity keys required depend on graph type. All entity-specific keys are optional
+     *        at the type level; individual graph definitions document which keys they require.
+     * @param array<string, mixed> $options  Resolved graph variables (e.g. duration)
+     */
     public function __construct(
         public readonly string $scope,
         public readonly string $graphType,

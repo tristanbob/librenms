@@ -106,8 +106,4 @@ class DiscardsGraph implements GraphDefinition
         return [];
     }
 
-    public function thresholds(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
 }

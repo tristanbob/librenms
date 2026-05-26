@@ -31,7 +31,16 @@ class IcmpPerfGraph implements GraphDefinition
 
     public function display(): array
     {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true];
+        return [
+            'kind'    => 'line',
+            'stacked' => false,
+            'area'    => true,
+            'legend'  => true,
+            'y_axes'  => [
+                ['unit' => 'ms',  'scale' => 'linear', 'min' => null, 'max' => null],
+                ['unit' => '%',   'scale' => 'linear', 'min' => 0,    'max' => 100],
+            ],
+        ];
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -70,6 +79,7 @@ class IcmpPerfGraph implements GraphDefinition
                 color: 'd42e08',
                 area: true,
                 areaOpacity: 0.25,
+                yAxisIndex: 1,
                 bindings: [new RrdMetricBinding(
                     rrdName: 'icmp-perf',
                     ds: ['xmt', 'rcv'],
@@ -80,6 +90,4 @@ class IcmpPerfGraph implements GraphDefinition
     }
 
     public function markers(array $device, GraphQuery $query): array { return []; }
-
-    public function thresholds(array $device, GraphQuery $query): array { return []; }
 }

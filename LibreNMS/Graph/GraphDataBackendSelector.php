@@ -25,6 +25,7 @@ namespace LibreNMS\Graph;
 
 use Illuminate\Support\Facades\Log;
 use LibreNMS\Config as LibrenmsConfig;
+use LibreNMS\Graph\Exception\NoVmBindingException;
 
 /**
  * Selects between RRD and VictoriaMetrics backends based on configuration.
@@ -45,8 +46,12 @@ class GraphDataBackendSelector implements GraphDataProvider
 
         try {
             return $this->vm->query($query);
+        } catch (NoVmBindingException $e) {
+            Log::debug('VictoriaMetrics not used, falling back to RRD: ' . $e->getMessage());
+
+            return $this->rrd->query($query);
         } catch (\RuntimeException $e) {
-            Log::debug('VictoriaMetrics query failed, falling back to RRD: ' . $e->getMessage());
+            Log::warning('VictoriaMetrics query failed, falling back to RRD: ' . $e->getMessage());
             $result = $this->rrd->query($query);
             $result->setFallback(true);
             $result->addWarning('VictoriaMetrics query failed; RRD used as fallback.');

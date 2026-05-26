@@ -289,6 +289,18 @@ function get_graph_by_service(Request $request)
     return check_device_permission($device_id, fn () => api_get_graph($request, $vars));
 }
 
+function graph_data_response(\LibreNMS\Graph\GraphDataResult $result, \LibreNMS\Graph\GraphQuery $query): \Illuminate\Http\JsonResponse
+{
+    $response = response()->json($result->toArray());
+    if ($query->to < time() - 60) {
+        $response->header('Cache-Control', 'public, max-age=300');
+    } else {
+        $response->header('Cache-Control', 'no-store');
+    }
+
+    return $response;
+}
+
 function get_device_graph_data(Request $request)
 {
     $hostname   = $request->route('hostname') ?? $request->route('device_id');
@@ -306,7 +318,7 @@ function get_device_graph_data(Request $request)
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result = $provider->query($query);
 
-            return response()->json($result->toArray());
+            return graph_data_response($result, $query);
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json([
                 'status'  => 'error',
@@ -341,7 +353,7 @@ function get_port_graph_data(Request $request)
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result = $provider->query($query);
 
-            return response()->json($result->toArray());
+            return graph_data_response($result, $query);
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
         }
@@ -388,7 +400,7 @@ function get_sensor_graph_data(Request $request)
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result   = $provider->query($query);
 
-            return response()->json($result->toArray());
+            return graph_data_response($result, $query);
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
         }
@@ -439,7 +451,7 @@ function get_wireless_graph_data(Request $request)
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result   = $provider->query($query);
 
-            return response()->json($result->toArray());
+            return graph_data_response($result, $query);
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
         }

@@ -9,7 +9,6 @@ use LibreNMS\Graph\GraphPlanDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\GraphVariableDefinition;
-use LibreNMS\Graph\RrdMetricBinding;
 
 class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
 {
@@ -23,6 +22,7 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
         private readonly string $palette = 'rainbow_stats_purple',
         private readonly mixed $transform = null,
         array $display = [],
+        private readonly array $graphVariables = [],
     ) {
         parent::__construct($graphType, $title, $unit, $display + [
             'kind' => 'line',
@@ -32,11 +32,7 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
 
     public function variables(): array
     {
-        if ($this->graphType !== 'device_availability') {
-            return [];
-        }
-
-        return [GraphVariableDefinition::integer('duration', 86400, 1)];
+        return $this->graphVariables;
     }
 
     public function expressions(array $device, GraphQuery $query): GraphPlan
@@ -88,48 +84,8 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
 
     public function series(array $device, GraphQuery $query): array
     {
-        $timeDiff = $query->to - $query->from;
-        $label = $this->label !== '' ? $this->label : $this->title;
-        $series = [
-            new GraphSeriesDefinition(
-                name: $label,
-                key: $this->key('value'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 0, '663399'),
-                area: true,
-                areaOpacity: 0x33 / 0xff,
-                bindings: [new RrdMetricBinding($this->resolvedRrdName($query), $this->ds, transform: $this->bindingTransform())],
-            ),
-            new GraphSeriesDefinition(
-                name: '1 hour avg',
-                key: $this->key('1h'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 4, '3366BB'),
-                bindings: [new RrdMetricBinding($this->resolvedRrdName($query), $this->ds, step: 3600, transform: $this->bindingTransform())],
-            ),
-        ];
-
-        if ($timeDiff >= 129600) {
-            $series[] = new GraphSeriesDefinition(
-                name: '1 day avg',
-                key: $this->key('1d'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 5, 'AA3355'),
-                bindings: [new RrdMetricBinding($this->resolvedRrdName($query), $this->ds, step: 86400, transform: $this->bindingTransform())],
-            );
-        }
-
-        if ($timeDiff >= 691200) {
-            $series[] = new GraphSeriesDefinition(
-                name: '1 week avg',
-                key: $this->key('1w'),
-                unit: $this->unit($device, $query),
-                color: $this->paletteColor($this->palette, 6, '881177'),
-                bindings: [new RrdMetricBinding($this->resolvedRrdName($query), $this->ds, step: 604800, transform: $this->bindingTransform())],
-            );
-        }
-
-        return $series;
+        // Plan-based graphs are evaluated via expressions(); series() must not be called.
+        throw new \LogicException('SimpleStatsGraph is a GraphPlanDefinition; use expressions() instead of series().');
     }
 
     public function display(): array
@@ -154,20 +110,6 @@ class SimpleStatsGraph extends GraphTemplate implements GraphPlanDefinition
         }
 
         return $this->rrdName;
-    }
-
-    private function bindingTransform(): mixed
-    {
-        if (is_callable($this->transform)) {
-            return $this->transform;
-        }
-        if (is_numeric($this->transform)) {
-            $factor = (float) $this->transform;
-
-            return static fn ($value) => $value * $factor;
-        }
-
-        return null;
     }
 
     private function percentileMarkers(GraphExpression $expression): array

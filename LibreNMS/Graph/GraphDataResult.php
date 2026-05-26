@@ -26,9 +26,8 @@ namespace LibreNMS\Graph;
 class GraphDataResult
 {
     /** @var GraphSeries[] */
-    private array  $series     = [];
-    private array  $markers    = [];
-    private array  $thresholds = [];
+    private array  $series  = [];
+    private array  $markers = [];
     private string $source     = 'rrd';
     private bool   $fallback   = false;
     private ?string $emptyReason = null;
@@ -50,7 +49,6 @@ class GraphDataResult
 
     public function addSeries(GraphSeries $series): void  { $this->series[] = $series; }
     public function addMarker(array $marker): void        { $this->markers[] = $marker; }
-    public function addThreshold(array $threshold): void  { $this->thresholds[] = $threshold; }
     public function setSource(string $source): void       { $this->source = $source; }
     public function setFallback(bool $fb): void           { $this->fallback = $fb; }
     public function setEmptyReason(?string $reason): void { $this->emptyReason = $reason; }
@@ -68,12 +66,18 @@ class GraphDataResult
 
     public function toArray(): array
     {
-        $yAxis = [
-            'unit' => $this->unit,
-            'scale' => 'linear',
-            'min' => $this->display['yAxisMin'] ?? null,
-            'max' => $this->display['yAxisMax'] ?? null,
-        ];
+        // Build y_axes from display config. If display['y_axes'] is provided (multi-axis graphs),
+        // use it directly. Otherwise, synthesise a single axis from the scalar yAxisMin/yAxisMax hints.
+        if (! empty($this->display['y_axes'])) {
+            $yAxes = $this->display['y_axes'];
+        } else {
+            $yAxes = [[
+                'unit'  => $this->unit,
+                'scale' => 'linear',
+                'min'   => $this->display['yAxisMin'] ?? null,
+                'max'   => $this->display['yAxisMax'] ?? null,
+            ]];
+        }
 
         return [
             'status' => 'ok',
@@ -90,10 +94,9 @@ class GraphDataResult
                 'display'  => $this->display,
                 'variables' => $this->variables,
                 'x_axis'     => ['type' => 'time'],
-                'y_axis'     => $yAxis,
+                'y_axes'     => $yAxes,
                 'series'     => array_map(fn ($s) => $s->toArray(), $this->series),
                 'markers'    => $this->markers,
-                'thresholds' => $this->thresholds,
                 'meta'       => [
                     'source'        => $this->source,
                     'fallback_used' => $this->fallback,

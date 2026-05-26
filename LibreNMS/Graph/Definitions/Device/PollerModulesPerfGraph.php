@@ -118,11 +118,6 @@ class PollerModulesPerfGraph implements GraphDefinition
         return [];
     }
 
-    public function thresholds(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
     /**
      * Generate an N-color HSL palette with evenly spaced hues.
      *

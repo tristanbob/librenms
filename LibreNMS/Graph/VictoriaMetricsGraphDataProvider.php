@@ -26,6 +26,7 @@ namespace LibreNMS\Graph;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 use LibreNMS\Config as LibrenmsConfig;
+use LibreNMS\Graph\Exception\NoVmBindingException;
 use LibreNMS\Util\Http;
 
 class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
@@ -50,6 +51,12 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         array           $device,
         GraphQuery      $query
     ): void {
+        if ($def instanceof GraphPlanDefinition) {
+            throw new NoVmBindingException(
+                "GraphPlanDefinition graphs are evaluated server-side on RRD only; VM expression translation is not implemented for graph type '{$query->graphType}'."
+            );
+        }
+
         $series = $def->series($device, $query);
 
         $hasVmBinding = false;
@@ -60,7 +67,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
             }
         }
         if (! $hasVmBinding) {
-            throw new \RuntimeException(
+            throw new NoVmBindingException(
                 "No VictoriaMetrics bindings defined for graph type '{$query->graphType}'; RRD should be used."
             );
         }

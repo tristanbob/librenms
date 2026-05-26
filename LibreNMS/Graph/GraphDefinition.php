@@ -23,6 +23,11 @@
 
 namespace LibreNMS\Graph;
 
+/**
+ * All methods receive $device as a Device model array (keys: device_id, hostname, os, …)
+ * and $query->entities as an entity-specific array whose required keys vary by graph type.
+ * See GraphQuery for the documented entity shape.
+ */
 interface GraphDefinition
 {
     public function graphType(): string;
@@ -50,12 +55,6 @@ interface GraphDefinition
      * Each entry: ['type' => 'horizontal_line', 'name' => string, 'value' => float, 'severity' => 'warning'|'critical']
      */
     public function markers(array $device, GraphQuery $query): array;
-
-    /**
-     * Shaded threshold bands (reserved for future use — return [] for now).
-     * Distinct from markers(): markers() = horizontal lines, thresholds() = shaded regions.
-     */
-    public function thresholds(array $device, GraphQuery $query): array;
 
     /**
      * The primary entity type this graph belongs to ('device', 'port', 'sensor', 'wireless_sensor', 'bill').

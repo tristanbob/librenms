@@ -55,11 +55,6 @@ abstract class GraphTemplate implements GraphDefinition
         return [];
     }
 
-    public function thresholds(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
     protected function paletteColor(string $palette, int $index, string $fallback): string
     {
         $colors = (array) \LibreNMS\Config::get("graph_colours.$palette", []);

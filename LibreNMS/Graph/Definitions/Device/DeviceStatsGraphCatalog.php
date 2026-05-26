@@ -5,6 +5,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use LibreNMS\Graph\Definitions\Templates\SimpleStatsGraph;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphVariableDefinition;
 
 class DeviceStatsGraphCatalog
 {
@@ -24,6 +25,7 @@ class DeviceStatsGraphCatalog
                 'availability',
                 '',
                 display: ['yAxisMin' => 0, 'yAxisMax' => 100],
+                graphVariables: [GraphVariableDefinition::integer('duration', 86400, 1)],
             ),
             new SimpleStatsGraph('device_hr_processes', 'Processes', 'Processes', 'hr_processes', 'procs'),
             new SimpleStatsGraph('device_hr_users', 'Users', 'Users', 'hr_users', 'users'),

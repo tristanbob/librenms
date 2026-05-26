@@ -115,5 +115,4 @@ class DiskIoGraph implements GraphDefinition
 
     public function markers(array $device, GraphQuery $query): array { return []; }
 
-    public function thresholds(array $device, GraphQuery $query): array { return []; }
 }

@@ -96,8 +96,8 @@ final class SensorGraphVmFallbackTest extends DBTestCase
         $arr = $result->toArray();
 
         $this->assertSame('rrd', $arr['graph']['meta']['source']);
-        $this->assertTrue($arr['graph']['meta']['fallback_used']);
-        $this->assertNotEmpty($arr['graph']['meta']['warnings']);
+        $this->assertFalse($arr['graph']['meta']['fallback_used']);
+        $this->assertEmpty($arr['graph']['meta']['warnings']);
     }
 
     public static function sensorGraphTypesWithoutVmBindings(): array

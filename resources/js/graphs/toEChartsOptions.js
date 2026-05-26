@@ -75,16 +75,17 @@ export function toEChartsOptions(payload, options = {}) {
             ? s.data.map(([t, v]) => [t, v != null ? -v : null])
             : s.data;
         return {
-            name:      s.name,
-            type:      seriesType,
-            smooth:    false,
-            symbol:    seriesType === 'line' ? 'circle' : undefined,
+            name:       s.name,
+            type:       seriesType,
+            smooth:     false,
+            symbol:     seriesType === 'line' ? 'circle' : undefined,
             showSymbol: seriesType === 'line' ? false : undefined,
-            lineStyle: seriesType === 'line' ? { color: lineColor, width: s.style?.lineWidth ?? 1.25, opacity: s.style?.lineOpacity ?? 1.0 } : undefined,
-            itemStyle: { color: fillColor },
-            areaStyle: seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
-            stack:     s.style?.stack ?? undefined,
-            emphasis:  options.sparkline ? { disabled: true } : undefined,
+            lineStyle:  seriesType === 'line' ? { color: lineColor, width: s.style?.lineWidth ?? 1.25, opacity: s.style?.lineOpacity ?? 1.0 } : undefined,
+            itemStyle:  { color: fillColor },
+            areaStyle:  seriesType === 'line' && s.style?.area ? { color: fillColor, opacity: s.style.areaOpacity ?? 1.0 } : undefined,
+            stack:      s.style?.stack ?? undefined,
+            emphasis:   options.sparkline ? { disabled: true } : undefined,
+            yAxisIndex: s.yAxisIndex ?? 0,
             data,
         };
     });
@@ -102,21 +103,43 @@ export function toEChartsOptions(payload, options = {}) {
             limit:         '#cc0000',
         };
         const SEVERITY_OPACITY = { limit: 0.376 };
-        series[0].markLine = {
-            symbol: ['none', 'none'],
-            label:  { position: 'end', formatter: '{b}', color: t.font },
-            data: graph.markers.map(m => ({
-                yAxis:     m.value,
-                name:      m.name,
-                lineStyle: {
-                    color:   m.color ? resolveColor(m.color) : (SEVERITY_COLOR[m.severity] ?? '#FF0000'),
-                    type:    m.lineStyle ?? 'dashed',
-                    width:   1.5,
-                    opacity: SEVERITY_OPACITY[m.severity] ?? 1.0,
-                },
-            })),
-        };
+        // Use a dedicated invisible series so markers render even when all data series are empty.
+        series.push({
+            type:   'line',
+            data:   [],
+            silent: true,
+            markLine: {
+                symbol: ['none', 'none'],
+                label:  { position: 'end', formatter: '{b}', color: t.font },
+                data: graph.markers.map(m => ({
+                    yAxis:     m.value,
+                    name:      m.name,
+                    lineStyle: {
+                        color:   m.color ? resolveColor(m.color) : (SEVERITY_COLOR[m.severity] ?? '#FF0000'),
+                        type:    m.lineStyle ?? 'dashed',
+                        width:   1.5,
+                        opacity: SEVERITY_OPACITY[m.severity] ?? 1.0,
+                    },
+                })),
+            },
+        });
     }
+
+    const yAxes = graph.y_axes ?? [{ unit: graph.unit, min: null, max: null }];
+    const buildYAxis = (axis, isPrimary) => ({
+        type:         'value',
+        name:         axis.unit.charAt(0).toUpperCase() + axis.unit.slice(1),
+        nameRotate:   90,
+        nameLocation: 'middle',
+        nameGap:      40,
+        nameTextStyle: { color: t.font, fontFamily: MONO, fontSize: 10 },
+        splitLine:    { show: isPrimary, lineStyle: { color: t.grid, type: 'solid' } },
+        axisLine:     { show: true, lineStyle: { color: t.frame } },
+        axisTick:     { lineStyle: { color: t.frame } },
+        axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
+        min:          axis.min ?? undefined,
+        max:          axis.max ?? undefined,
+    });
 
     return {
         backgroundColor: t.background,
@@ -138,7 +161,8 @@ export function toEChartsOptions(payload, options = {}) {
                 const negated = new Set(graph.series.filter(s => s.style?.negate).map(s => s.name));
                 const lines   = params.map(p => {
                     const v = negated.has(p.seriesName) ? Math.abs(p.value[1]) : p.value[1];
-                    return `${p.seriesName}: ${formatValue(v, graph.unit)}`;
+                    const axisUnit = yAxes[p.axisIndex ?? 0]?.unit ?? graph.unit;
+                    return `${p.seriesName}: ${formatValue(v, axisUnit)}`;
                 });
                 return `${ts.toLocaleString()}<br>${lines.join('<br>')}`;
             },
@@ -146,26 +170,13 @@ export function toEChartsOptions(payload, options = {}) {
         legend: { show: false },
         grid: options.sparkline
             ? { top: 2, bottom: 2, left: 2, right: 2, containLabel: false }
-            : { top: '5%', bottom: '5%', left: '7%', right: '3%', containLabel: true },
+            : { top: '5%', bottom: '5%', left: '7%', right: yAxes.length > 1 ? '7%' : '3%', containLabel: true },
         xAxis: options.sparkline
             ? { type: 'time', ...timeBounds(graph), show: false }
             : buildXAxis(t, graph),
         yAxis: options.sparkline
             ? { type: 'value', show: false }
-            : {
-                type:         'value',
-                name:         graph.unit.charAt(0).toUpperCase() + graph.unit.slice(1),
-                nameRotate:   90,
-                nameLocation: 'middle',
-                nameGap:      40,
-                nameTextStyle: { color: t.font, fontFamily: MONO, fontSize: 10 },
-                splitLine:    { show: true, lineStyle: { color: t.grid, type: 'solid' } },
-                axisLine:     { show: true, lineStyle: { color: t.frame } },
-                axisTick:     { lineStyle: { color: t.frame } },
-                axisLabel:    { formatter: v => formatNumber(v, 1), color: t.font, fontFamily: MONO, fontSize: 10 },
-                min:          graph.y_axis?.min ?? undefined,
-                max:          graph.y_axis?.max ?? undefined,
-            },
+            : yAxes.map((axis, i) => buildYAxis(axis, i === 0)),
         dataZoom: [],
         series,
     };

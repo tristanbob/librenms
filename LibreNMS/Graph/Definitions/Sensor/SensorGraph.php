@@ -105,11 +105,6 @@ class SensorGraph implements GraphDefinition
         return $markers;
     }
 
-    public function thresholds(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
     public function display(): array
     {
         return ['kind' => 'line', 'stacked' => false, 'area' => true];
