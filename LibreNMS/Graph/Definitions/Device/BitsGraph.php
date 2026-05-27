@@ -26,7 +26,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Facades\LibrenmsConfig;
 use App\Models\Port;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
@@ -34,48 +34,16 @@ use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Util\Rewrite;
 
-class BitsGraph implements GraphDefinition
+class BitsGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_bits';
 
     private const IN_PALETTE = 'greens';
     private const OUT_PALETTE = 'purples';
 
-    public function graphType(): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE;
-    }
-
-    public function id(array $device, GraphQuery $query): string
-    {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string
-    {
-        return 'Device Traffic';
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'];
-    }
-
-    public function unit(array $device, GraphQuery $query): string
-    {
-        return 'bps';
-    }
-
-    public function entityType(): string
-    {
-        return 'device';
-    }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => true, 'area' => true, 'legend' => true];
+        parent::__construct(self::GRAPH_TYPE, 'Device Traffic', 'bps', ['stacked' => true, 'area' => true]);
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -83,7 +51,7 @@ class BitsGraph implements GraphDefinition
         $toBits         = fn ($value) => $value * 8;
         $inSeries       = [];
         $outSeries      = [];
-        $mirrorOutbound = $this->isMirrorStacked();
+        $mirrorOutbound = $this->stackedMultiplier() === 1;
         $opacity        = $mirrorOutbound ? 0x88 / 0xff : 1.0;
         $ports          = $this->includedPorts($device);
         $inEntry        = VictoriaMetricsMetricCatalog::get('port.if_in_bits_rate');
@@ -144,11 +112,6 @@ class BitsGraph implements GraphDefinition
         return [...$inSeries, ...$outSeries];
     }
 
-    public function markers(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
     /**
      * Mirrors includes/html/graphs/device/bits.inc.php so the JSON graph includes
      * the same non-disabled, non-deleted ports as the legacy RRD image graph.
@@ -194,18 +157,4 @@ class BitsGraph implements GraphDefinition
         return false;
     }
 
-    private function paletteColor(string $palette, int $index, string $fallback): string
-    {
-        $colors = (array) LibrenmsConfig::get("graph_colours.$palette", []);
-        if ($colors === []) {
-            return $fallback;
-        }
-
-        return $colors[$index % count($colors)] ?? $fallback;
-    }
-
-    private function isMirrorStacked(): bool
-    {
-        return LibrenmsConfig::get('webui.graph_stacked') == true;
-    }
 }

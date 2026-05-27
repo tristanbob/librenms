@@ -24,20 +24,14 @@
 namespace LibreNMS\Graph\Definitions\Wireless;
 
 use LibreNMS\Enum\WirelessSensorType;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\SensorBaseGraph;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class WirelessSensorGraph implements GraphDefinition
+class WirelessSensorGraph extends SensorBaseGraph
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
-    private bool $transformComputed = false;
-    /** @var callable|null */
-    private $transform = null;
-
     public function __construct(private readonly WirelessSensorType $sensorClass) {}
 
     public function graphType(): string { return 'wireless_' . $this->sensorClass->value; }
@@ -49,19 +43,9 @@ class WirelessSensorGraph implements GraphDefinition
         return __("wireless.{$this->sensorClass->value}.unit");
     }
 
-    public function id(array $device, GraphQuery $query): string
-    {
-        return $this->graphType() . ':' . ($query->entities['sensor_id'] ?? '');
-    }
-
     public function title(array $device): string
     {
         return __("wireless.{$this->sensorClass->value}.long");
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return ($device['hostname'] ?? '') . ' — ' . ($query->entities['sensor_descr'] ?? '');
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -97,33 +81,7 @@ class WirelessSensorGraph implements GraphDefinition
         return $markers;
     }
 
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true];
-    }
-
-    private function marker(string $name, mixed $value, string $severity): array
-    {
-        $value = (float) $value;
-        $transform = $this->valueTransform();
-        if ($transform !== null) {
-            $value = $transform($value);
-        }
-
-        return ['type' => 'horizontal_line', 'name' => $name, 'value' => $value, 'severity' => $severity];
-    }
-
-    private function valueTransform(): ?callable
-    {
-        if (! $this->transformComputed) {
-            $this->transform = $this->computeTransform();
-            $this->transformComputed = true;
-        }
-
-        return $this->transform;
-    }
-
-    private function computeTransform(): ?callable
+    protected function computeTransform(): ?callable
     {
         return match ($this->sensorClass) {
             WirelessSensorType::Distance => fn (float $value): float => $value * 1000,

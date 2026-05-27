@@ -26,21 +26,15 @@ namespace LibreNMS\Graph\Definitions\Sensor;
 use App\Facades\LibrenmsConfig;
 use App\Models\UserPref;
 use LibreNMS\Enum\Sensor as SensorClass;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\SensorBaseGraph;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Util\Rewrite;
 
-class SensorGraph implements GraphDefinition
+class SensorGraph extends SensorBaseGraph
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
-    private bool $transformComputed = false;
-    /** @var callable|null */
-    private $transform = null;
-
     public function __construct(private readonly SensorClass $sensorClass) {}
 
     public function graphType(): string { return 'sensor_' . $this->sensorClass->value; }
@@ -52,19 +46,9 @@ class SensorGraph implements GraphDefinition
         return $this->sensorClass->unit();
     }
 
-    public function id(array $device, GraphQuery $query): string
-    {
-        return $this->graphType() . ':' . ($query->entities['sensor_id'] ?? '');
-    }
-
     public function title(array $device): string
     {
         return $this->sensorClass->label();
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return ($device['hostname'] ?? '') . ' — ' . ($query->entities['sensor_descr'] ?? '');
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -110,33 +94,7 @@ class SensorGraph implements GraphDefinition
         return $markers;
     }
 
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true];
-    }
-
-    private function marker(string $name, mixed $value, string $severity): array
-    {
-        $value = (float) $value;
-        $transform = $this->valueTransform();
-        if ($transform !== null) {
-            $value = $transform($value);
-        }
-
-        return ['type' => 'horizontal_line', 'name' => $name, 'value' => $value, 'severity' => $severity];
-    }
-
-    private function valueTransform(): ?callable
-    {
-        if (! $this->transformComputed) {
-            $this->transform = $this->computeTransform();
-            $this->transformComputed = true;
-        }
-
-        return $this->transform;
-    }
-
-    private function computeTransform(): ?callable
+    protected function computeTransform(): ?callable
     {
         if ($this->sensorClass !== SensorClass::Temperature) {
             return null;

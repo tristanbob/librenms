@@ -25,43 +25,23 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Models\Storage;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class StorageGraph implements GraphDefinition
+class StorageGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_storage';
 
     // Matches the iter-based 7-color cycle in includes/html/graphs/device/storage.inc.php
     private const COLORS = ['CC0000', '008C00', '4096EE', '73880A', 'D01F3C', '36393D', 'FF0084'];
 
-    public function graphType(): string { return self::GRAPH_TYPE; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string { return 'Disk Usage'; }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string { return '%'; }
-
-    public function entityType(): string { return 'device'; }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => false, 'legend' => true];
+        parent::__construct(self::GRAPH_TYPE, 'Disk Usage', '%', ['legend' => true]);
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -109,5 +89,4 @@ class StorageGraph implements GraphDefinition
         })->all();
     }
 
-    public function markers(array $device, GraphQuery $query): array { return []; }
 }

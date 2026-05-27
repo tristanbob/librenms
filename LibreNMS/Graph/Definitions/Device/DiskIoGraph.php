@@ -23,47 +23,26 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
-use App\Facades\LibrenmsConfig;
 use App\Models\DiskIo;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class DiskIoGraph implements GraphDefinition
+class DiskIoGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_diskio';
 
     // Matches graph_colours.greens / graph_colours.blues from config_definitions.json
     private const GREENS = ['CAE853', 'B2D849', '94C63D', '75BA30', '49A81E', '0C990C'];
     private const BLUES  = ['A9A9F2', '9696DD', '8080C9', '6A6AB7', '5151A3', '3D3D99'];
 
-    public function graphType(): string { return self::GRAPH_TYPE; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string { return 'Disk I/O'; }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string { return 'ops/s'; }
-
-    public function entityType(): string { return 'device'; }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true];
+        parent::__construct(self::GRAPH_TYPE, 'Disk I/O', 'ops/s', ['area' => true]);
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -75,7 +54,7 @@ class DiskIoGraph implements GraphDefinition
         // Mirror the generic_multi_seperated stacked/negate behaviour:
         // stacked=true  → mirror style (both positive, area with 53% opacity)
         // stacked=false → reads up / writes negated (below 0), full opacity
-        $mirrorStacked = (bool) LibrenmsConfig::get('webui.graph_stacked', false);
+        $mirrorStacked = $this->stackedMultiplier() === 1;
         $areaOpacity   = $mirrorStacked ? (0x88 / 0xff) : 1.0;
         $readsEntry    = VictoriaMetricsMetricCatalog::get('diskio.reads');
         $writesEntry   = VictoriaMetricsMetricCatalog::get('diskio.writes');
@@ -142,7 +121,5 @@ class DiskIoGraph implements GraphDefinition
         // Reads first (positive), then writes (negative) — matches RRD render order
         return [...$readSeries, ...$writeSeries];
     }
-
-    public function markers(array $device, GraphQuery $query): array { return []; }
 
 }

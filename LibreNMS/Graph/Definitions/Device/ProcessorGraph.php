@@ -5,40 +5,20 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Facades\LibrenmsConfig;
 use App\Models\Processor;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class ProcessorGraph implements GraphDefinition
+class ProcessorGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_processor';
 
-    public function graphType(): string { return self::GRAPH_TYPE; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string { return 'CPU Usage'; }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string { return '%'; }
-
-    public function entityType(): string { return 'device'; }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true];
+        parent::__construct(self::GRAPH_TYPE, 'CPU Usage', '%', ['area' => true]);
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -87,5 +67,4 @@ class ProcessorGraph implements GraphDefinition
         })->all();
     }
 
-    public function markers(array $device, GraphQuery $query): array { return []; }
 }

@@ -2,39 +2,19 @@
 
 namespace LibreNMS\Graph\Definitions\Processor;
 
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\EntityGraph;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class UsageGraph implements GraphDefinition
+class UsageGraph extends EntityGraph
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'processor_usage';
 
-    public function graphType(): string { return self::GRAPH_TYPE; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE . ':' . ($query->entities['processor_id'] ?? '');
-    }
-
-    public function title(array $device): string { return 'Processor Usage'; }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return ($device['hostname'] ?? '') . ' - ' . ($query->entities['processor_descr'] ?? '');
-    }
-
-    public function unit(array $device, GraphQuery $query): string { return '%'; }
-
-    public function entityType(): string { return 'processor'; }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true];
+        parent::__construct(self::GRAPH_TYPE, 'Processor Usage', '%', 'processor', 'processor_id', 'processor_descr');
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -56,7 +36,5 @@ class UsageGraph implements GraphDefinition
             ],
         )];
     }
-
-    public function markers(array $device, GraphQuery $query): array { return []; }
 
 }
