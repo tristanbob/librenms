@@ -28,6 +28,7 @@ use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
@@ -89,11 +90,7 @@ class BitsGraph implements GraphDefinition
                 lineColor: '608720',
                 area:      true,
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits),
-                    new VictoriaMetricsMetricBinding(
-                        metricName: 'librenms_port_if_in_bits_per_second',
-                        labelKeys:  ['device_id', 'port_id'],
-                    ),
+                    ...MetricSeries::gauge('port.if_in_bits_rate', new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits)),
                 ],
             ),
             new GraphSeriesDefinition(
@@ -105,11 +102,7 @@ class BitsGraph implements GraphDefinition
                 area:      true,
                 negate:    true,
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits),
-                    new VictoriaMetricsMetricBinding(
-                        metricName: 'librenms_port_if_out_bits_per_second',
-                        labelKeys:  ['device_id', 'port_id'],
-                    ),
+                    ...MetricSeries::gauge('port.if_out_bits_rate', new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits)),
                 ],
             ),
         ];
@@ -135,10 +128,7 @@ class BitsGraph implements GraphDefinition
             ),
             GraphMarkerDefinition::percentile(
                 "{$percentileLabel}th percentile in",
-                new VictoriaMetricsMetricBinding(
-                    metricName: 'librenms_port_if_in_bits_per_second',
-                    labelKeys:  ['device_id', 'port_id'],
-                ),
+                VictoriaMetricsMetricBinding::catalog('port.if_in_bits_rate'),
                 $percentile,
                 'aa0000',
             ),
@@ -150,11 +140,7 @@ class BitsGraph implements GraphDefinition
             ),
             GraphMarkerDefinition::percentile(
                 "{$percentileLabel}th percentile out",
-                new VictoriaMetricsMetricBinding(
-                    metricName: 'librenms_port_if_out_bits_per_second',
-                    labelKeys:  ['device_id', 'port_id'],
-                    transform:  fn ($v) => $v * -1,
-                ),
+                VictoriaMetricsMetricBinding::catalog('port.if_out_bits_rate', fn ($v) => $v * -1),
                 $percentile,
                 'aa0000',
             ),

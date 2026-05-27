@@ -89,20 +89,21 @@ final class VictoriaMetricsDatastoreTest extends TestCase
         });
     }
 
-    public function testPortLabelsIncludePortId(): void
+    public function testPortLabelsUseStablePollingIdentity(): void
     {
         Http::fake(['*' => Http::response('', 204)]);
         $store = new VictoriaMetrics();
 
-        $store->write('ports', ['INOCTETS' => 1000.0], ['port_id' => 7, 'ifName' => 'Gi0/0'], ['device' => $this->device]);
+        $store->write('ports', ['INOCTETS' => 1000.0], ['port_id' => 7, 'ifIndex' => 3, 'ifName' => 'Gi0/0'], ['device' => $this->device]);
         $store->terminate();
 
         Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             $body = $request->body();
             $this->assertStringContainsString("# TYPE librenms_port_if_in_octets_total counter\n", $body);
             $this->assertStringContainsString('entity_type="port"', $body);
-            $this->assertStringContainsString('port_id="7"', $body);
+            $this->assertStringContainsString('ifIndex="3"', $body);
             $this->assertStringContainsString('ifName="Gi0/0"', $body);
+            $this->assertStringNotContainsString('port_id="7"', $body);
 
             return true;
         });
@@ -118,7 +119,7 @@ final class VictoriaMetricsDatastoreTest extends TestCase
             'INOCTETS' => 1.0,
             'OUTOCTETS' => 2.0,
             'INERRORS' => 3.0,
-        ], ['port_id' => 7], ['device' => $this->device]);
+        ], ['ifIndex' => 7], ['device' => $this->device]);
 
         Http::assertSentCount(1);
     }
@@ -144,7 +145,7 @@ final class VictoriaMetricsDatastoreTest extends TestCase
             ->once()
             ->with(\Mockery::on(fn ($msg) => str_contains($msg, 'HTTP 400')));
 
-        $store->write('ports', ['INOCTETS' => 42.0], ['port_id' => 7], ['device' => $this->device]);
+        $store->write('ports', ['INOCTETS' => 42.0], ['ifIndex' => 7], ['device' => $this->device]);
         $store->terminate();
     }
 
@@ -157,9 +158,9 @@ final class VictoriaMetricsDatastoreTest extends TestCase
             ->once()
             ->with(\Mockery::on(fn ($msg) => str_contains($msg, 'temporarily disabling')));
 
-        $store->write('ports', ['INOCTETS' => 42.0], ['port_id' => 7], ['device' => $this->device]);
+        $store->write('ports', ['INOCTETS' => 42.0], ['ifIndex' => 7], ['device' => $this->device]);
         $store->terminate();
-        $store->write('ports', ['OUTOCTETS' => 43.0], ['port_id' => 7], ['device' => $this->device]);
+        $store->write('ports', ['OUTOCTETS' => 43.0], ['ifIndex' => 7], ['device' => $this->device]);
         $store->terminate();
     }
 
@@ -170,7 +171,7 @@ final class VictoriaMetricsDatastoreTest extends TestCase
         Http::fake(['*' => Http::response('', 204)]);
         $store = new VictoriaMetrics();
 
-        $store->write('ports', ['INOCTETS' => 1.0], ['port_id' => 7], ['device' => $this->device]);
+        $store->write('ports', ['INOCTETS' => 1.0], ['ifIndex' => 7], ['device' => $this->device]);
         $store->terminate();
 
         Http::assertSent(fn ($request) => $request->url() === 'http://victoriametrics:8428/api/v1/import/prometheus');

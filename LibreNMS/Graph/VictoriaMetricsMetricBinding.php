@@ -23,6 +23,8 @@
 
 namespace LibreNMS\Graph;
 
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
+
 class VictoriaMetricsMetricBinding implements MetricBinding
 {
     public const SOURCE = 'victoriametrics';
@@ -37,6 +39,20 @@ class VictoriaMetricsMetricBinding implements MetricBinding
         public readonly array  $labelKeys = ['device_id'],
         public readonly mixed  $transform = null,
     ) {}
+
+    public static function catalog(string $key, mixed $transform = null): self
+    {
+        $entry = VictoriaMetricsMetricCatalog::get($key);
+        if ($entry === null) {
+            throw new \InvalidArgumentException("Unknown VictoriaMetrics metric catalog key '{$key}'.");
+        }
+
+        return new self(
+            metricName: $entry->definition->name,
+            labelKeys: $entry->identityLabels,
+            transform: $transform,
+        );
+    }
 
     public function source(): string
     {

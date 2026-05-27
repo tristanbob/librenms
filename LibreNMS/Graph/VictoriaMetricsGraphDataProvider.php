@@ -55,7 +55,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
 
         $hasVmBinding = false;
         foreach ($series as $seriesDef) {
-            if ($seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE) instanceof VictoriaMetricsMetricBinding) {
+            if ($this->isVictoriaMetricsBinding($seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE))) {
                 $hasVmBinding = true;
                 break;
             }
@@ -78,7 +78,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
                 );
                 $binding = $binding->inner;
             }
-            if (! $binding instanceof VictoriaMetricsMetricBinding) {
+            if (! $this->isVictoriaMetricsBinding($binding)) {
                 $result->addSeries($this->emptySeries($seriesDef));
                 continue;
             }
@@ -107,8 +107,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
                 $result->addSeries($s);
             } catch (\RuntimeException $e) {
                 Log::debug('VictoriaMetrics graph data fetch failed: ' . $e->getMessage());
-                $result->addWarning("VictoriaMetrics query failed for series '{$seriesDef->key}'; empty returned.");
-                $result->addSeries($this->emptySeries($seriesDef));
+                throw $e;
             }
         }
 
@@ -120,7 +119,11 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
      */
     protected function evaluateBindingPoints(MetricBinding $binding, array $device, GraphQuery $query): array
     {
-        if (! $binding instanceof VictoriaMetricsMetricBinding) {
+        if ($binding instanceof ShiftBinding) {
+            $binding = $binding->inner;
+        }
+
+        if (! $this->isVictoriaMetricsBinding($binding)) {
             return [];
         }
 
@@ -153,10 +156,30 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
      * Build a MetricsQL selector expression from the binding and query entities.
      * Example: librenms_device_poller_duration_seconds{device_id="42"}
      */
-    public static function buildExpr(VictoriaMetricsMetricBinding $binding, array $entities): string
+    public static function buildExpr(MetricBinding $binding, array $entities): string
     {
+        if ($binding instanceof VictoriaMetricsExpressionBinding) {
+            self::assertRequiredLabels($binding->labelKeys, $entities);
+
+            return $binding->expression($entities);
+        }
+
+        if (! $binding instanceof VictoriaMetricsMetricBinding) {
+            throw new \RuntimeException('Unsupported VictoriaMetrics binding type.');
+        }
+
+        return self::buildSelector($binding->metricName, $binding->labelKeys, $entities);
+    }
+
+    /**
+     * @param string[] $labelKeys
+     */
+    public static function buildSelector(string $metricName, array $labelKeys, array $entities): string
+    {
+        self::assertRequiredLabels($labelKeys, $entities);
+
         $matchers = [];
-        foreach ($binding->labelKeys as $key) {
+        foreach ($labelKeys as $key) {
             $value = $entities[$key] ?? null;
             if ($value !== null) {
                 $escaped    = str_replace(['\\', '"', "\n"], ['\\\\', '\\"', '\\n'], (string) $value);
@@ -165,8 +188,26 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         }
 
         return $matchers === []
-            ? $binding->metricName
-            : $binding->metricName . '{' . implode(',', $matchers) . '}';
+            ? $metricName
+            : $metricName . '{' . implode(',', $matchers) . '}';
+    }
+
+    /**
+     * @param string[] $labelKeys
+     */
+    private static function assertRequiredLabels(array $labelKeys, array $entities): void
+    {
+        foreach ($labelKeys as $key) {
+            if (! array_key_exists($key, $entities) || $entities[$key] === null || $entities[$key] === '') {
+                throw new \RuntimeException("VictoriaMetrics query is missing required label '{$key}'.");
+            }
+        }
+    }
+
+    private function isVictoriaMetricsBinding(?MetricBinding $binding): bool
+    {
+        return $binding instanceof VictoriaMetricsMetricBinding
+            || $binding instanceof VictoriaMetricsExpressionBinding;
     }
 
     /**
@@ -204,7 +245,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
      * Parse a Prometheus JSON matrix response into [tsMs, value] pairs.
      *
      * Expects exactly one result series. Returns an empty array when the result set is empty.
-     * Logs a warning when multiple series are returned (label matchers were non-selective).
+     * Throws when multiple series are returned (label matchers were non-selective).
      *
      * @return list<array{int, float|null}>
      * @throws \RuntimeException on malformed JSON or unexpected resultType
@@ -232,8 +273,8 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         }
 
         if (count($results) > 1) {
-            Log::warning(
-                "VictoriaMetrics returned " . count($results) . " series for expr '{$expr}'; using first. " .
+            throw new \RuntimeException(
+                "VictoriaMetrics returned " . count($results) . " series for expr '{$expr}'. " .
                 "Check that label matchers uniquely identify one series."
             );
         }

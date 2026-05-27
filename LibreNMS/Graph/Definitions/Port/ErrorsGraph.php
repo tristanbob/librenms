@@ -26,6 +26,7 @@ namespace LibreNMS\Graph\Definitions\Port;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class ErrorsGraph implements GraphDefinition
@@ -86,7 +87,7 @@ class ErrorsGraph implements GraphDefinition
                 area:      true,
                 stack:     'in',
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INERRORS'),
+                    ...MetricSeries::rate('port.if_in_errors', new RrdMetricBinding(rrdName: $rrdName, ds: 'INERRORS')),
                 ],
             ),
             new GraphSeriesDefinition(
@@ -99,7 +100,7 @@ class ErrorsGraph implements GraphDefinition
                 stack:     'out',
                 negate:    true,
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTERRORS'),
+                    ...MetricSeries::rate('port.if_out_errors', new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTERRORS')),
                 ],
             ),
             new GraphSeriesDefinition(
@@ -111,7 +112,7 @@ class ErrorsGraph implements GraphDefinition
                 area:      true,
                 stack:     'in',
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INDISCARDS'),
+                    ...MetricSeries::rate('port.if_in_discards', new RrdMetricBinding(rrdName: $rrdName, ds: 'INDISCARDS')),
                 ],
             ),
             new GraphSeriesDefinition(
@@ -124,7 +125,7 @@ class ErrorsGraph implements GraphDefinition
                 stack:     'out',
                 negate:    true,
                 bindings:  [
-                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTDISCARDS'),
+                    ...MetricSeries::rate('port.if_out_discards', new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTDISCARDS')),
                 ],
             ),
         ];

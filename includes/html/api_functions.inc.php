@@ -341,7 +341,7 @@ function get_port_graph_data(Request $request)
     $device_id = $port->device_id;
     $port_name = $port->ifName ?: $port->ifDescr;
 
-    return check_port_permission($port_id, $device_id, function () use ($request, $port_id, $graph_type, $device_id, $port_name) {
+    return check_port_permission($port_id, $device_id, function () use ($request, $port, $port_id, $graph_type, $device_id, $port_name) {
         $from   = (int) $request->input('from',  time() - 86400);
         $to     = (int) $request->input('to',    time());
         $width  = (int) $request->input('width', 1200);
@@ -355,7 +355,13 @@ function get_port_graph_data(Request $request)
             $query    = \LibreNMS\Graph\GraphQuery::fromRequest(
                 'port',
                 $graph_type,
-                ['device_id' => $device_id, 'port_id' => $port_id, 'port_name' => $port_name],
+                [
+                    'device_id' => $device_id,
+                    'port_id' => $port_id,
+                    'port_name' => $port_name,
+                    'ifIndex' => $port->ifIndex,
+                    'ifName' => $port->ifName,
+                ],
                 $from, $to, $width, $height, $options
             );
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
@@ -544,6 +550,7 @@ function get_storage_graph_data(Request $request)
             'device_id' => $device_id,
             'storage_id' => $storage->storage_id,
             'type' => $storage->type,
+            'descr' => $storage->storage_descr,
             'storage_descr' => $storage->storage_descr,
         ];
 

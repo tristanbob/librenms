@@ -1,7 +1,7 @@
 <?php
 
 /**
- * MetricMapper.php
+ * MetricCatalogEntry.php
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,22 @@
  * @link       https://www.librenms.org
  *
  * @copyright  2026 LibreNMS Contributors
+ * @copyright  2026 Tristan
  */
 
 namespace LibreNMS\Data\Store\VictoriaMetrics;
 
-class MetricMapper
+final readonly class MetricCatalogEntry
 {
-    public static function map(string $measurement, string $field): ?MetricDefinition
-    {
-        return VictoriaMetricsMetricCatalog::getByMeasurementField($measurement, $field)?->definition;
+    /**
+     * @param string[] $identityLabels
+     */
+    public function __construct(
+        public string $key,
+        public string $measurement,
+        public string $field,
+        public MetricDefinition $definition,
+        public array $identityLabels = ['device_id'],
+    ) {
     }
 }

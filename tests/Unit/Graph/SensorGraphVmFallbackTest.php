@@ -3,8 +3,8 @@
 /**
  * SensorGraphVmFallbackTest.php
  *
- * Verifies that sensor graph families remain usable when VictoriaMetrics query
- * mode is enabled but no sensor VM bindings exist yet.
+ * Verifies that wireless sensor graph families remain usable when
+ * VictoriaMetrics query mode is enabled but no VM bindings exist yet.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ namespace LibreNMS\Tests\Unit\Graph;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
@@ -54,7 +53,6 @@ final class SensorGraphVmFallbackTest extends DBTestCase
         $this->device = Device::factory()->create();
 
         $registry = new GraphDefinitionRegistry();
-        $registry->registerResolver(new SensorGraphDefinitionResolver());
         $registry->registerResolver(new WirelessGraphDefinitionResolver());
 
         $vm = new VictoriaMetricsGraphDataProvider($registry);
@@ -103,14 +101,6 @@ final class SensorGraphVmFallbackTest extends DBTestCase
     public static function sensorGraphTypesWithoutVmBindings(): array
     {
         return [
-            'sensor_temperature' => ['sensor', 'sensor_temperature', [
-                'sensor_id' => 1,
-                'sensor_class' => 'temperature',
-                'sensor_type' => 'dummy',
-                'sensor_index' => 1,
-                'sensor_descr' => 'Temperature',
-                'poller_type' => 'snmp',
-            ]],
             'wireless_rssi' => ['wireless_sensor', 'wireless_rssi', [
                 'sensor_id' => 2,
                 'sensor_class' => 'rssi',

@@ -47,11 +47,11 @@ final class RrdMigrationMapper
     {
         return [
             'INOCTETS' => [
-                new MetricDefinition('librenms_port_if_in_bits_per_second', 'gauge', 'bits_per_second'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_in_bits_rate'),
                 fn (float $v): float => $v * 8.0,
             ],
             'OUTOCTETS' => [
-                new MetricDefinition('librenms_port_if_out_bits_per_second', 'gauge', 'bits_per_second'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_out_bits_rate'),
                 fn (float $v): float => $v * 8.0,
             ],
         ];
@@ -68,19 +68,19 @@ final class RrdMigrationMapper
     {
         return [
             'INERRORS' => [
-                new MetricDefinition('librenms_port_if_in_errors_total', 'counter', 'errors'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_in_errors'),
                 fn (float $rate, int $step): float => $rate * $step,
             ],
             'OUTERRORS' => [
-                new MetricDefinition('librenms_port_if_out_errors_total', 'counter', 'errors'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_out_errors'),
                 fn (float $rate, int $step): float => $rate * $step,
             ],
             'INDISCARDS' => [
-                new MetricDefinition('librenms_port_if_in_discards_total', 'counter', 'discards'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_in_discards'),
                 fn (float $rate, int $step): float => $rate * $step,
             ],
             'OUTDISCARDS' => [
-                new MetricDefinition('librenms_port_if_out_discards_total', 'counter', 'discards'),
+                VictoriaMetricsMetricCatalog::getDefinition('port.if_out_discards'),
                 fn (float $rate, int $step): float => $rate * $step,
             ],
         ];
@@ -99,7 +99,7 @@ final class RrdMigrationMapper
      */
     public static function pollerPerfMetric(): MetricDefinition
     {
-        return new MetricDefinition('librenms_device_poller_duration_seconds', 'gauge', 'seconds');
+        return VictoriaMetricsMetricCatalog::getDefinition('device.poller.duration');
     }
 
     /**

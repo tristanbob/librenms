@@ -149,7 +149,7 @@ class MigrateRrd extends LnmsCommand
 
     private function migratePorts(Device $device): void
     {
-        $ports = $device->ports()->where('deleted', 0)->get(['port_id', 'ifName']);
+        $ports = $device->ports()->where('deleted', 0)->get(['port_id', 'ifIndex', 'ifName']);
 
         foreach ($ports as $port) {
             $this->migratePort($device, $port);
@@ -166,7 +166,7 @@ class MigrateRrd extends LnmsCommand
 
         $allData = $this->fetchRrd($rrdFile);
         $labels  = LabelExtractor::extract($device, 'ports', [
-            'port_id' => $port->port_id,
+            'ifIndex' => $port->ifIndex,
             'ifName'  => $port->ifName,
         ]);
 

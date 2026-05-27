@@ -4,7 +4,7 @@
  * PortGraphVmFallbackTest.php
  *
  * Verifies that when VictoriaMetrics query is enabled, graph types that have no
- * VM bindings (port_packets, port_errors, port_discards) are handled by RRD
+ * VM bindings (port_packets, port_discards) are handled by RRD
  * without marking the response as a VictoriaMetrics failure fallback.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,6 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
-use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
 use LibreNMS\Graph\Definitions\Port\PacketsGraph;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
@@ -58,7 +57,6 @@ final class PortGraphVmFallbackTest extends DBTestCase
 
         $registry = new GraphDefinitionRegistry([
             PacketsGraph::class,
-            ErrorsGraph::class,
             DiscardsGraph::class,
         ]);
 
@@ -111,7 +109,6 @@ final class PortGraphVmFallbackTest extends DBTestCase
     {
         return [
             'port_packets' => ['port_packets'],
-            'port_errors'  => ['port_errors'],
             'port_discards' => ['port_discards'],
         ];
     }

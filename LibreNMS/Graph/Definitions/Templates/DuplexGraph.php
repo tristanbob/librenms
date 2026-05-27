@@ -4,6 +4,7 @@ namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class DuplexGraph extends GraphTemplate
@@ -22,6 +23,9 @@ class DuplexGraph extends GraphTemplate
         private readonly string $outArea = '8080C0',
         private readonly string $outLine = '606090',
         array $display = [],
+        private readonly ?string $metricIn = null,
+        private readonly ?string $metricOut = null,
+        private readonly string $vmKind = 'gauge',
     ) {
         parent::__construct($graphType, $title, $unit, $display + ['kind' => 'line', 'area' => true]);
     }
@@ -29,6 +33,10 @@ class DuplexGraph extends GraphTemplate
     public function series(array $device, GraphQuery $query): array
     {
         $mirror = $this->stackedMultiplier() > 0;
+        $rrdIn = new RrdMetricBinding($this->rrdNameIn, $this->dsIn, transform: $this->transform);
+        $rrdOut = new RrdMetricBinding($this->rrdNameOut, $this->dsOut, transform: $this->transform);
+        $bindingsIn = $this->metricIn === null ? [$rrdIn] : $this->metricBindings($this->metricIn, $rrdIn);
+        $bindingsOut = $this->metricOut === null ? [$rrdOut] : $this->metricBindings($this->metricOut, $rrdOut);
 
         return [
             new GraphSeriesDefinition(
@@ -39,7 +47,7 @@ class DuplexGraph extends GraphTemplate
                 lineColor: $this->inLine,
                 area: true,
                 areaOpacity: $mirror ? 0x88 / 0xff : 1.0,
-                bindings: [new RrdMetricBinding($this->rrdNameIn, $this->dsIn, transform: $this->transform)],
+                bindings: $bindingsIn,
             ),
             new GraphSeriesDefinition(
                 name: 'Out',
@@ -50,8 +58,15 @@ class DuplexGraph extends GraphTemplate
                 area: true,
                 areaOpacity: $mirror ? 0x88 / 0xff : 1.0,
                 negate: ! $mirror,
-                bindings: [new RrdMetricBinding($this->rrdNameOut, $this->dsOut, transform: $this->transform)],
+                bindings: $bindingsOut,
             ),
         ];
+    }
+
+    private function metricBindings(string $metric, RrdMetricBinding $rrd): array
+    {
+        return $this->vmKind === 'rate'
+            ? MetricSeries::rate($metric, $rrd)
+            : MetricSeries::gauge($metric, $rrd);
     }
 }

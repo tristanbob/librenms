@@ -67,7 +67,7 @@ timestamp:
 
 ```text
 # TYPE librenms_port_if_in_octets_total counter
-librenms_port_if_in_octets_total{source="librenms",device_id="1",hostname="router1",entity_type="port",port_id="7",ifName="Gi0/0"} 123456789 1779475200000
+librenms_port_if_in_octets_total{source="librenms",device_id="1",hostname="router1",entity_type="port",ifIndex="7",ifName="Gi0/0"} 123456789 1779475200000
 ```
 
 `PrometheusTextFormatter` handles name sanitisation and line assembly.
@@ -78,11 +78,11 @@ librenms_port_if_in_octets_total{source="librenms",device_id="1",hostname="route
 ## Metric Mapping Contract
 
 The poller maps internal measurement/field pairs to explicit Prometheus metric names
-via `MetricMapper::MAP`. Any measurement or field not in this table is skipped. All
+via `VictoriaMetricsMetricCatalog`. Any measurement or field not in this catalog is skipped. All
 names follow the `librenms_<entity>_<metric>_<unit>` convention.
 
-This table is authoritative. When adding a VM binding to a graph definition, the
-metric name used in `VictoriaMetricsMetricBinding` must match the name here.
+The catalog is authoritative. When adding a VM binding to a graph definition, prefer
+catalog-backed helpers such as `MetricSeries::gauge()` and `MetricSeries::rate()`.
 
 ### Device Metrics
 
@@ -117,25 +117,17 @@ on which tags are present in the poller's `write()` call.
 | `source` | `"librenms"` |
 | `device_id` | The LibreNMS device primary key as a string |
 | `hostname` | The device hostname |
-| `entity_type` | `device`, `port`, `sensor`, `service`, `app`, or `bill` |
+| `entity_type` | `device`, `port`, `sensor`, `mempool`, `storage`, or `processor` |
 
-**Present when the polled entity has the tag:**
+**Stable polling identity labels (included when non-empty):**
 
-| Label | Tag | Sets `entity_type` to |
-|-------|-----|-----------------------|
-| `port_id` | `port_id` | `port` |
-| `sensor_id` | `sensor_id` | `sensor` |
-| `service_id` | `service_id` | `service` |
-| `app_id` | `app_id` | `app` |
-| `bill_id` | `bill_id` | `bill` |
+`ifIndex`, `ifName`, `sensor_class`, `sensor_type`, `sensor_index`,
+`mempool_type`, `mempool_class`, `mempool_index`, `type`, `descr`,
+`processor_type`, `processor_index`, `sla_nr`, `af`, `name`, and `module`.
 
-**Low-cardinality descriptive labels (included when non-empty):**
-
-`ifName`, `sensor_class`, `module`
-
-**Intentionally excluded:** all `rrd_*` tags, `ifIndex`, `ifAlias`, and other
-high-cardinality or RRD-specific fields. The exclusion list is enforced in
-`LabelExtractor`.
+**Intentionally excluded:** all `rrd_*` tags, database ID tags such as `port_id`,
+`sensor_id`, `mempool_id`, and `storage_id`, `ifAlias`, and other high-cardinality
+or RRD-specific fields. The exclusion list is enforced in `LabelExtractor`.
 
 ---
 
@@ -154,45 +146,43 @@ high-cardinality or RRD-specific fields. The exclusion list is enforced in
 
 ### MetricsQL Query Construction
 
-`VictoriaMetricsGraphDataProvider::buildExpr()` constructs a MetricsQL selector from
-the binding's `metricName` and `labelKeys`. Counter metrics are wrapped in `rate()`:
+`VictoriaMetricsGraphDataProvider::buildExpr()` constructs a MetricsQL selector or
+expression from catalog-backed bindings. Counter metrics can be wrapped in
+`rate()` by `MetricSeries::rate()`:
 
 ```
-rate(librenms_port_if_in_octets_total{device_id="1",port_id="7"}[300s]) * 8
+rate(librenms_port_if_in_errors_total{device_id="1",ifIndex="7"}[5m])
 ```
 
 Gauge metrics query directly:
 
 ```
-librenms_port_if_in_bits_per_second{device_id="1",port_id="7"}
+librenms_port_if_in_bits_per_second{device_id="1",ifIndex="7"}
 ```
 
-The range duration (`[300s]`) is derived from the graph's requested step. The
-provider requests `/api/v1/query_range`, which returns timestamps in seconds and
-values as strings; it converts timestamps to milliseconds and casts values to float
-before passing data to the graph layer.
+All label keys listed by a binding are required. Ambiguous selectors that return
+multiple series throw so the graph backend selector can fall back to RRD.
 
 ---
 
 ## Adding VM Bindings to a Graph Definition
 
 Graph definitions that already have `RrdMetricBinding` entries can be extended for
-VictoriaMetrics by adding a `VictoriaMetricsMetricBinding` to each series. No other
-code changes are needed.
+VictoriaMetrics by using catalog-backed graph helpers where possible. Graph
+definitions should reference LibreNMS metric catalog keys instead of repeating VM
+metric names and labels.
 
 ```php
-use LibreNMS\Graph\VictoriaMetricsMetricBinding;
+use LibreNMS\Graph\MetricSeries;
 
 new GraphSeriesDefinition(
     name:     'In',
     key:      'port_bits_in',
     unit:     'bps',
     bindings: [
-        new RrdMetricBinding(rrdName: 'port-id', ds: 'INOCTETS', transform: fn ($v) => $v * 8),
-        new VictoriaMetricsMetricBinding(
-            metricName: 'librenms_port_if_in_octets_total',
-            labelKeys:  ['device_id', 'port_id'],
-            transform:  fn (float $v) => $v * 8,
+        ...MetricSeries::gauge(
+            'port.if_in_bits_rate',
+            new RrdMetricBinding(rrdName: 'port-id', ds: 'INOCTETS', transform: fn ($v) => $v * 8),
         ),
     ],
 )
@@ -202,18 +192,18 @@ new GraphSeriesDefinition(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `metricName` | `string` | required | Prometheus metric name — must match `MetricMapper::MAP`. |
-| `labelKeys` | `string[]` | `['device_id']` | Keys from `GraphQuery::$entities` to use as MetricsQL label matchers. |
+| `metricName` | `string` | required | Prometheus metric name — usually supplied by `VictoriaMetricsMetricCatalog`. |
+| `labelKeys` | `string[]` | `['device_id']` | Keys from `GraphQuery::$entities` to use as MetricsQL label matchers. All listed labels are required. |
 | `transform` | `callable\|null` | `null` | Applied to each raw float value before the point is stored. |
 
 ### Checklist when adding VM bindings
 
-1. Verify the metric name exists in `MetricMapper::MAP`. Add it there if not — the
-   write side and read side must agree on the name.
-2. Set `labelKeys` to the minimum set that uniquely identifies one series: typically
-   `['device_id']` for device graphs, `['device_id', 'port_id']` for port graphs.
-3. If the raw metric is a counter (octets, errors), apply a `transform` that converts
-   the rate-of-change to the unit the graph expects (e.g. `* 8` for octets → bps).
+1. Verify the metric exists in `VictoriaMetricsMetricCatalog`. Add it there if not —
+   the write side, read side, and migration tooling must agree on the name.
+2. Use stable polling identity labels from the catalog. Do not use database IDs such
+   as `port_id`, `sensor_id`, `mempool_id`, or `storage_id` as VM labels.
+3. Prefer MetricsQL expressions for rates, sums, and percentages instead of fetching
+   multiple VM series and merging them in PHP.
 4. Add a unit test asserting the binding produces the correct MetricsQL expression via
    `VictoriaMetricsGraphDataProvider::buildExpr()`.
 

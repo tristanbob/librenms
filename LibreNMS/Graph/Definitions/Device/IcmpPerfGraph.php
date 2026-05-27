@@ -2,10 +2,13 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class IcmpPerfGraph implements GraphDefinition
 {
@@ -54,7 +57,7 @@ class IcmpPerfGraph implements GraphDefinition
                 unit: 'ms',
                 color: '36393d',
                 lineWidth: 2.0,
-                bindings: [new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'avg')],
+                bindings: MetricSeries::gauge('icmp.avg_rtt', new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'avg')),
             ),
             new GraphSeriesDefinition(
                 name: 'Min',
@@ -62,7 +65,7 @@ class IcmpPerfGraph implements GraphDefinition
                 unit: 'ms',
                 color: '8a96a8',
                 lineOpacity: 0.6,
-                bindings: [new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'min', consolidation: 'MIN')],
+                bindings: MetricSeries::gauge('icmp.min_rtt', new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'min', consolidation: 'MIN')),
             ),
             new GraphSeriesDefinition(
                 name: 'Max',
@@ -72,7 +75,7 @@ class IcmpPerfGraph implements GraphDefinition
                 area: true,
                 areaOpacity: 0.18,
                 lineOpacity: 0.6,
-                bindings: [new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'max', consolidation: 'MAX')],
+                bindings: MetricSeries::gauge('icmp.max_rtt', new RrdMetricBinding(rrdName: 'icmp-perf', ds: 'max', consolidation: 'MAX')),
             ),
             new GraphSeriesDefinition(
                 name: 'Loss',
@@ -82,14 +85,28 @@ class IcmpPerfGraph implements GraphDefinition
                 area: true,
                 areaOpacity: 0.25,
                 yAxisIndex: 1,
-                bindings: [new RrdMetricBinding(
-                    rrdName: 'icmp-perf',
-                    ds: ['xmt', 'rcv'],
-                    transform: fn (array $v) => $v['xmt'] > 0 ? (($v['xmt'] - $v['rcv']) / $v['xmt'] * 100) : null,
-                )],
+                bindings: MetricSeries::expression(
+                    new RrdMetricBinding(
+                        rrdName: 'icmp-perf',
+                        ds: ['xmt', 'rcv'],
+                        transform: fn (array $v) => $v['xmt'] > 0 ? (($v['xmt'] - $v['rcv']) / $v['xmt'] * 100) : null,
+                    ),
+                    fn (array $entities): string => self::lossExpression($entities),
+                ),
             ),
         ];
     }
 
     public function markers(array $device, GraphQuery $query): array { return []; }
+
+    private static function lossExpression(array $entities): string
+    {
+        $xmt = VictoriaMetricsMetricCatalog::get('icmp.transmitted');
+        $rcv = VictoriaMetricsMetricCatalog::get('icmp.received');
+
+        $xmtSelector = VictoriaMetricsGraphDataProvider::buildSelector($xmt->definition->name, $xmt->identityLabels, $entities);
+        $rcvSelector = VictoriaMetricsGraphDataProvider::buildSelector($rcv->definition->name, $rcv->identityLabels, $entities);
+
+        return "100 * ({$xmtSelector} - {$rcvSelector}) / {$xmtSelector}";
+    }
 }

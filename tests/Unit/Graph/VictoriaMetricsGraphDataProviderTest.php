@@ -3,6 +3,7 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
+use LibreNMS\Graph\VictoriaMetricsExpressionBinding;
 use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 use LibreNMS\Tests\TestCase;
 
@@ -83,6 +84,23 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
         $this->assertSame(3.0, $points[1][1]);
     }
 
+    public function testThrowsWhenMatrixResponseHasMultipleSeries(): void
+    {
+        $body = json_encode([
+            'status' => 'success',
+            'data'   => [
+                'resultType' => 'matrix',
+                'result'     => [
+                    ['metric' => ['instance' => 'a'], 'values' => [[1000, '1']]],
+                    ['metric' => ['instance' => 'b'], 'values' => [[1000, '2']]],
+                ],
+            ],
+        ]);
+
+        $this->expectException(\RuntimeException::class);
+        VictoriaMetricsGraphDataProvider::parseQueryRangeResponse($body, 'my_metric');
+    }
+
     // ── buildExpr ───────────────────────────────────────────────────────────
 
     public function testBuildExprWithSingleLabel(): void
@@ -101,17 +119,17 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
         $this->assertSame('my_metric{device_id="1",port_id="2"}', $expr);
     }
 
-    public function testBuildExprOmitsMissingEntityKeys(): void
+    public function testBuildExprThrowsOnMissingEntityKeys(): void
     {
         $binding = new VictoriaMetricsMetricBinding('my_metric', ['device_id', 'port_id']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '1']);
 
-        $this->assertSame('my_metric{device_id="1"}', $expr);
+        $this->expectException(\RuntimeException::class);
+        VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '1']);
     }
 
-    public function testBuildExprWithNoMatchingEntities(): void
+    public function testBuildExprWithNoLabels(): void
     {
-        $binding = new VictoriaMetricsMetricBinding('my_metric', ['device_id']);
+        $binding = new VictoriaMetricsMetricBinding('my_metric', []);
         $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, []);
 
         $this->assertSame('my_metric', $expr);
@@ -123,5 +141,17 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
         $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'host"with\\slash']);
 
         $this->assertSame('my_metric{hostname="host\\"with\\\\slash"}', $expr);
+    }
+
+    public function testBuildExprFromExpressionBinding(): void
+    {
+        $binding = new VictoriaMetricsExpressionBinding(
+            fn (array $entities): string => 'rate(my_metric{device_id="' . $entities['device_id'] . '"}[5m])',
+            ['device_id'],
+        );
+
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '42']);
+
+        $this->assertSame('rate(my_metric{device_id="42"}[5m])', $expr);
     }
 }

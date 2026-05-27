@@ -1,7 +1,7 @@
 <?php
 
 /**
- * MetricMapper.php
+ * VictoriaMetricsExpressionBinding.php
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,33 @@
  * @link       https://www.librenms.org
  *
  * @copyright  2026 LibreNMS Contributors
+ * @copyright  2026 Tristan
  */
 
-namespace LibreNMS\Data\Store\VictoriaMetrics;
+namespace LibreNMS\Graph;
 
-class MetricMapper
+final readonly class VictoriaMetricsExpressionBinding implements MetricBinding
 {
-    public static function map(string $measurement, string $field): ?MetricDefinition
+    public const SOURCE = VictoriaMetricsMetricBinding::SOURCE;
+
+    /**
+     * @param callable(array<string, string>): string $expressionBuilder
+     * @param string[] $labelKeys
+     */
+    public function __construct(
+        public mixed $expressionBuilder,
+        public array $labelKeys = ['device_id'],
+        public mixed $transform = null,
+    ) {
+    }
+
+    public function expression(array $entities): string
     {
-        return VictoriaMetricsMetricCatalog::getByMeasurementField($measurement, $field)?->definition;
+        return ($this->expressionBuilder)($entities);
+    }
+
+    public function source(): string
+    {
+        return self::SOURCE;
     }
 }

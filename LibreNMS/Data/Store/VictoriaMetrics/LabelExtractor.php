@@ -27,28 +27,27 @@ use App\Models\Device;
 
 class LabelExtractor
 {
-    // Entity ID tags become labels when present; they also determine entity_type.
-    private const ENTITY_ID_TAGS = [
-        'port_id', 'sensor_id', 'service_id', 'app_id', 'bill_id',
-        'mempool_id', 'storage_id',
-    ];
-
-    // Low-cardinality tags that are useful for browsing metrics without being required.
+    // Stable polling identity and low-cardinality context labels. Database IDs are
+    // intentionally excluded because LibreNMS does not soft-delete every entity.
     private const EXTRA_TAGS = [
-        'ifName', 'sensor_class', 'sensor_type', 'module',
+        'ifIndex', 'ifName',
+        'sensor_class', 'sensor_type', 'sensor_index',
+        'module',
         'af',             // IP version for ipSystemStats (ipv4/ipv6)
         'name',           // duration window for availability
-        'descr',          // disk description for ucd_diskio
+        'descr', 'type',
+        'sla_nr',
         'processor_type', 'processor_index',  // processor identity (no numeric ID in write path)
-        'mempool_type', 'mempool_class',      // human context alongside mempool_id
+        'mempool_type', 'mempool_class', 'mempool_index',
     ];
 
     /**
      * Build the VictoriaMetrics label set for one write() call.
      *
      * Always includes: source, device_id, hostname, entity_type.
-     * Conditionally includes entity ID tags and extra descriptive tags.
+     * Conditionally includes stable polling identity and extra descriptive tags.
      * RRD-specific tags (rrd_def, rrd_name, etc.) are intentionally excluded.
+     * Database ID tags are intentionally excluded from VM labels.
      *
      * @param  Device $device  The polled device
      * @param  string $measurement  Unused at this layer; reserved for future per-measurement overrides
@@ -64,16 +63,14 @@ class LabelExtractor
             'entity_type' => self::deriveEntityType($tags),
         ];
 
-        foreach (self::ENTITY_ID_TAGS as $key) {
-            if (isset($tags[$key])) {
-                $labels[$key] = (string) $tags[$key];
-            }
-        }
-
         foreach (self::EXTRA_TAGS as $key) {
             if (isset($tags[$key]) && $tags[$key] !== '' && $tags[$key] !== null) {
                 $labels[$key] = (string) $tags[$key];
             }
+        }
+
+        if (! isset($labels['descr']) && isset($tags['diskio_descr']) && $tags['diskio_descr'] !== '') {
+            $labels['descr'] = (string) $tags['diskio_descr'];
         }
 
         return $labels;
@@ -81,20 +78,24 @@ class LabelExtractor
 
     private static function deriveEntityType(array $tags): string
     {
-        $map = [
-            'port_id'    => 'port',
-            'sensor_id'  => 'sensor',
-            'service_id' => 'service',
-            'app_id'     => 'app',
-            'bill_id'    => 'bill',
-            'mempool_id' => 'mempool',
-            'storage_id' => 'storage',
-        ];
+        if (isset($tags['ifIndex'])) {
+            return 'port';
+        }
 
-        foreach ($map as $key => $type) {
-            if (isset($tags[$key])) {
-                return $type;
-            }
+        if (isset($tags['sensor_class'], $tags['sensor_type'], $tags['sensor_index'])) {
+            return 'sensor';
+        }
+
+        if (isset($tags['mempool_type'], $tags['mempool_class'], $tags['mempool_index'])) {
+            return 'mempool';
+        }
+
+        if (isset($tags['type'], $tags['descr'])) {
+            return 'storage';
+        }
+
+        if (isset($tags['processor_type'], $tags['processor_index'])) {
+            return 'processor';
         }
 
         return 'device';

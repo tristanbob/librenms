@@ -29,6 +29,7 @@ use LibreNMS\Enum\Sensor as SensorClass;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Util\Rewrite;
 
@@ -82,7 +83,9 @@ class SensorGraph implements GraphDefinition
             area:      false,
             color:     'theme-ink',
             lineWidth: 2.0,
-            bindings:  [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
+            bindings:  [
+                ...MetricSeries::gauge('sensor.value', new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform()), $this->valueTransform()),
+            ],
         )];
     }
 

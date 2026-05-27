@@ -3,8 +3,8 @@
 namespace LibreNMS\Tests\Unit\VictoriaMetrics;
 
 use App\Models\Device;
-use LibreNMS\Tests\TestCase;
 use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
+use LibreNMS\Tests\TestCase;
 
 final class LabelExtractorTest extends TestCase
 {
@@ -13,7 +13,6 @@ final class LabelExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // device_id is the primary key and is not mass-assignable; assign directly
         $this->device = new Device();
         $this->device->device_id = 42;
         $this->device->hostname = 'router1.example.com';
@@ -26,218 +25,111 @@ final class LabelExtractorTest extends TestCase
         $this->assertSame('librenms', $labels['source']);
         $this->assertSame('42', $labels['device_id']);
         $this->assertSame('router1.example.com', $labels['hostname']);
-        $this->assertArrayHasKey('entity_type', $labels);
-    }
-
-    public function testEntityTypeDefaultsToDevice(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'poller-perf', []);
-
         $this->assertSame('device', $labels['entity_type']);
     }
 
-    public function testEntityTypeDerivesFromPortId(): void
+    public function testDatabaseIdsAreNeverIncludedAsLabels(): void
     {
-        $labels = LabelExtractor::extract($this->device, 'ports', ['port_id' => 7]);
+        $labels = LabelExtractor::extract($this->device, 'sensor', [
+            'port_id' => 7,
+            'sensor_id' => 12,
+            'mempool_id' => 4,
+            'storage_id' => 9,
+            'service_id' => 2,
+            'app_id' => 3,
+            'bill_id' => 5,
+            'sensor_class' => 'temperature',
+            'sensor_type' => 'cisco-entity-sensor',
+            'sensor_index' => '1',
+        ]);
 
-        $this->assertSame('port', $labels['entity_type']);
-        $this->assertSame('7', $labels['port_id']);
+        $this->assertArrayNotHasKey('port_id', $labels);
+        $this->assertArrayNotHasKey('sensor_id', $labels);
+        $this->assertArrayNotHasKey('mempool_id', $labels);
+        $this->assertArrayNotHasKey('storage_id', $labels);
+        $this->assertArrayNotHasKey('service_id', $labels);
+        $this->assertArrayNotHasKey('app_id', $labels);
+        $this->assertArrayNotHasKey('bill_id', $labels);
     }
 
-    public function testEntityTypeDerivesFromSensorId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'sensors', ['sensor_id' => 3]);
-
-        $this->assertSame('sensor', $labels['entity_type']);
-        $this->assertSame('3', $labels['sensor_id']);
-    }
-
-    public function testEntityTypeDerivesFromServiceId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'services', ['service_id' => 5]);
-
-        $this->assertSame('service', $labels['entity_type']);
-    }
-
-    public function testEntityTypeDerivesFromAppId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'apps', ['app_id' => 2]);
-
-        $this->assertSame('app', $labels['entity_type']);
-    }
-
-    public function testEntityTypeDerivesFromBillId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'billing', ['bill_id' => 1]);
-
-        $this->assertSame('bill', $labels['entity_type']);
-    }
-
-    public function testRrdTagsAreNotIncluded(): void
-    {
-        $tags = [
-            'rrd_def'     => 'some-rrd-def-object',
-            'rrd_name'    => ['port-id7'],
-            'rrd_oldname' => ['port-id6'],
-            'rrd_step'    => 300,
-            'port_id'     => 7,
-        ];
-        $labels = LabelExtractor::extract($this->device, 'ports', $tags);
-
-        $this->assertArrayNotHasKey('rrd_def', $labels);
-        $this->assertArrayNotHasKey('rrd_name', $labels);
-        $this->assertArrayNotHasKey('rrd_oldname', $labels);
-        $this->assertArrayNotHasKey('rrd_step', $labels);
-    }
-
-    public function testHighCardinalityTagsAreNotIncluded(): void
-    {
-        $tags = [
-            'ifAlias'          => 'some-long-alias',
-            'ifIndex'          => '3',
-            'port_descr_type'  => 'something',
-            'port_id'          => 7,
-        ];
-        $labels = LabelExtractor::extract($this->device, 'ports', $tags);
-
-        $this->assertArrayNotHasKey('ifAlias', $labels);
-        $this->assertArrayNotHasKey('ifIndex', $labels);
-        $this->assertArrayNotHasKey('port_descr_type', $labels);
-    }
-
-    public function testIfNameIsIncludedWhenPresent(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'ports', ['port_id' => 7, 'ifName' => 'Gi0/0']);
-
-        $this->assertSame('Gi0/0', $labels['ifName']);
-    }
-
-    public function testRealPortPollerTagsKeepPortIdAndDropHighCardinalityLabels(): void
+    public function testPortIdentityUsesIfIndexAndIfName(): void
     {
         $labels = LabelExtractor::extract($this->device, 'ports', [
             'port_id' => 7,
+            'ifIndex' => 3,
             'ifName' => 'Gi0/0',
             'ifAlias' => 'uplink to core',
-            'ifIndex' => '3',
-            'port_descr_type' => 'uplink',
             'rrd_name' => ['port-id7'],
             'rrd_def' => 'definition',
         ]);
 
         $this->assertSame('port', $labels['entity_type']);
-        $this->assertSame('7', $labels['port_id']);
+        $this->assertSame('3', $labels['ifIndex']);
         $this->assertSame('Gi0/0', $labels['ifName']);
+        $this->assertArrayNotHasKey('port_id', $labels);
         $this->assertArrayNotHasKey('ifAlias', $labels);
-        $this->assertArrayNotHasKey('ifIndex', $labels);
-        $this->assertArrayNotHasKey('port_descr_type', $labels);
         $this->assertArrayNotHasKey('rrd_name', $labels);
         $this->assertArrayNotHasKey('rrd_def', $labels);
     }
 
-    public function testSensorClassIsIncludedWhenPresent(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'sensors', ['sensor_id' => 1, 'sensor_class' => 'temperature']);
-
-        $this->assertSame('temperature', $labels['sensor_class']);
-    }
-
-    public function testModuleIsIncludedWhenPresent(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'poller-perf', ['module' => 'ALL']);
-
-        $this->assertSame('ALL', $labels['module']);
-    }
-
-    public function testEmptyExtraTagsAreNotIncluded(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'ports', ['ifName' => '']);
-
-        $this->assertArrayNotHasKey('ifName', $labels);
-    }
-
-    public function testEntityIdIsStringified(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'ports', ['port_id' => 99]);
-
-        $this->assertIsString($labels['port_id']);
-        $this->assertSame('99', $labels['port_id']);
-    }
-
-    public function testEntityTypeDerivesFromMempoolId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'mempool', ['mempool_id' => 5]);
-
-        $this->assertSame('mempool', $labels['entity_type']);
-        $this->assertSame('5', $labels['mempool_id']);
-    }
-
-    public function testEntityTypeDerivesFromStorageId(): void
-    {
-        $labels = LabelExtractor::extract($this->device, 'storage', ['storage_id' => 3]);
-
-        $this->assertSame('storage', $labels['entity_type']);
-        $this->assertSame('3', $labels['storage_id']);
-    }
-
-    public function testRealSensorTagsIncludeSensorId(): void
+    public function testSensorIdentityUsesClassTypeAndIndex(): void
     {
         $labels = LabelExtractor::extract($this->device, 'sensor', [
-            'sensor_id'    => 12,
+            'sensor_id' => 12,
             'sensor_class' => 'temperature',
-            'sensor_type'  => 'cisco-entity-sensor',
+            'sensor_type' => 'cisco-entity-sensor',
             'sensor_descr' => 'Inlet Temperature Sensor',
             'sensor_index' => '1',
-            'rrd_name'     => ['sensor', 'temperature', 'cisco-entity-sensor', '1'],
-            'rrd_def'      => 'some-rrd-def',
         ]);
 
         $this->assertSame('sensor', $labels['entity_type']);
-        $this->assertSame('12', $labels['sensor_id']);
         $this->assertSame('temperature', $labels['sensor_class']);
         $this->assertSame('cisco-entity-sensor', $labels['sensor_type']);
+        $this->assertSame('1', $labels['sensor_index']);
+        $this->assertArrayNotHasKey('sensor_id', $labels);
         $this->assertArrayNotHasKey('sensor_descr', $labels);
-        $this->assertArrayNotHasKey('sensor_index', $labels);
-        $this->assertArrayNotHasKey('rrd_name', $labels);
-        $this->assertArrayNotHasKey('rrd_def', $labels);
     }
 
-    public function testRealMempoolTagsIncludeMempoolId(): void
+    public function testMempoolIdentityUsesTypeClassAndIndex(): void
     {
         $labels = LabelExtractor::extract($this->device, 'mempool', [
-            'mempool_id'    => 7,
-            'mempool_type'  => 'system',
+            'mempool_id' => 7,
+            'mempool_type' => 'system',
             'mempool_class' => 'virtual',
             'mempool_index' => '0',
-            'rrd_name'      => ['mempool', 'system', 'virtual', '0'],
-            'rrd_def'       => 'some-rrd-def',
         ]);
 
         $this->assertSame('mempool', $labels['entity_type']);
-        $this->assertSame('7', $labels['mempool_id']);
         $this->assertSame('system', $labels['mempool_type']);
         $this->assertSame('virtual', $labels['mempool_class']);
-        $this->assertArrayNotHasKey('mempool_index', $labels);
-        $this->assertArrayNotHasKey('rrd_name', $labels);
+        $this->assertSame('0', $labels['mempool_index']);
+        $this->assertArrayNotHasKey('mempool_id', $labels);
     }
 
-    public function testAfLabelIncludedForIpSystemStats(): void
+    public function testStorageIdentityUsesTypeAndDescr(): void
     {
-        $labels = LabelExtractor::extract($this->device, 'ipSystemStats', ['af' => 'ipv4']);
+        $labels = LabelExtractor::extract($this->device, 'storage', [
+            'storage_id' => 3,
+            'type' => 'hrStorage',
+            'descr' => '/',
+        ]);
 
-        $this->assertSame('ipv4', $labels['af']);
-        $this->assertSame('device', $labels['entity_type']);
+        $this->assertSame('storage', $labels['entity_type']);
+        $this->assertSame('hrStorage', $labels['type']);
+        $this->assertSame('/', $labels['descr']);
+        $this->assertArrayNotHasKey('storage_id', $labels);
     }
 
-    public function testNameLabelIncludedForAvailability(): void
+    public function testExtraLabelsForDeviceLevelMetrics(): void
     {
-        $labels = LabelExtractor::extract($this->device, 'availability', ['name' => '86400']);
-
-        $this->assertSame('86400', $labels['name']);
+        $this->assertSame('ipv4', LabelExtractor::extract($this->device, 'ipSystemStats', ['af' => 'ipv4'])['af']);
+        $this->assertSame('86400', LabelExtractor::extract($this->device, 'availability', ['name' => '86400'])['name']);
+        $this->assertSame('7', LabelExtractor::extract($this->device, 'sla', ['sla_nr' => 7])['sla_nr']);
     }
 
-    public function testDescrLabelIncludedForDiskIo(): void
+    public function testDiskIoDescrIsNormalised(): void
     {
-        $labels = LabelExtractor::extract($this->device, 'ucd_diskio', ['descr' => 'sda']);
+        $labels = LabelExtractor::extract($this->device, 'ucd_diskio', ['diskio_descr' => 'sda']);
 
         $this->assertSame('sda', $labels['descr']);
     }
@@ -245,12 +137,19 @@ final class LabelExtractorTest extends TestCase
     public function testProcessorLabelsIncluded(): void
     {
         $labels = LabelExtractor::extract($this->device, 'processors', [
-            'processor_type'  => 'hr',
+            'processor_type' => 'hr',
             'processor_index' => '0',
         ]);
 
         $this->assertSame('hr', $labels['processor_type']);
         $this->assertSame('0', $labels['processor_index']);
-        $this->assertSame('device', $labels['entity_type']);
+        $this->assertSame('processor', $labels['entity_type']);
+    }
+
+    public function testEmptyExtraTagsAreNotIncluded(): void
+    {
+        $labels = LabelExtractor::extract($this->device, 'ports', ['ifName' => '']);
+
+        $this->assertArrayNotHasKey('ifName', $labels);
     }
 }

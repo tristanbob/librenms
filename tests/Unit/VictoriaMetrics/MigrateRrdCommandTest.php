@@ -113,7 +113,8 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
             return str_contains($body, 'librenms_port_if_in_bits_per_second')
                 && str_contains($body, 'librenms_port_if_out_bits_per_second')
                 && str_contains($body, "device_id=\"{$device->device_id}\"")
-                && str_contains($body, "port_id=\"{$port->port_id}\"")
+                && str_contains($body, "ifIndex=\"{$port->ifIndex}\"")
+                && ! str_contains($body, 'port_id=')
                 && str_contains($body, '8000')   // INOCTETS × 8
                 && str_contains($body, '4000');  // OUTOCTETS × 8
         });
