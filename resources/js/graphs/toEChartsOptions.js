@@ -74,7 +74,9 @@ export function toEChartsOptions(payload, options = {}) {
         const fillColor  = resolveColor(s.style?.color);
         const lineColor  = s.style?.lineColor ? resolveColor(s.style.lineColor) : fillColor;
         const seriesType = ['line', 'bar'].includes(s.type) ? s.type : defaultKind;
-        const data       = s.data;
+        const data       = s.style?.negate
+            ? s.data.map(([ts, v]) => [ts, v !== null ? -v : null])
+            : s.data;
         return {
             name:       s.name,
             type:       seriesType,
