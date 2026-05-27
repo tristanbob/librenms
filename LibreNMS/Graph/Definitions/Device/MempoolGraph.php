@@ -2,6 +2,7 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Mempool;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
