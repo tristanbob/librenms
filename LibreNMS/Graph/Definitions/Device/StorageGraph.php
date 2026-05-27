@@ -94,16 +94,16 @@ class StorageGraph implements GraphDefinition
                     ),
                     function (array $entities) use ($storageType, $storageDescr, $usedEntry, $freeEntry): string {
                         $labels = [
-                            'device_id' => $entities['device_id'],
-                            'type'      => $storageType,
-                            'descr'     => $storageDescr,
+                            'hostname' => $entities['hostname'],
+                            'type'     => $storageType,
+                            'descr'    => $storageDescr,
                         ];
                         $usedSel = VictoriaMetricsGraphDataProvider::buildSelector($usedEntry->definition->name, $usedEntry->identityLabels, $labels);
                         $freeSel = VictoriaMetricsGraphDataProvider::buildSelector($freeEntry->definition->name, $freeEntry->identityLabels, $labels);
 
                         return "100 * {$usedSel} / ({$usedSel} + {$freeSel})";
                     },
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
         })->all();

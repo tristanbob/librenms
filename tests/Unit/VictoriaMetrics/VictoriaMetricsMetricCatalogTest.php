@@ -15,7 +15,7 @@ final class VictoriaMetricsMetricCatalogTest extends TestCase
         $this->assertSame('INERRORS', $entry->field);
         $this->assertSame('librenms_port_if_in_errors_total', $entry->definition->name);
         $this->assertSame('counter', $entry->definition->type);
-        $this->assertSame(['device_id', 'ifIndex'], $entry->identityLabels);
+        $this->assertSame(['hostname', 'ifIndex'], $entry->identityLabels);
     }
 
     public function testLooksUpMetricByMeasurementAndField(): void
@@ -24,7 +24,7 @@ final class VictoriaMetricsMetricCatalogTest extends TestCase
 
         $this->assertSame('sensor.value', $entry->key);
         $this->assertSame('librenms_sensor_value', $entry->definition->name);
-        $this->assertSame(['device_id', 'sensor_class', 'sensor_type', 'sensor_index'], $entry->identityLabels);
+        $this->assertSame(['hostname', 'sensor_class', 'sensor_type', 'sensor_index'], $entry->identityLabels);
     }
 
     public function testUnknownMetricReturnsNull(): void

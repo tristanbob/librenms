@@ -105,26 +105,26 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
 
     public function testBuildExprWithSingleLabel(): void
     {
-        $binding = new VictoriaMetricsMetricBinding('my_metric', ['device_id']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '42']);
+        $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname']);
+        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1']);
 
-        $this->assertSame('my_metric{device_id="42"}', $expr);
+        $this->assertSame('my_metric{hostname="router1"}', $expr);
     }
 
     public function testBuildExprWithMultipleLabels(): void
     {
-        $binding = new VictoriaMetricsMetricBinding('my_metric', ['device_id', 'port_id']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '1', 'port_id' => '2']);
+        $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname', 'ifIndex']);
+        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1', 'ifIndex' => '2']);
 
-        $this->assertSame('my_metric{device_id="1",port_id="2"}', $expr);
+        $this->assertSame('my_metric{hostname="router1",ifIndex="2"}', $expr);
     }
 
     public function testBuildExprThrowsOnMissingEntityKeys(): void
     {
-        $binding = new VictoriaMetricsMetricBinding('my_metric', ['device_id', 'port_id']);
+        $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname', 'ifIndex']);
 
         $this->expectException(\RuntimeException::class);
-        VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '1']);
+        VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1']);
     }
 
     public function testBuildExprWithNoLabels(): void
@@ -146,12 +146,12 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
     public function testBuildExprFromExpressionBinding(): void
     {
         $binding = new VictoriaMetricsExpressionBinding(
-            fn (array $entities): string => 'rate(my_metric{device_id="' . $entities['device_id'] . '"}[5m])',
-            ['device_id'],
+            fn (array $entities): string => 'rate(my_metric{hostname="' . $entities['hostname'] . '"}[5m])',
+            ['hostname'],
         );
 
-        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['device_id' => '42']);
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1']);
 
-        $this->assertSame('rate(my_metric{device_id="42"}[5m])', $expr);
+        $this->assertSame('rate(my_metric{hostname="router1"}[5m])', $expr);
     }
 }

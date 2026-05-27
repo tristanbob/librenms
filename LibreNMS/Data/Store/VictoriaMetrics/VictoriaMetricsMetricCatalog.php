@@ -115,16 +115,16 @@ final class VictoriaMetricsMetricCatalog
             self::entry('icmp.transmitted', 'icmp-perf', 'xmt', 'librenms_icmp_transmitted_total', 'gauge', 'packets'),
             self::entry('icmp.received', 'icmp-perf', 'rcv', 'librenms_icmp_received_total', 'gauge', 'packets'),
             self::entry('device.uptime', 'uptime', 'uptime', 'librenms_device_uptime_seconds', 'gauge', 'seconds'),
-            self::entry('device.availability', 'availability', 'availability', 'librenms_device_availability_percent', 'gauge', 'percent', ['device_id', 'name']),
+            self::entry('device.availability', 'availability', 'availability', 'librenms_device_availability_percent', 'gauge', 'percent', ['hostname', 'name']),
             self::entry('ospf.instances', 'ospf-statistics', 'instances', 'librenms_ospf_instances', 'gauge', 'count'),
             self::entry('ospf.areas', 'ospf-statistics', 'areas', 'librenms_ospf_areas', 'gauge', 'count'),
             self::entry('ospf.ports', 'ospf-statistics', 'ports', 'librenms_ospf_ports', 'gauge', 'count'),
             self::entry('ospf.neighbours', 'ospf-statistics', 'neighbours', 'librenms_ospf_neighbours', 'gauge', 'count'),
-            self::entry('sla.rtt', 'sla', 'rtt', 'librenms_sla_rtt_milliseconds', 'gauge', 'milliseconds', ['device_id', 'sla_nr']),
-            self::entry('diskio.read_bytes', 'ucd_diskio', 'read', 'librenms_diskio_read_bytes_total', 'counter', 'bytes', ['device_id', 'descr']),
-            self::entry('diskio.written_bytes', 'ucd_diskio', 'written', 'librenms_diskio_written_bytes_total', 'counter', 'bytes', ['device_id', 'descr']),
-            self::entry('diskio.reads', 'ucd_diskio', 'reads', 'librenms_diskio_reads_total', 'counter', 'operations', ['device_id', 'descr']),
-            self::entry('diskio.writes', 'ucd_diskio', 'writes', 'librenms_diskio_writes_total', 'counter', 'operations', ['device_id', 'descr']),
+            self::entry('sla.rtt', 'sla', 'rtt', 'librenms_sla_rtt_milliseconds', 'gauge', 'milliseconds', ['hostname', 'sla_nr']),
+            self::entry('diskio.read_bytes', 'ucd_diskio', 'read', 'librenms_diskio_read_bytes_total', 'counter', 'bytes', ['hostname', 'descr']),
+            self::entry('diskio.written_bytes', 'ucd_diskio', 'written', 'librenms_diskio_written_bytes_total', 'counter', 'bytes', ['hostname', 'descr']),
+            self::entry('diskio.reads', 'ucd_diskio', 'reads', 'librenms_diskio_reads_total', 'counter', 'operations', ['hostname', 'descr']),
+            self::entry('diskio.writes', 'ucd_diskio', 'writes', 'librenms_diskio_writes_total', 'counter', 'operations', ['hostname', 'descr']),
 
             // netstats-icmp
             self::entry('netstats.icmpInMsgs',        'netstats-icmp', 'icmpInMsgs',        'librenms_netstats_icmp_in_msgs_total',          'counter', 'packets'),
@@ -227,7 +227,7 @@ final class VictoriaMetricsMetricCatalog
         string $name,
         string $type,
         string $unit,
-        array $identityLabels = ['device_id'],
+        array $identityLabels = ['hostname'],
     ): MetricCatalogEntry {
         return new MetricCatalogEntry(
             key: $key,
@@ -243,6 +243,6 @@ final class VictoriaMetricsMetricCatalog
      */
     private static function portLabels(): array
     {
-        return ['device_id', 'ifIndex'];
+        return ['hostname', 'ifIndex'];
     }
 }

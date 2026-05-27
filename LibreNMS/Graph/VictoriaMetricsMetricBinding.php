@@ -36,7 +36,7 @@ class VictoriaMetricsMetricBinding implements MetricBinding
      */
     public function __construct(
         public readonly string $metricName,
-        public readonly array  $labelKeys = ['device_id'],
+        public readonly array  $labelKeys = ['hostname'],
         public readonly mixed  $transform = null,
     ) {}
 

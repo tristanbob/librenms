@@ -57,7 +57,7 @@ class UsageGraph implements GraphDefinition
                     transform: fn (array $v) => ($v['used'] + $v['free']) > 0 ? ($v['used'] / ($v['used'] + $v['free']) * 100) : null,
                 ),
                 fn (array $entities): string => self::usageExpression($entities),
-                ['device_id', 'mempool_type', 'mempool_class', 'mempool_index'],
+                ['hostname', 'mempool_type', 'mempool_class', 'mempool_index'],
             ),
         )];
     }

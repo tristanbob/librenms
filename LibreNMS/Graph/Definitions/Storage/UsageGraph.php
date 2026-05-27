@@ -65,7 +65,7 @@ class UsageGraph implements GraphDefinition
 
                         return "100 * $usedSel / ($usedSel + $freeSel)";
                     },
-                    labelKeys: ['device_id', 'type', 'descr'],
+                    labelKeys: ['hostname', 'type', 'descr'],
                 ),
             ],
         )];

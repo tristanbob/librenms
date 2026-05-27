@@ -75,13 +75,13 @@ class ProcessorGraph implements GraphDefinition
                             $usageEntry->definition->name,
                             $usageEntry->identityLabels,
                             [
-                                'device_id'       => $entities['device_id'],
+                                'hostname'        => $entities['hostname'],
                                 'processor_type'  => $processor->processor_type,
                                 'processor_index' => (string) $processor->processor_index,
                             ],
                         );
                     },
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
         })->all();

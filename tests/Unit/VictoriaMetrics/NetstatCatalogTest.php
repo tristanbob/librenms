@@ -42,7 +42,7 @@ final class NetstatCatalogTest extends TestCase
         $this->assertSame($field, $entry->field, "Wrong field for $key");
         $this->assertSame($metricName, $entry->definition->name, "Wrong metric name for $key");
         $this->assertSame('counter', $entry->definition->type, "$key must be a counter");
-        $this->assertSame(['device_id'], $entry->identityLabels, "$key must use only device_id as identity label");
+        $this->assertSame(['hostname'], $entry->identityLabels, "$key must use only hostname as identity label");
     }
 
     #[DataProvider('netstatsKeyProvider')]

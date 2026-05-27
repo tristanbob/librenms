@@ -79,7 +79,7 @@ class MempoolGraph implements GraphDefinition
                         ),
                         function (array $entities) use ($mempool, $usedEntry, $freeEntry): string {
                             $labels = [
-                                'device_id'     => $entities['device_id'],
+                                'hostname'      => $entities['hostname'],
                                 'mempool_type'  => $mempool->mempool_type,
                                 'mempool_class' => $mempool->mempool_class,
                                 'mempool_index' => (string) $mempool->mempool_index,
@@ -89,7 +89,7 @@ class MempoolGraph implements GraphDefinition
 
                             return "100 * {$usedSel} / ({$usedSel} + {$freeSel})";
                         },
-                        ['device_id'],
+                        ['hostname'],
                     ),
                 );
             })

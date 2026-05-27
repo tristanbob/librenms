@@ -100,7 +100,7 @@ final class DeviceGraphDefinitionTest extends TestCase
 
     private function query(string $type, int $range = 86400): GraphQuery
     {
-        return new GraphQuery('device', $type, 1000000, 1000000 + $range, 1200, 300, ['device_id' => 1]);
+        return new GraphQuery('device', $type, 1000000, 1000000 + $range, 1200, 300, ['device_id' => 1, 'hostname' => 'router1']);
     }
 
     private function device(): array

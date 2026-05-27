@@ -318,7 +318,11 @@ function get_device_graph_data(Request $request)
         ], fn ($v) => $v !== null);
 
         try {
-            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('device', $graph_type, ['device_id' => $device_id], $from, $to, $width, $height, $options);
+            $device   = \App\Models\Device::findOrFail($device_id);
+            $query    = \LibreNMS\Graph\GraphQuery::fromRequest('device', $graph_type, [
+                'device_id' => $device_id,
+                'hostname'  => $device->hostname,
+            ], $from, $to, $width, $height, $options);
             $provider = app(\LibreNMS\Graph\GraphDataProvider::class);
             $result = $provider->query($query);
 
@@ -357,10 +361,11 @@ function get_port_graph_data(Request $request)
                 $graph_type,
                 [
                     'device_id' => $device_id,
-                    'port_id' => $port_id,
+                    'hostname'  => $port->device->hostname,
+                    'port_id'   => $port_id,
                     'port_name' => $port_name,
-                    'ifIndex' => $port->ifIndex,
-                    'ifName' => $port->ifName,
+                    'ifIndex'   => $port->ifIndex,
+                    'ifName'    => $port->ifName,
                 ],
                 $from, $to, $width, $height, $options
             );
@@ -401,6 +406,7 @@ function get_sensor_graph_data(Request $request)
 
         $entities = [
             'device_id'             => $device_id,
+            'hostname'              => $sensor->device->hostname,
             'sensor_id'             => $sensor->sensor_id,
             'sensor_class'          => $sensor->sensor_class,
             'sensor_type'           => $sensor->sensor_type,
@@ -452,6 +458,7 @@ function get_wireless_graph_data(Request $request)
 
         $entities = [
             'device_id'             => $device_id,
+            'hostname'              => $sensor->device->hostname,
             'sensor_id'             => $sensor->sensor_id,
             'sensor_class'          => $sensorClass,
             'sensor_type'           => $sensor->sensor_type,
@@ -492,9 +499,10 @@ function get_processor_graph_data(Request $request)
         }
 
         $entities = [
-            'device_id' => $device_id,
-            'processor_id' => $processor->processor_id,
-            'processor_type' => $processor->processor_type,
+            'device_id'       => $device_id,
+            'hostname'        => $processor->device->hostname,
+            'processor_id'    => $processor->processor_id,
+            'processor_type'  => $processor->processor_type,
             'processor_index' => $processor->processor_index,
             'processor_descr' => $processor->processor_descr,
         ];
@@ -519,9 +527,10 @@ function get_mempool_graph_data(Request $request)
         }
 
         $entities = [
-            'device_id' => $device_id,
-            'mempool_id' => $mempool->mempool_id,
-            'mempool_type' => $mempool->mempool_type,
+            'device_id'     => $device_id,
+            'hostname'      => $mempool->device->hostname,
+            'mempool_id'    => $mempool->mempool_id,
+            'mempool_type'  => $mempool->mempool_type,
             'mempool_class' => $mempool->mempool_class,
             'mempool_index' => $mempool->mempool_index,
             'mempool_descr' => $mempool->mempool_descr,
@@ -547,10 +556,11 @@ function get_storage_graph_data(Request $request)
         }
 
         $entities = [
-            'device_id' => $device_id,
-            'storage_id' => $storage->storage_id,
-            'type' => $storage->type,
-            'descr' => $storage->storage_descr,
+            'device_id'     => $device_id,
+            'hostname'      => $storage->device->hostname,
+            'storage_id'    => $storage->storage_id,
+            'type'          => $storage->type,
+            'descr'         => $storage->storage_descr,
             'storage_descr' => $storage->storage_descr,
         ];
 
@@ -574,9 +584,10 @@ function get_printer_supply_graph_data(Request $request)
         }
 
         $entities = [
-            'device_id' => $device_id,
-            'supply_id' => $supply->supply_id,
-            'supply_type' => $supply->supply_type,
+            'device_id'    => $device_id,
+            'hostname'     => $supply->device->hostname,
+            'supply_id'    => $supply->supply_id,
+            'supply_type'  => $supply->supply_type,
             'supply_index' => $supply->supply_index,
             'supply_descr' => $supply->supply_descr,
         ];

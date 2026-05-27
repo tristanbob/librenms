@@ -106,10 +106,10 @@ class DiskIoGraph implements GraphDefinition
                         VictoriaMetricsGraphDataProvider::buildSelector(
                             $readsEntry->definition->name,
                             $readsEntry->identityLabels,
-                            ['device_id' => $entities['device_id'], 'descr' => $diskDescr],
+                            ['hostname' => $entities['hostname'], 'descr' => $diskDescr],
                         ),
                     ),
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
 
@@ -131,10 +131,10 @@ class DiskIoGraph implements GraphDefinition
                         VictoriaMetricsGraphDataProvider::buildSelector(
                             $writesEntry->definition->name,
                             $writesEntry->identityLabels,
-                            ['device_id' => $entities['device_id'], 'descr' => $diskDescr],
+                            ['hostname' => $entities['hostname'], 'descr' => $diskDescr],
                         ),
                     ),
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
         }

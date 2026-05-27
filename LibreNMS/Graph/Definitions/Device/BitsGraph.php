@@ -112,9 +112,9 @@ class BitsGraph implements GraphDefinition
                     fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
                         $inEntry->definition->name,
                         $inEntry->identityLabels,
-                        ['device_id' => $entities['device_id'], 'ifIndex' => $ifIndex],
+                        ['hostname' => $entities['hostname'], 'ifIndex' => $ifIndex],
                     ),
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
 
@@ -134,9 +134,9 @@ class BitsGraph implements GraphDefinition
                     fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
                         $outEntry->definition->name,
                         $outEntry->identityLabels,
-                        ['device_id' => $entities['device_id'], 'ifIndex' => $ifIndex],
+                        ['hostname' => $entities['hostname'], 'ifIndex' => $ifIndex],
                     ),
-                    ['device_id'],
+                    ['hostname'],
                 ),
             );
         }
