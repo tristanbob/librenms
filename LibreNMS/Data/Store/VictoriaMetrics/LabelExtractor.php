@@ -28,10 +28,20 @@ use App\Models\Device;
 class LabelExtractor
 {
     // Entity ID tags become labels when present; they also determine entity_type.
-    private const ENTITY_ID_TAGS = ['port_id', 'sensor_id', 'service_id', 'app_id', 'bill_id'];
+    private const ENTITY_ID_TAGS = [
+        'port_id', 'sensor_id', 'service_id', 'app_id', 'bill_id',
+        'mempool_id', 'storage_id',
+    ];
 
     // Low-cardinality tags that are useful for browsing metrics without being required.
-    private const EXTRA_TAGS = ['ifName', 'sensor_class', 'module'];
+    private const EXTRA_TAGS = [
+        'ifName', 'sensor_class', 'sensor_type', 'module',
+        'af',             // IP version for ipSystemStats (ipv4/ipv6)
+        'name',           // duration window for availability
+        'descr',          // disk description for ucd_diskio
+        'processor_type', 'processor_index',  // processor identity (no numeric ID in write path)
+        'mempool_type', 'mempool_class',      // human context alongside mempool_id
+    ];
 
     /**
      * Build the VictoriaMetrics label set for one write() call.
@@ -77,6 +87,8 @@ class LabelExtractor
             'service_id' => 'service',
             'app_id'     => 'app',
             'bill_id'    => 'bill',
+            'mempool_id' => 'mempool',
+            'storage_id' => 'storage',
         ];
 
         foreach ($map as $key => $type) {

@@ -117,6 +117,7 @@ class Mempools implements Module
                 ->addDataset('free', 'GAUGE', 0);
 
             $tags = [
+                'mempool_id' => $mempool->mempool_id,
                 'mempool_type' => $mempool->mempool_type,
                 'mempool_class' => $mempool->mempool_class,
                 'mempool_index' => $mempool->mempool_index,
