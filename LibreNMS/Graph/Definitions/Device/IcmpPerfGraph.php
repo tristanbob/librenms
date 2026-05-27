@@ -3,49 +3,31 @@
 namespace LibreNMS\Graph\Definitions\Device;
 
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class IcmpPerfGraph implements GraphDefinition
+class IcmpPerfGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_icmp_perf';
 
-    public function graphType(): string { return self::GRAPH_TYPE; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string { return 'Ping Response'; }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string { return 'ms'; }
-
-    public function entityType(): string { return 'device'; }
-
-    public function display(): array
-    {
-        return [
-            'kind'    => 'line',
-            'stacked' => false,
-            'area'    => true,
-            'legend'  => true,
-            'y_axes'  => [
-                ['unit' => 'ms',  'scale' => 'linear', 'min' => null, 'max' => null],
-                ['unit' => '%',   'scale' => 'linear', 'min' => 0,    'max' => 100],
+        parent::__construct(
+            graphType: self::GRAPH_TYPE,
+            title:     'Ping Response',
+            unit:      'ms',
+            display:   [
+                'area'   => true,
+                'y_axes' => [
+                    ['unit' => 'ms', 'scale' => 'linear', 'min' => null, 'max' => null],
+                    ['unit' => '%',  'scale' => 'linear', 'min' => 0,    'max' => 100],
+                ],
             ],
-        ];
+        );
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -96,8 +78,6 @@ class IcmpPerfGraph implements GraphDefinition
             ),
         ];
     }
-
-    public function markers(array $device, GraphQuery $query): array { return []; }
 
     private static function lossExpression(array $entities): string
     {

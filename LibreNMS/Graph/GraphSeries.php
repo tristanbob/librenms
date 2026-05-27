@@ -76,12 +76,16 @@ class GraphSeries
 
     public function toArray(): array
     {
+        $data = $this->negate
+            ? array_map(fn ($p) => [$p[0], $p[1] !== null ? -$p[1] : null], $this->data)
+            : $this->data;
+
         return [
             'name'  => $this->name,
             'key'   => $this->key,
             'type'  => $this->type,
             'unit'  => $this->unit,
-            'data'  => $this->data,
+            'data'  => $data,
             'yAxisIndex' => $this->yAxisIndex,
             'style' => ['area' => $this->area, 'stack' => $this->stack, 'color' => $this->color, 'lineColor' => $this->lineColor, 'areaOpacity' => $this->areaOpacity, 'lineOpacity' => $this->lineOpacity, 'lineWidth' => $this->lineWidth, 'negate' => $this->negate],
             'stats' => $this->stats(),

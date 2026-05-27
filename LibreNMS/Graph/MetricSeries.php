@@ -56,7 +56,7 @@ final class MetricSeries
         ];
     }
 
-    public static function expression(RrdMetricBinding $rrd, callable $expressionBuilder, array $labelKeys = ['device_id'], mixed $transform = null): array
+    public static function expression(RrdMetricBinding $rrd, callable $expressionBuilder, array $labelKeys = ['hostname'], mixed $transform = null): array
     {
         return [
             $rrd,

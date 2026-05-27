@@ -24,53 +24,26 @@
 namespace LibreNMS\Graph\Definitions\Device;
 
 use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class PollerPerfGraph implements GraphDefinition
+class PollerPerfGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_poller_perf';
 
     private const PALETTE = 'rainbow_stats_purple';
 
-    public function graphType(): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE;
-    }
-
-    public function id(array $device, GraphQuery $query): string
-    {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string
-    {
-        return 'Poller Time';
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'];
-    }
-
-    public function unit(array $device, GraphQuery $query): string
-    {
-        return 'seconds';
-    }
-
-    public function entityType(): string
-    {
-        return 'device';
-    }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => true];
+        parent::__construct(
+            graphType: self::GRAPH_TYPE,
+            title:     'Poller Time',
+            unit:      'seconds',
+            display:   ['area' => true],
+        );
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -123,10 +96,4 @@ class PollerPerfGraph implements GraphDefinition
 
         return $series;
     }
-
-    public function markers(array $device, GraphQuery $query): array
-    {
-        return [];
-    }
-
 }

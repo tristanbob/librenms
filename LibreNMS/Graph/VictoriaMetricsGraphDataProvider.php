@@ -154,7 +154,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
 
     /**
      * Build a MetricsQL selector expression from the binding and query entities.
-     * Example: librenms_device_poller_duration_seconds{device_id="42"}
+     * Example: librenms_device_poller_duration_seconds{hostname="myhost"}
      */
     public static function buildExpr(MetricBinding $binding, array $entities): string
     {

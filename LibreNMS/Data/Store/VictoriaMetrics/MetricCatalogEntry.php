@@ -34,7 +34,7 @@ final readonly class MetricCatalogEntry
         public string $measurement,
         public string $field,
         public MetricDefinition $definition,
-        public array $identityLabels = ['device_id'],
+        public array $identityLabels = ['hostname'],
     ) {
     }
 }

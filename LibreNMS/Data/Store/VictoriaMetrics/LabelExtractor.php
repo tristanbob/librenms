@@ -44,10 +44,10 @@ class LabelExtractor
     /**
      * Build the VictoriaMetrics label set for one write() call.
      *
-     * Always includes: source, device_id, hostname, entity_type.
+     * Always includes: source, hostname, entity_type.
      * Conditionally includes stable polling identity and extra descriptive tags.
      * RRD-specific tags (rrd_def, rrd_name, etc.) are intentionally excluded.
-     * Database ID tags are intentionally excluded from VM labels.
+     * Database ID tags (including device_id) are intentionally excluded from VM labels.
      *
      * @param  Device $device  The polled device
      * @param  string $measurement  Unused at this layer; reserved for future per-measurement overrides
@@ -58,7 +58,6 @@ class LabelExtractor
     {
         $labels = [
             'source'      => 'librenms',
-            'device_id'   => (string) $device->device_id,
             'hostname'    => (string) $device->hostname,
             'entity_type' => self::deriveEntityType($tags),
         ];

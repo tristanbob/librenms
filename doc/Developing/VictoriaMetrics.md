@@ -5,6 +5,62 @@ for contributors adding or extending VM support in code. For operator setup,
 configuration, and the RRD migration command, see
 [Extensions/metrics/VictoriaMetrics](../Extensions/metrics/VictoriaMetrics.md).
 
+## Why VictoriaMetrics?
+
+LibreNMS polls hundreds or thousands of devices every few minutes, producing a high
+write throughput of small samples. VictoriaMetrics was chosen over alternatives
+(InfluxDB, Prometheus, TimescaleDB) for the following reasons:
+
+- **High-throughput ingestion with low memory overhead.** VM sustains millions of
+  samples per second on modest hardware and uses significantly less RAM than
+  Prometheus or InfluxDB under equivalent write load, because its storage engine
+  defers most work to background merge passes rather than holding large in-memory
+  indexes.
+- **Compact on-disk storage.** VM's two-level compression scheme typically reaches
+  ~0.4 bytes per sample on real-world network monitoring data — roughly 10× smaller
+  than stock Prometheus and orders of magnitude smaller than RRD, which pre-allocates
+  fixed-size round-robin files regardless of actual data density.
+- **Drop-in Prometheus compatibility.** It accepts Prometheus remote-write and text
+  exposition formats, so the write side requires no proprietary client SDK.
+- **MetricsQL.** A superset of PromQL that adds useful aggregation functions
+  (`rate_over_sum`, `increase_pure`, quantile-over-time without subqueries) that
+  reduce the complexity of graph expressions.
+- **Optional vmagent relay for resilience.** The core
+  `victoriametrics` binary runs standalone with no Zookeeper, Kafka, or sidecar.
+  Adding a local vmagent relay is a single additional binary: it buffers writes to
+  disk when VictoriaMetrics is unreachable (maintenance, restarts, network blips),
+  replays them automatically on reconnect, and can fan-out the same stream to
+  multiple backends. It also offloads HTTP keep-alive and batching from the poller
+  process itself.
+- **Millisecond timestamps.** Unlike stock Prometheus, VM stores and returns
+  millisecond-resolution timestamps, which the graph pipeline uses without
+  conversion.
+- **Long-term retention without downsampling loss.** VM can retain full-resolution
+  data for years without the step-wise precision loss RRD imposes.
+
+## Why Prometheus Text Exposition Format?
+
+The main alternative was **InfluxDB line protocol**, which VictoriaMetrics also
+accepts and which is similarly simple to generate in PHP. The deciding factor against
+it is that InfluxDB line protocol carries no type information — VictoriaMetrics
+receives the data without knowing which fields are counters and which are gauges. That
+matters: `rate()` on a gauge is meaningless, and VictoriaMetrics handles counter
+resets (wraps at 2³² or 2⁶⁴) differently from gauge fluctuations. Our catalog
+explicitly marks every metric as counter or gauge, and Prometheus text's `# TYPE`
+hint is the only way to deliver that information to VictoriaMetrics at write time.
+
+The other candidate was **Prometheus Remote Write (protobuf + Snappy)**. It is more
+wire-efficient than text, but requires a protobuf PHP library and significantly more
+serialization code. The throughput gain is negligible here because the write bottleneck
+is SNMP polling, not metric serialization.
+
+So the format choice comes down to: Prometheus text is the simplest format that
+preserves counter/gauge semantics end-to-end. Staying in the Prometheus data model
+also means the written metrics can be scraped directly by a real Prometheus instance
+or any OpenMetrics-compatible tool without any conversion layer.
+
+---
+
 The integration has two independent halves that can be enabled separately:
 
 - **Write** — the poller dual-writes metrics in Prometheus text format while still
@@ -67,7 +123,7 @@ timestamp:
 
 ```text
 # TYPE librenms_port_if_in_octets_total counter
-librenms_port_if_in_octets_total{source="librenms",device_id="1",hostname="router1",entity_type="port",ifIndex="7",ifName="Gi0/0"} 123456789 1779475200000
+librenms_port_if_in_octets_total{source="librenms",hostname="router1",entity_type="port",ifIndex="7",ifName="Gi0/0"} 123456789 1779475200000
 ```
 
 `PrometheusTextFormatter` handles name sanitisation and line assembly.
@@ -88,38 +144,38 @@ catalog-backed helpers such as `MetricSeries::gauge()` and `MetricSeries::rate()
 
 | Measurement | Field | Metric Name | Type | Identity Labels |
 |-------------|-------|-------------|------|----------------|
-| `poller-perf` | `poller` | `librenms_device_poller_duration_seconds` | gauge | `device_id` |
-| `uptime` | `uptime` | `librenms_device_uptime_seconds` | gauge | `device_id` |
-| `availability` | `availability` | `librenms_device_availability_percent` | gauge | `device_id`, `name` |
+| `poller-perf` | `poller` | `librenms_device_poller_duration_seconds` | gauge | `hostname` |
+| `uptime` | `uptime` | `librenms_device_uptime_seconds` | gauge | `hostname` |
+| `availability` | `availability` | `librenms_device_availability_percent` | gauge | `hostname`, `name` |
 
 ### Port Metrics
 
 | Measurement | Field | Metric Name | Type | Identity Labels |
 |-------------|-------|-------------|------|----------------|
-| `ports` | `INOCTETS` | `librenms_port_if_in_octets_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `OUTOCTETS` | `librenms_port_if_out_octets_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `INERRORS` | `librenms_port_if_in_errors_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `OUTERRORS` | `librenms_port_if_out_errors_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `INDISCARDS` | `librenms_port_if_in_discards_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `OUTDISCARDS` | `librenms_port_if_out_discards_total` | counter | `device_id`, `ifIndex` |
-| `ports` | `ifInBits_rate` | `librenms_port_if_in_bits_per_second` | gauge | `device_id`, `ifIndex` |
-| `ports` | `ifOutBits_rate` | `librenms_port_if_out_bits_per_second` | gauge | `device_id`, `ifIndex` |
+| `ports` | `INOCTETS` | `librenms_port_if_in_octets_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `OUTOCTETS` | `librenms_port_if_out_octets_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `INERRORS` | `librenms_port_if_in_errors_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `OUTERRORS` | `librenms_port_if_out_errors_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `INDISCARDS` | `librenms_port_if_in_discards_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `OUTDISCARDS` | `librenms_port_if_out_discards_total` | counter | `hostname`, `ifIndex` |
+| `ports` | `ifInBits_rate` | `librenms_port_if_in_bits_per_second` | gauge | `hostname`, `ifIndex` |
+| `ports` | `ifOutBits_rate` | `librenms_port_if_out_bits_per_second` | gauge | `hostname`, `ifIndex` |
 
 ### Entity Metrics
 
 | Entity | Measurement | Metric Name | Type | Identity Labels |
 |--------|-------------|-------------|------|----------------|
-| Processor | `processors` | `librenms_processor_usage_percent` | gauge | `device_id`, `processor_type`, `processor_index` |
-| Memory | `mempool` | `librenms_mempool_used_bytes` | gauge | `device_id`, `mempool_type`, `mempool_class`, `mempool_index` |
-| Memory | `mempool` | `librenms_mempool_free_bytes` | gauge | `device_id`, `mempool_type`, `mempool_class`, `mempool_index` |
-| Storage | `storage` | `librenms_storage_used_bytes` | gauge | `device_id`, `type`, `descr` |
-| Storage | `storage` | `librenms_storage_free_bytes` | gauge | `device_id`, `type`, `descr` |
-| Sensor | `sensors` | `librenms_sensor_value` | gauge | `device_id`, `sensor_class`, `sensor_type`, `sensor_index` |
-| Wireless | `wireless_sensor` | `librenms_wireless_sensor_value` | gauge | `device_id`, `sensor_class`, `sensor_type`, `sensor_index` |
-| Disk I/O | `ucd_diskio` | `librenms_diskio_reads_total` | counter | `device_id`, `descr` |
-| Disk I/O | `ucd_diskio` | `librenms_diskio_writes_total` | counter | `device_id`, `descr` |
+| Processor | `processors` | `librenms_processor_usage_percent` | gauge | `hostname`, `processor_type`, `processor_index` |
+| Memory | `mempool` | `librenms_mempool_used_bytes` | gauge | `hostname`, `mempool_type`, `mempool_class`, `mempool_index` |
+| Memory | `mempool` | `librenms_mempool_free_bytes` | gauge | `hostname`, `mempool_type`, `mempool_class`, `mempool_index` |
+| Storage | `storage` | `librenms_storage_used_bytes` | gauge | `hostname`, `type`, `descr` |
+| Storage | `storage` | `librenms_storage_free_bytes` | gauge | `hostname`, `type`, `descr` |
+| Sensor | `sensors` | `librenms_sensor_value` | gauge | `hostname`, `sensor_class`, `sensor_type`, `sensor_index` |
+| Wireless | `wireless_sensor` | `librenms_wireless_sensor_value` | gauge | `hostname`, `sensor_class`, `sensor_type`, `sensor_index` |
+| Disk I/O | `ucd_diskio` | `librenms_diskio_reads_total` | counter | `hostname`, `descr` |
+| Disk I/O | `ucd_diskio` | `librenms_diskio_writes_total` | counter | `hostname`, `descr` |
 
-### Network Statistics (device-scoped, identity label: `device_id` only)
+### Network Statistics (device-scoped, identity label: `hostname` only)
 
 Netstats metrics cover ICMP, IP, SNMP, TCP, and UDP MIB counters (measurements
 `netstats-icmp`, `netstats-ip`, `netstats-snmp`, `netstats-tcp`, `netstats-udp`)
@@ -140,7 +196,6 @@ on which tags are present in the poller's `write()` call.
 | Label | Value |
 |-------|-------|
 | `source` | `"librenms"` |
-| `device_id` | The LibreNMS device primary key as a string |
 | `hostname` | The device hostname |
 | `entity_type` | `device`, `port`, `sensor`, `mempool`, `storage`, or `processor` |
 
@@ -150,9 +205,10 @@ on which tags are present in the poller's `write()` call.
 `mempool_type`, `mempool_class`, `mempool_index`, `type`, `descr`,
 `processor_type`, `processor_index`, `sla_nr`, `af`, `name`, and `module`.
 
-**Intentionally excluded:** all `rrd_*` tags, database ID tags such as `port_id`,
-`sensor_id`, `mempool_id`, and `storage_id`, `ifAlias`, and other high-cardinality
-or RRD-specific fields. The exclusion list is enforced in `LabelExtractor`.
+**Intentionally excluded:** all `rrd_*` tags, all database ID tags (`device_id`,
+`port_id`, `sensor_id`, `mempool_id`, `storage_id`, etc.), `ifAlias`, and other
+high-cardinality or RRD-specific fields. Database IDs are excluded because LibreNMS
+does not soft-delete every entity. The exclusion list is enforced in `LabelExtractor`.
 
 ---
 
@@ -177,13 +233,13 @@ expression from catalog-backed bindings. Counter metrics can be wrapped in
 `rate()` by `MetricSeries::rate()`:
 
 ```
-rate(librenms_port_if_in_errors_total{device_id="1",ifIndex="7"}[5m])
+rate(librenms_port_if_in_errors_total{hostname="router1",ifIndex="7"}[5m])
 ```
 
 Gauge metrics query directly:
 
 ```
-librenms_port_if_in_bits_per_second{device_id="1",ifIndex="7"}
+librenms_port_if_in_bits_per_second{hostname="router1",ifIndex="7"}
 ```
 
 All label keys listed by a binding are required. Ambiguous selectors that return
@@ -231,7 +287,7 @@ bindings: [
         new RrdMetricBinding(rrdName: $rrdName, ds: 'INDISCARDS'),
     ),
 ],
-// Produces: rate(librenms_port_if_in_discards_total{device_id="1",ifIndex="7"}[5m])
+// Produces: rate(librenms_port_if_in_discards_total{hostname="router1",ifIndex="7"}[5m])
 ```
 
 ### `MetricSeries::expression()` — for computed values
@@ -253,7 +309,7 @@ bindings: [
                 ? $v['used'] / ($v['used'] + $v['free']) * 100 : null),
         expressionBuilder: fn (array $entities): string =>
             "100 * $usedSel / ($usedSel + $freeSel)",
-        labelKeys: ['device_id', 'type', 'descr'],
+        labelKeys: ['hostname', 'type', 'descr'],
     ),
 ],
 ```
@@ -262,10 +318,10 @@ bindings: [
 
 Device-level aggregate graphs (processor, mempool, storage, bits, diskio) iterate DB
 models and build one series per entity. Their `$query->entities` contains only
-`device_id` at query time — per-entity labels such as `ifIndex` or `processor_type`
+`hostname` at query time — per-entity labels such as `ifIndex` or `processor_type`
 are not available there. The solution is to use `MetricSeries::expression()` with a
-closure that captures the per-entity DB values, and set `labelKeys: ['device_id']` so
-only `device_id` is required from the query context:
+closure that captures the per-entity DB values, and set `labelKeys: ['hostname']` so
+only `hostname` is required from the query context:
 
 ```php
 $entry = VictoriaMetricsMetricCatalog::get('processor.usage');
@@ -279,13 +335,13 @@ foreach ($processors as $processor) {
                     $entry->definition->name,
                     $entry->identityLabels,
                     [
-                        'device_id'       => $entities['device_id'],
+                        'hostname'        => $entities['hostname'],
                         'processor_type'  => $processor->processor_type,
                         'processor_index' => (string) $processor->processor_index,
                     ],
                 );
             },
-            ['device_id'],  // only device_id validated against $entities
+            ['hostname'],  // only hostname validated against $entities
         ),
     );
 }
@@ -304,12 +360,12 @@ The same pattern applies to `MempoolGraph`, `StorageGraph`, `BitsGraph`, and `Di
 
 1. Verify the metric exists in `VictoriaMetricsMetricCatalog`. Add it there if not —
    the write side, read side, and migration tooling must agree on the name.
-2. Use stable polling identity labels from the catalog. Do not use database IDs such
-   as `port_id`, `sensor_id`, `mempool_id`, or `storage_id` as VM labels.
+2. Use stable polling identity labels from the catalog. Do not use any database ID
+   (`device_id`, `port_id`, `sensor_id`, `mempool_id`, `storage_id`, etc.) as VM labels.
 3. Prefer MetricsQL expressions for rates, sums, and percentages instead of fetching
    multiple VM series and merging them in PHP.
 4. For aggregate graphs where per-entity labels are not in `$query->entities`, use
-   `MetricSeries::expression()` with a capturing closure and `labelKeys: ['device_id']`.
+   `MetricSeries::expression()` with a capturing closure and `labelKeys: ['hostname']`.
 5. Add a unit test asserting `$series->binding('victoriametrics')` is non-null for
    each series that should have a VM binding.
 

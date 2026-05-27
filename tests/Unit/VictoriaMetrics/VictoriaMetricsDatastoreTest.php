@@ -79,7 +79,7 @@ final class VictoriaMetricsDatastoreTest extends TestCase
             $body = $request->body();
             $this->assertStringContainsString("# TYPE librenms_device_poller_duration_seconds gauge\n", $body);
             $this->assertStringContainsString('librenms_device_poller_duration_seconds{', $body);
-            $this->assertStringContainsString('device_id="1"', $body);
+            $this->assertStringNotContainsString('device_id=', $body);
             $this->assertStringContainsString('hostname="test.host"', $body);
             $this->assertStringContainsString('entity_type="device"', $body);
             $this->assertStringContainsString('module="ALL"', $body);

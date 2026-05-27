@@ -23,9 +23,9 @@ final class LabelExtractorTest extends TestCase
         $labels = LabelExtractor::extract($this->device, 'poller-perf', []);
 
         $this->assertSame('librenms', $labels['source']);
-        $this->assertSame('42', $labels['device_id']);
         $this->assertSame('router1.example.com', $labels['hostname']);
         $this->assertSame('device', $labels['entity_type']);
+        $this->assertArrayNotHasKey('device_id', $labels);
     }
 
     public function testDatabaseIdsAreNeverIncludedAsLabels(): void
@@ -43,6 +43,7 @@ final class LabelExtractorTest extends TestCase
             'sensor_index' => '1',
         ]);
 
+        $this->assertArrayNotHasKey('device_id', $labels);
         $this->assertArrayNotHasKey('port_id', $labels);
         $this->assertArrayNotHasKey('sensor_id', $labels);
         $this->assertArrayNotHasKey('mempool_id', $labels);

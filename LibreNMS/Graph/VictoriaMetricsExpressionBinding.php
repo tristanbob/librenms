@@ -34,7 +34,7 @@ final readonly class VictoriaMetricsExpressionBinding implements MetricBinding
      */
     public function __construct(
         public mixed $expressionBuilder,
-        public array $labelKeys = ['device_id'],
+        public array $labelKeys = ['hostname'],
         public mixed $transform = null,
     ) {
     }
