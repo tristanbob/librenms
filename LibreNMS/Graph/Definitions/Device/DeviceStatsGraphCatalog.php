@@ -33,7 +33,7 @@ class DeviceStatsGraphCatalog
             new SimpleStatsGraph('device_ucd_cpu_steal', 'CPU Steal', 'CPU Steal', 'ucd_ssCpuRawSteal', 'value'),
             new SimpleStatsGraph('device_ucd_interrupts', 'Interrupts', 'Interrupts/s', 'ucd_ssRawInterrupts', 'value'),
             new SimpleStatsGraph('device_ucd_io_wait', 'IO Wait', 'IO Wait', 'ucd_ssCpuRawWait', 'value'),
-            new SimpleStatsGraph('device_uptime', 'Uptime', 'Days', 'uptime', 'uptime', 'Uptime', 'greens', $days, ['yAxisMin' => 0]),
+            new SimpleStatsGraph('device_uptime', 'Uptime', 'Days', 'uptime', 'uptime', 'Uptime', 'greens', $days, ['yAxisMin' => 0], metric: 'device.uptime', vmTransform: fn ($v) => $v * $days),
         ];
     }
 }

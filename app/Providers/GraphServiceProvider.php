@@ -17,10 +17,7 @@ use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
 use LibreNMS\Graph\Definitions\Device\StorageGraph as DeviceStorageGraph;
 use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Mempool\UsageGraph as MempoolUsageGraph;
-use LibreNMS\Graph\Definitions\Port\BitsGraph;
-use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
-use LibreNMS\Graph\Definitions\Port\ErrorsGraph;
-use LibreNMS\Graph\Definitions\Port\PacketsGraph;
+use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\Definitions\Processor\UsageGraph as ProcessorUsageGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Storage\UsageGraph as StorageUsageGraph;
@@ -50,12 +47,11 @@ class GraphServiceProvider extends ServiceProvider
                 MempoolUsageGraph::class,
                 StorageUsageGraph::class,
                 TonerUsageGraph::class,
-                BitsGraph::class,
-                PacketsGraph::class,
-                ErrorsGraph::class,
-                DiscardsGraph::class,
             ]);
             foreach (DeviceGraphCatalog::definitions() as $definition) {
+                $registry->register($definition);
+            }
+            foreach (PortGraphCatalog::definitions() as $definition) {
                 $registry->register($definition);
             }
             $registry->registerResolver(new DeviceWirelessGraphDefinitionResolver());

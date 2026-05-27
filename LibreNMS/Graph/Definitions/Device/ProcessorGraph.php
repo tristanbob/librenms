@@ -4,10 +4,13 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\Processor;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class ProcessorGraph implements GraphDefinition
 {
@@ -46,25 +49,40 @@ class ProcessorGraph implements GraphDefinition
             ->orderBy('processor_index')
             ->get();
 
-        $colors = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
-        $stacked = (bool) LibrenmsConfig::getOsSetting($device['os'] ?? '', 'processor_stacked');
+        $colors     = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
+        $stacked    = (bool) LibrenmsConfig::getOsSetting($device['os'] ?? '', 'processor_stacked');
+        $usageEntry = VictoriaMetricsMetricCatalog::get('processor.usage');
 
-        return $processors->values()->map(function (Processor $processor, int $i) use ($colors, $stacked) {
+        return $processors->values()->map(function (Processor $processor, int $i) use ($colors, $stacked, $usageEntry) {
             $color = $colors[$i % max(count($colors), 1)] ?? 'CC0000';
-            $name = short_hrDeviceDescr($processor->processor_descr);
+            $name  = short_hrDeviceDescr($processor->processor_descr);
 
             return new GraphSeriesDefinition(
-                name: $name,
-                key: 'processor_' . $processor->processor_id,
-                unit: '%',
-                area: true,
-                stack: $stacked ? 'processor_usage' : null,
-                color: $color,
+                name:        $name,
+                key:         'processor_' . $processor->processor_id,
+                unit:        '%',
+                area:        true,
+                stack:       $stacked ? 'processor_usage' : null,
+                color:       $color,
                 areaOpacity: 0.25,
-                bindings: [new RrdMetricBinding(
-                    rrdName: ['processor', $processor->processor_type, $processor->processor_index],
-                    ds: 'usage',
-                )],
+                bindings:    MetricSeries::expression(
+                    new RrdMetricBinding(
+                        rrdName: ['processor', $processor->processor_type, $processor->processor_index],
+                        ds: 'usage',
+                    ),
+                    function (array $entities) use ($processor, $usageEntry): string {
+                        return VictoriaMetricsGraphDataProvider::buildSelector(
+                            $usageEntry->definition->name,
+                            $usageEntry->identityLabels,
+                            [
+                                'device_id'       => $entities['device_id'],
+                                'processor_type'  => $processor->processor_type,
+                                'processor_index' => (string) $processor->processor_index,
+                            ],
+                        );
+                    },
+                    ['device_id'],
+                ),
             );
         })->all();
     }

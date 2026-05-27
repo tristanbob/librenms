@@ -27,6 +27,7 @@ use LibreNMS\Enum\WirelessSensorType;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph implements GraphDefinition
@@ -77,7 +78,7 @@ class WirelessSensorGraph implements GraphDefinition
             color:       '0000cc',
             lineWidth:   1.5,
             areaOpacity: 0.333,
-            bindings:    [new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform())],
+            bindings:    [...MetricSeries::gauge('wireless_sensor.value', new RrdMetricBinding($rrdName, 'sensor', transform: $this->valueTransform()), $this->valueTransform())],
         )];
     }
 

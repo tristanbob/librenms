@@ -79,35 +79,39 @@ final class SensorGraphVmFallbackTest extends DBTestCase
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
     }
 
-    #[DataProvider('sensorGraphTypesWithoutVmBindings')]
-    public function testFallsBackToRrdForSensorGraphFamiliesWithoutVmBindings(string $scope, string $graphType, array $entities): void
+    public function testWirelessSensorGraphSeriesHasVmBinding(): void
     {
+        $registry = new GraphDefinitionRegistry();
+        $registry->registerResolver(new WirelessGraphDefinitionResolver());
+
+        $definition = $registry->definitionFor('wireless_rssi');
+        $this->assertNotNull($definition, 'wireless_rssi must be registered');
+
         $query = GraphQuery::fromRequest(
-            $scope,
-            $graphType,
-            ['device_id' => $this->device->device_id] + $entities,
+            'wireless_sensor',
+            'wireless_rssi',
+            [
+                'device_id'    => $this->device->device_id,
+                'sensor_id'    => 1,
+                'sensor_class' => 'rssi',
+                'sensor_type'  => 'dummy',
+                'sensor_index' => 1,
+                'sensor_descr' => 'RSSI',
+            ],
             time() - 3600,
             time(),
         );
 
-        $result = $this->selector->query($query);
-        $arr = $result->toArray();
+        $series = $definition->series($this->device->toArray(), $query);
+        $this->assertNotEmpty($series);
 
-        $this->assertSame('rrd', $arr['graph']['meta']['source']);
-        $this->assertFalse($arr['graph']['meta']['fallback_used']);
-        $this->assertEmpty($arr['graph']['meta']['warnings']);
-    }
+        $hasVmBinding = false;
+        foreach ($series as $s) {
+            if ($s->binding('victoriametrics') !== null) {
+                $hasVmBinding = true;
+            }
+        }
 
-    public static function sensorGraphTypesWithoutVmBindings(): array
-    {
-        return [
-            'wireless_rssi' => ['wireless_sensor', 'wireless_rssi', [
-                'sensor_id' => 2,
-                'sensor_class' => 'rssi',
-                'sensor_type' => 'dummy',
-                'sensor_index' => 2,
-                'sensor_descr' => 'RSSI',
-            ]],
-        ];
+        $this->assertTrue($hasVmBinding, 'wireless_rssi series must include a VictoriaMetrics binding');
     }
 }

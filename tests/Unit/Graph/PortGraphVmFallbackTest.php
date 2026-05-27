@@ -3,9 +3,8 @@
 /**
  * PortGraphVmFallbackTest.php
  *
- * Verifies that when VictoriaMetrics query is enabled, graph types that have no
- * VM bindings (port_packets, port_discards) are handled by RRD
- * without marking the response as a VictoriaMetrics failure fallback.
+ * Verifies that port graph series carry the expected VictoriaMetrics bindings,
+ * and that graph types with no VM bindings fall back to RRD cleanly.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,8 +29,7 @@ namespace LibreNMS\Tests\Unit\Graph;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Graph\Definitions\Port\DiscardsGraph;
-use LibreNMS\Graph\Definitions\Port\PacketsGraph;
+use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDataResult;
@@ -55,10 +53,10 @@ final class PortGraphVmFallbackTest extends DBTestCase
 
         $this->device = Device::factory()->create();
 
-        $registry = new GraphDefinitionRegistry([
-            PacketsGraph::class,
-            DiscardsGraph::class,
-        ]);
+        $registry = new GraphDefinitionRegistry();
+        foreach (PortGraphCatalog::definitions() as $definition) {
+            $registry->register($definition);
+        }
 
         $vm = new VictoriaMetricsGraphDataProvider($registry);
 
@@ -83,33 +81,42 @@ final class PortGraphVmFallbackTest extends DBTestCase
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
     }
 
-    #[DataProvider('portGraphTypesWithoutVmBindings')]
-    public function testFallsBackToRrdForGraphTypeWithNoVmBindings(string $graphType): void
+    #[DataProvider('portGraphTypesWithVmBindings')]
+    public function testPortGraphSeriesHaveVmBindings(string $graphType): void
     {
+        $registry = new GraphDefinitionRegistry();
+        foreach (PortGraphCatalog::definitions() as $def) {
+            $registry->register($def);
+        }
+        $definition = $registry->definitionFor($graphType);
+        $this->assertNotNull($definition, "$graphType must be registered");
+
         $query = GraphQuery::fromRequest(
             'port',
             $graphType,
-            ['device_id' => $this->device->device_id, 'port_id' => 1],
+            ['device_id' => $this->device->device_id, 'port_id' => 1, 'ifIndex' => 1],
             time() - 3600,
             time(),
         );
 
-        $result = $this->selector->query($query);
-        $arr    = $result->toArray();
+        $series = $definition->series($this->device->toArray(), $query);
+        $this->assertNotEmpty($series, "$graphType must return at least one series");
 
-        $this->assertSame('rrd', $arr['graph']['meta']['source'],
-            "Expected RRD source for $graphType");
-        $this->assertFalse($arr['graph']['meta']['fallback_used'],
-            "Expected fallback_used=false for $graphType when VM has no bindings");
-        $this->assertEmpty($arr['graph']['meta']['warnings'],
-            "Expected no warning when $graphType has no VM bindings");
+        foreach ($series as $s) {
+            $this->assertNotNull(
+                $s->binding('victoriametrics'),
+                "Series '{$s->key}' of $graphType must include a VictoriaMetrics binding"
+            );
+        }
     }
 
-    public static function portGraphTypesWithoutVmBindings(): array
+    public static function portGraphTypesWithVmBindings(): array
     {
         return [
-            'port_packets' => ['port_packets'],
+            'port_bits'     => ['port_bits'],
+            'port_packets'  => ['port_packets'],
             'port_discards' => ['port_discards'],
+            'port_errors'   => ['port_errors'],
         ];
     }
 }

@@ -86,22 +86,47 @@ catalog-backed helpers such as `MetricSeries::gauge()` and `MetricSeries::rate()
 
 ### Device Metrics
 
-| Measurement | Field | Metric Name | Type |
-|-------------|-------|-------------|------|
-| `poller-perf` | `poller` | `librenms_device_poller_duration_seconds` | gauge |
+| Measurement | Field | Metric Name | Type | Identity Labels |
+|-------------|-------|-------------|------|----------------|
+| `poller-perf` | `poller` | `librenms_device_poller_duration_seconds` | gauge | `device_id` |
+| `uptime` | `uptime` | `librenms_device_uptime_seconds` | gauge | `device_id` |
+| `availability` | `availability` | `librenms_device_availability_percent` | gauge | `device_id`, `name` |
 
 ### Port Metrics
 
-| Measurement | Field | Metric Name | Type |
-|-------------|-------|-------------|------|
-| `ports` | `INOCTETS` | `librenms_port_if_in_octets_total` | counter |
-| `ports` | `OUTOCTETS` | `librenms_port_if_out_octets_total` | counter |
-| `ports` | `INERRORS` | `librenms_port_if_in_errors_total` | counter |
-| `ports` | `OUTERRORS` | `librenms_port_if_out_errors_total` | counter |
-| `ports` | `INDISCARDS` | `librenms_port_if_in_discards_total` | counter |
-| `ports` | `OUTDISCARDS` | `librenms_port_if_out_discards_total` | counter |
-| `ports` | `ifInBits_rate` | `librenms_port_if_in_bits_per_second` | gauge |
-| `ports` | `ifOutBits_rate` | `librenms_port_if_out_bits_per_second` | gauge |
+| Measurement | Field | Metric Name | Type | Identity Labels |
+|-------------|-------|-------------|------|----------------|
+| `ports` | `INOCTETS` | `librenms_port_if_in_octets_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `OUTOCTETS` | `librenms_port_if_out_octets_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `INERRORS` | `librenms_port_if_in_errors_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `OUTERRORS` | `librenms_port_if_out_errors_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `INDISCARDS` | `librenms_port_if_in_discards_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `OUTDISCARDS` | `librenms_port_if_out_discards_total` | counter | `device_id`, `ifIndex` |
+| `ports` | `ifInBits_rate` | `librenms_port_if_in_bits_per_second` | gauge | `device_id`, `ifIndex` |
+| `ports` | `ifOutBits_rate` | `librenms_port_if_out_bits_per_second` | gauge | `device_id`, `ifIndex` |
+
+### Entity Metrics
+
+| Entity | Measurement | Metric Name | Type | Identity Labels |
+|--------|-------------|-------------|------|----------------|
+| Processor | `processors` | `librenms_processor_usage_percent` | gauge | `device_id`, `processor_type`, `processor_index` |
+| Memory | `mempool` | `librenms_mempool_used_bytes` | gauge | `device_id`, `mempool_type`, `mempool_class`, `mempool_index` |
+| Memory | `mempool` | `librenms_mempool_free_bytes` | gauge | `device_id`, `mempool_type`, `mempool_class`, `mempool_index` |
+| Storage | `storage` | `librenms_storage_used_bytes` | gauge | `device_id`, `type`, `descr` |
+| Storage | `storage` | `librenms_storage_free_bytes` | gauge | `device_id`, `type`, `descr` |
+| Sensor | `sensors` | `librenms_sensor_value` | gauge | `device_id`, `sensor_class`, `sensor_type`, `sensor_index` |
+| Wireless | `wireless_sensor` | `librenms_wireless_sensor_value` | gauge | `device_id`, `sensor_class`, `sensor_type`, `sensor_index` |
+| Disk I/O | `ucd_diskio` | `librenms_diskio_reads_total` | counter | `device_id`, `descr` |
+| Disk I/O | `ucd_diskio` | `librenms_diskio_writes_total` | counter | `device_id`, `descr` |
+
+### Network Statistics (device-scoped, identity label: `device_id` only)
+
+Netstats metrics cover ICMP, IP, SNMP, TCP, and UDP MIB counters (measurements
+`netstats-icmp`, `netstats-ip`, `netstats-snmp`, `netstats-tcp`, `netstats-udp`)
+and IP system statistics for IPv4 and IPv6 (measurements `ipSystemStats-ipv4`,
+`ipSystemStats-ipv6`). All are counter type. The catalog key prefix matches the
+measurement: `netstats.icmpInMsgs`, `ipsystemstats.ipv4.InReceives`, etc.
+The full list is in `VictoriaMetricsMetricCatalog`.
 
 ---
 
@@ -137,8 +162,9 @@ or RRD-specific fields. The exclusion list is enforced in `LabelExtractor`.
 
 `GraphDataBackendSelector` wraps both providers. When `query_enabled` is `true`:
 
-1. If the graph definition has no `VictoriaMetricsMetricBinding`, the selector falls
-   back to RRD silently (`meta.source = "rrd"`).
+1. If the graph definition has no VM binding on any series (neither
+   `VictoriaMetricsMetricBinding` nor `VictoriaMetricsExpressionBinding`), the
+   selector falls back to RRD silently (`meta.source = "rrd"`).
 2. If the VictoriaMetrics query fails (connection error, HTTP error, malformed
    response), the selector falls back to RRD and sets `meta.fallback_used = true`
    with a user-visible warning.
@@ -168,9 +194,15 @@ multiple series throw so the graph backend selector can fall back to RRD.
 ## Adding VM Bindings to a Graph Definition
 
 Graph definitions that already have `RrdMetricBinding` entries can be extended for
-VictoriaMetrics by using catalog-backed graph helpers where possible. Graph
-definitions should reference LibreNMS metric catalog keys instead of repeating VM
-metric names and labels.
+VictoriaMetrics by using catalog-backed graph helpers. Graph definitions should
+reference LibreNMS metric catalog keys instead of repeating VM metric names and labels.
+
+The three `MetricSeries` helpers each return `[RrdMetricBinding, VictoriaMetricsBinding]`
+and can be spread directly into `bindings:`.
+
+### `MetricSeries::gauge()` — for gauge metrics
+
+Use when the VM metric stores the value directly (no accumulation required):
 
 ```php
 use LibreNMS\Graph\MetricSeries;
@@ -188,13 +220,85 @@ new GraphSeriesDefinition(
 )
 ```
 
-### `VictoriaMetricsMetricBinding` Parameters
+### `MetricSeries::rate()` — for counter metrics
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `metricName` | `string` | required | Prometheus metric name — usually supplied by `VictoriaMetricsMetricCatalog`. |
-| `labelKeys` | `string[]` | `['device_id']` | Keys from `GraphQuery::$entities` to use as MetricsQL label matchers. All listed labels are required. |
-| `transform` | `callable\|null` | `null` | Applied to each raw float value before the point is stored. |
+Use when the VM metric is a cumulative counter that must be wrapped in `rate()`:
+
+```php
+bindings: [
+    ...MetricSeries::rate(
+        'port.if_in_discards',
+        new RrdMetricBinding(rrdName: $rrdName, ds: 'INDISCARDS'),
+    ),
+],
+// Produces: rate(librenms_port_if_in_discards_total{device_id="1",ifIndex="7"}[5m])
+```
+
+### `MetricSeries::expression()` — for computed values
+
+Use when the value requires MetricsQL arithmetic (percentage from two metrics,
+rate of a counter where labels don't come from `$query->entities`, etc.):
+
+```php
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
+
+$used = VictoriaMetricsMetricCatalog::get('storage.used');
+$free = VictoriaMetricsMetricCatalog::get('storage.free');
+
+bindings: [
+    ...MetricSeries::expression(
+        rrd: new RrdMetricBinding(['storage', $type, $descr], ['used', 'free'],
+            transform: fn ($v) => ($v['used'] + $v['free']) > 0
+                ? $v['used'] / ($v['used'] + $v['free']) * 100 : null),
+        expressionBuilder: fn (array $entities): string =>
+            "100 * $usedSel / ($usedSel + $freeSel)",
+        labelKeys: ['device_id', 'type', 'descr'],
+    ),
+],
+```
+
+### Aggregate device graphs — closures that capture DB values
+
+Device-level aggregate graphs (processor, mempool, storage, bits, diskio) iterate DB
+models and build one series per entity. Their `$query->entities` contains only
+`device_id` at query time — per-entity labels such as `ifIndex` or `processor_type`
+are not available there. The solution is to use `MetricSeries::expression()` with a
+closure that captures the per-entity DB values, and set `labelKeys: ['device_id']` so
+only `device_id` is required from the query context:
+
+```php
+$entry = VictoriaMetricsMetricCatalog::get('processor.usage');
+
+foreach ($processors as $processor) {
+    new GraphSeriesDefinition(
+        bindings: MetricSeries::expression(
+            new RrdMetricBinding(['processor', $processor->processor_type, $processor->processor_index], 'usage'),
+            function (array $entities) use ($processor, $entry): string {
+                return VictoriaMetricsGraphDataProvider::buildSelector(
+                    $entry->definition->name,
+                    $entry->identityLabels,
+                    [
+                        'device_id'       => $entities['device_id'],
+                        'processor_type'  => $processor->processor_type,
+                        'processor_index' => (string) $processor->processor_index,
+                    ],
+                );
+            },
+            ['device_id'],  // only device_id validated against $entities
+        ),
+    );
+}
+```
+
+The same pattern applies to `MempoolGraph`, `StorageGraph`, `BitsGraph`, and `DiskIoGraph`.
+
+### Binding type reference
+
+| Type | Created via | Use when |
+|------|-------------|----------|
+| `VictoriaMetricsMetricBinding` | `MetricSeries::gauge()` or `::catalog()` | Single metric, labels come directly from `$query->entities` |
+| `VictoriaMetricsExpressionBinding` | `MetricSeries::rate()` or `::expression()` | Rate of a counter, multi-metric math, or labels captured in a closure |
 
 ### Checklist when adding VM bindings
 
@@ -204,8 +308,10 @@ new GraphSeriesDefinition(
    as `port_id`, `sensor_id`, `mempool_id`, or `storage_id` as VM labels.
 3. Prefer MetricsQL expressions for rates, sums, and percentages instead of fetching
    multiple VM series and merging them in PHP.
-4. Add a unit test asserting the binding produces the correct MetricsQL expression via
-   `VictoriaMetricsGraphDataProvider::buildExpr()`.
+4. For aggregate graphs where per-entity labels are not in `$query->entities`, use
+   `MetricSeries::expression()` with a capturing closure and `labelKeys: ['device_id']`.
+5. Add a unit test asserting `$series->binding('victoriametrics')` is non-null for
+   each series that should have a VM binding.
 
 ---
 
@@ -293,7 +399,9 @@ queries and exploring stored time series.
 | [LibreNMS/Data/Store/VictoriaMetrics/MetricMapper.php](../../LibreNMS/Data/Store/VictoriaMetrics/MetricMapper.php) | Measurement/field → Prometheus metric name mapping |
 | [LibreNMS/Data/Store/VictoriaMetrics/LabelExtractor.php](../../LibreNMS/Data/Store/VictoriaMetrics/LabelExtractor.php) | Tag → label set extraction for written samples |
 | [LibreNMS/Data/Store/VictoriaMetrics/PrometheusTextFormatter.php](../../LibreNMS/Data/Store/VictoriaMetrics/PrometheusTextFormatter.php) | Prometheus text exposition formatting |
-| [LibreNMS/Graph/VictoriaMetricsMetricBinding.php](../../LibreNMS/Graph/VictoriaMetricsMetricBinding.php) | Binding type for graph series definitions |
+| [LibreNMS/Graph/VictoriaMetricsMetricBinding.php](../../LibreNMS/Graph/VictoriaMetricsMetricBinding.php) | Binding: catalog key lookup, label validation |
+| [LibreNMS/Graph/VictoriaMetricsExpressionBinding.php](../../LibreNMS/Graph/VictoriaMetricsExpressionBinding.php) | Binding: arbitrary MetricsQL expression via callable |
+| [LibreNMS/Graph/MetricSeries.php](../../LibreNMS/Graph/MetricSeries.php) | Helpers: `gauge()`, `rate()`, `expression()` — return `[RrdBinding, VmBinding]` |
 | [LibreNMS/Graph/VictoriaMetricsGraphDataProvider.php](../../LibreNMS/Graph/VictoriaMetricsGraphDataProvider.php) | Graph query provider: MetricsQL construction, HTTP fetch, response parsing |
 | [LibreNMS/Graph/GraphDataBackendSelector.php](../../LibreNMS/Graph/GraphDataBackendSelector.php) | Selects RRD vs VictoriaMetrics provider; handles fallback |
 | [app/Console/Commands/VictoriaMetrics/MigrateRrd.php](../../app/Console/Commands/VictoriaMetrics/MigrateRrd.php) | Migration command: orchestration, batching, HTTP flush |

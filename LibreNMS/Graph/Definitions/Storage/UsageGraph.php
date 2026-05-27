@@ -2,10 +2,13 @@
 
 namespace LibreNMS\Graph\Definitions\Storage;
 
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class UsageGraph implements GraphDefinition
 {
@@ -47,11 +50,24 @@ class UsageGraph implements GraphDefinition
             area: true,
             color: 'CC0000',
             areaOpacity: 0.25,
-            bindings: [new RrdMetricBinding(
-                rrdName: ['storage', $e['type'] ?? '', $e['storage_descr'] ?? ''],
-                ds: ['used', 'free'],
-                transform: fn (array $v) => ($v['used'] + $v['free']) > 0 ? ($v['used'] / ($v['used'] + $v['free']) * 100) : null,
-            )],
+            bindings: [
+                ...MetricSeries::expression(
+                    rrd: new RrdMetricBinding(
+                        rrdName: ['storage', $e['type'] ?? '', $e['storage_descr'] ?? ''],
+                        ds: ['used', 'free'],
+                        transform: fn (array $v) => ($v['used'] + $v['free']) > 0 ? ($v['used'] / ($v['used'] + $v['free']) * 100) : null,
+                    ),
+                    expressionBuilder: function (array $entities): string {
+                        $used = VictoriaMetricsMetricCatalog::get('storage.used');
+                        $free = VictoriaMetricsMetricCatalog::get('storage.free');
+                        $usedSel = VictoriaMetricsGraphDataProvider::buildSelector($used->definition->name, $used->identityLabels, $entities);
+                        $freeSel = VictoriaMetricsGraphDataProvider::buildSelector($free->definition->name, $free->identityLabels, $entities);
+
+                        return "100 * $usedSel / ($usedSel + $freeSel)";
+                    },
+                    labelKeys: ['device_id', 'type', 'descr'],
+                ),
+            ],
         )];
     }
 

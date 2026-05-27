@@ -24,10 +24,13 @@
 namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Models\Storage;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class StorageGraph implements GraphDefinition
 {
@@ -63,12 +66,16 @@ class StorageGraph implements GraphDefinition
 
     public function series(array $device, GraphQuery $query): array
     {
-        $storages = Storage::where('device_id', $device['device_id'])
+        $storages  = Storage::where('device_id', $device['device_id'])
             ->orderBy('storage_descr')
             ->get();
+        $usedEntry = VictoriaMetricsMetricCatalog::get('storage.used');
+        $freeEntry = VictoriaMetricsMetricCatalog::get('storage.free');
 
-        return $storages->values()->map(function (Storage $storage, int $i) {
-            $color = self::COLORS[$i % count(self::COLORS)];
+        return $storages->values()->map(function (Storage $storage, int $i) use ($usedEntry, $freeEntry) {
+            $color        = self::COLORS[$i % count(self::COLORS)];
+            $storageType  = $storage->type;
+            $storageDescr = $storage->storage_descr;
 
             return new GraphSeriesDefinition(
                 name:      $storage->storage_descr,
@@ -77,13 +84,27 @@ class StorageGraph implements GraphDefinition
                 area:      false,
                 color:     $color,
                 lineWidth: 1.25,
-                bindings:  [new RrdMetricBinding(
-                    rrdName:   ['storage', $storage->type, $storage->storage_descr],
-                    ds:        ['used', 'free'],
-                    transform: fn (array $v) => ($v['used'] + $v['free']) > 0
-                        ? ($v['used'] / ($v['used'] + $v['free']) * 100)
-                        : null,
-                )],
+                bindings:  MetricSeries::expression(
+                    new RrdMetricBinding(
+                        rrdName:   ['storage', $storage->type, $storage->storage_descr],
+                        ds:        ['used', 'free'],
+                        transform: fn (array $v) => ($v['used'] + $v['free']) > 0
+                            ? ($v['used'] / ($v['used'] + $v['free']) * 100)
+                            : null,
+                    ),
+                    function (array $entities) use ($storageType, $storageDescr, $usedEntry, $freeEntry): string {
+                        $labels = [
+                            'device_id' => $entities['device_id'],
+                            'type'      => $storageType,
+                            'descr'     => $storageDescr,
+                        ];
+                        $usedSel = VictoriaMetricsGraphDataProvider::buildSelector($usedEntry->definition->name, $usedEntry->identityLabels, $labels);
+                        $freeSel = VictoriaMetricsGraphDataProvider::buildSelector($freeEntry->definition->name, $freeEntry->identityLabels, $labels);
+
+                        return "100 * {$usedSel} / ({$usedSel} + {$freeSel})";
+                    },
+                    ['device_id'],
+                ),
             );
         })->all();
     }

@@ -36,19 +36,38 @@ per supported backend. At query time the active backend picks the binding whose
 definition can support RRD today and VictoriaMetrics tomorrow without branching.
 
 ```php
+use LibreNMS\Graph\MetricSeries;
+
 new GraphSeriesDefinition(
     name:     'In',
     key:      'port_bits_in',
     unit:     'bps',
     bindings: [
-        new RrdMetricBinding(rrdName: 'port-id', ds: 'INOCTETS', transform: fn ($v) => $v * 8),
-        new VictoriaMetricsMetricBinding('ifInOctets', labelKeys: ['port_id']),
+        ...MetricSeries::gauge(
+            'port.if_in_bits_rate',
+            new RrdMetricBinding(rrdName: 'port-id', ds: 'INOCTETS', transform: fn ($v) => $v * 8),
+        ),
     ],
 )
 ```
 
-To add VictoriaMetrics support to an existing RRD-only graph, add a
-`VictoriaMetricsMetricBinding` to each series — no other code changes required.
+To add VictoriaMetrics support to an existing RRD-only graph, use the
+`MetricSeries::gauge()`, `MetricSeries::rate()`, or `MetricSeries::expression()`
+helpers. These return an array of `[RrdMetricBinding, VictoriaMetricsBinding]`
+that can be spread directly into the `bindings:` parameter.
+
+For arbitrary MetricsQL expressions — including multi-metric math such as
+percentage calculations — use `VictoriaMetricsExpressionBinding` directly or
+via `MetricSeries::expression()`:
+
+```php
+// 100 * used / (used + free) — built from two VM metrics in one expression
+MetricSeries::expression(
+    rrd: new RrdMetricBinding(['storage', $type, $descr], ds: ['used', 'free'], transform: fn ($v) => ...),
+    expressionBuilder: fn (array $entities): string => "100 * $usedSel / ($usedSel + $freeSel)",
+    labelKeys: ['device_id', 'type', 'descr'],
+)
+```
 
 #### Multi-DS Math
 
@@ -203,9 +222,10 @@ structured warnings in `meta.warnings` rather than silent empty graphs.
 
 ### VictoriaMetrics Backend
 
-Constructs a MetricsQL selector from the `VictoriaMetricsMetricBinding` and
-queries `/api/v1/query_range`. If a definition has no VM bindings, a
-`NoVmBindingException` is thrown and the selector silently falls back to RRD
+Constructs a MetricsQL expression from the series' VM binding
+(`VictoriaMetricsMetricBinding` or `VictoriaMetricsExpressionBinding`) and
+queries `/api/v1/query_range`. If a definition has no VM bindings on any series,
+a `NoVmBindingException` is thrown and the selector silently falls back to RRD
 with no user-visible warning. An unexpected VM failure (connection error, HTTP
 error, malformed response) sets `meta.fallback_used = true` and adds a
 user-visible warning.
@@ -269,9 +289,11 @@ graph shows the correct unit next to each series value.
 
 1. Create a class implementing `GraphDefinition` in the appropriate namespace
    under `LibreNMS/Graph/Definitions/`.
-2. Implement `series()` with `RrdMetricBinding` entries. Add
-   `VictoriaMetricsMetricBinding` entries for any series that have a direct VM
-   metric equivalent.
+2. Implement `series()` with `RrdMetricBinding` entries. Add VM bindings using
+   `MetricSeries::gauge()` (for gauge metrics), `MetricSeries::rate()` (for
+   counters), or `MetricSeries::expression()` (for computed values such as
+   percentages or multi-metric math). See `VictoriaMetrics.md` for the full
+   checklist.
 3. Implement `markers()` for threshold lines. Use `GraphMarkerDefinition::percentile()`
    for computed reference lines.
 4. Implement `variables()` for any configurable request parameters.

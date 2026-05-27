@@ -6,6 +6,7 @@ use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\GraphVariableDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class SimpleStatsGraph extends GraphTemplate
@@ -21,6 +22,9 @@ class SimpleStatsGraph extends GraphTemplate
         private readonly mixed $transform = null,
         array $display = [],
         private readonly array $graphVariables = [],
+        private readonly ?string $metric = null,
+        private readonly string $vmKind = 'gauge',
+        private readonly mixed $vmTransform = null,
     ) {
         parent::__construct($graphType, $title, $unit, $display + [
             'kind' => 'line',
@@ -35,15 +39,23 @@ class SimpleStatsGraph extends GraphTemplate
 
     public function series(array $device, GraphQuery $query): array
     {
-        $timeDiff = $query->to - $query->from;
-        $label    = $this->label !== '' ? $this->label : $this->title;
-        $scale    = is_numeric($this->transform) ? (float) $this->transform : null;
-        $binding  = fn (?int $step) => new RrdMetricBinding(
+        $timeDiff    = $query->to - $query->from;
+        $label       = $this->label !== '' ? $this->label : $this->title;
+        $scale       = is_numeric($this->transform) ? (float) $this->transform : null;
+        $rrdTransform = $scale !== null ? fn ($v) => $v * $scale : null;
+        $binding     = fn (?int $step) => new RrdMetricBinding(
             rrdName:   $this->resolvedRrdName($query),
             ds:        $this->ds,
             step:      $step,
-            transform: $scale !== null ? fn ($v) => $v * $scale : null,
+            transform: $rrdTransform,
         );
+
+        $primaryRrd      = $binding(null);
+        $primaryBindings = match (true) {
+            $this->metric !== null && $this->vmKind === 'rate' => MetricSeries::rate($this->metric, $primaryRrd, null, $this->vmTransform),
+            $this->metric !== null                             => MetricSeries::gauge($this->metric, $primaryRrd, $this->vmTransform),
+            default                                            => [$primaryRrd],
+        };
 
         $series = [
             new GraphSeriesDefinition(
@@ -53,7 +65,7 @@ class SimpleStatsGraph extends GraphTemplate
                 color:       $this->paletteColor($this->palette, 0, '663399'),
                 area:        true,
                 areaOpacity: 0x33 / 0xff,
-                bindings:    [$binding(null)],
+                bindings:    $primaryBindings,
             ),
             new GraphSeriesDefinition(
                 name:     '1 hour avg',

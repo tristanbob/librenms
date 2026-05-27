@@ -5,6 +5,7 @@ namespace LibreNMS\Graph\Definitions\Processor;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class UsageGraph implements GraphDefinition
@@ -47,10 +48,12 @@ class UsageGraph implements GraphDefinition
             area: true,
             color: 'CC0000',
             areaOpacity: 0.25,
-            bindings: [new RrdMetricBinding(
-                rrdName: ['processor', $e['processor_type'] ?? '', $e['processor_index'] ?? ''],
-                ds: 'usage',
-            )],
+            bindings: [
+                ...MetricSeries::gauge('processor.usage', new RrdMetricBinding(
+                    rrdName: ['processor', $e['processor_type'] ?? '', $e['processor_index'] ?? ''],
+                    ds: 'usage',
+                )),
+            ],
         )];
     }
 

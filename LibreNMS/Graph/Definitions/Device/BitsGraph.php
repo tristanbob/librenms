@@ -25,10 +25,13 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\Port;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Util\Rewrite;
 
 class BitsGraph implements GraphDefinition
@@ -77,18 +80,21 @@ class BitsGraph implements GraphDefinition
 
     public function series(array $device, GraphQuery $query): array
     {
-        $toBits = fn ($value) => $value * 8;
-        $inSeries = [];
-        $outSeries = [];
+        $toBits         = fn ($value) => $value * 8;
+        $inSeries       = [];
+        $outSeries      = [];
         $mirrorOutbound = $this->isMirrorStacked();
-        $opacity = $mirrorOutbound ? 0x88 / 0xff : 1.0;
-        $ports = $this->includedPorts($device);
+        $opacity        = $mirrorOutbound ? 0x88 / 0xff : 1.0;
+        $ports          = $this->includedPorts($device);
+        $inEntry        = VictoriaMetricsMetricCatalog::get('port.if_in_bits_rate');
+        $outEntry       = VictoriaMetricsMetricCatalog::get('port.if_out_bits_rate');
 
         foreach ($ports as $i => $port) {
-            $portId = (int) $port['port_id'];
-            $label = Rewrite::shortenIfName($port['label']);
-            $rrdName = "port-id$portId";
-            $inColor = $this->paletteColor(self::IN_PALETTE, $i, '91B13C');
+            $portId   = (int) $port['port_id'];
+            $label    = Rewrite::shortenIfName($port['label']);
+            $rrdName  = "port-id$portId";
+            $ifIndex  = (string) $port['ifIndex'];
+            $inColor  = $this->paletteColor(self::IN_PALETTE, $i, '91B13C');
             $outColor = $this->paletteColor(self::OUT_PALETTE, $i, '8080BD');
 
             $inSeries[] = new GraphSeriesDefinition(
@@ -101,7 +107,15 @@ class BitsGraph implements GraphDefinition
                 areaOpacity: $opacity,
                 lineOpacity: $opacity,
                 stack:       'device_bits_in',
-                bindings:    [new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits)],
+                bindings:    MetricSeries::expression(
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits),
+                    fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
+                        $inEntry->definition->name,
+                        $inEntry->identityLabels,
+                        ['device_id' => $entities['device_id'], 'ifIndex' => $ifIndex],
+                    ),
+                    ['device_id'],
+                ),
             );
 
             $outSeries[] = new GraphSeriesDefinition(
@@ -115,7 +129,15 @@ class BitsGraph implements GraphDefinition
                 lineOpacity: $opacity,
                 stack:       'device_bits_out',
                 negate:      ! $mirrorOutbound,
-                bindings:    [new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits)],
+                bindings:    MetricSeries::expression(
+                    new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits),
+                    fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
+                        $outEntry->definition->name,
+                        $outEntry->identityLabels,
+                        ['device_id' => $entities['device_id'], 'ifIndex' => $ifIndex],
+                    ),
+                    ['device_id'],
+                ),
             );
         }
 

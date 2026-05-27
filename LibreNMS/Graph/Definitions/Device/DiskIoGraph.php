@@ -25,10 +25,13 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\DiskIo;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class DiskIoGraph implements GraphDefinition
 {
@@ -74,6 +77,8 @@ class DiskIoGraph implements GraphDefinition
         // stacked=false → reads up / writes negated (below 0), full opacity
         $mirrorStacked = (bool) LibrenmsConfig::get('webui.graph_stacked', false);
         $areaOpacity   = $mirrorStacked ? (0x88 / 0xff) : 1.0;
+        $readsEntry    = VictoriaMetricsMetricCatalog::get('diskio.reads');
+        $writesEntry   = VictoriaMetricsMetricCatalog::get('diskio.writes');
 
         $readSeries  = [];
         $writeSeries = [];
@@ -82,6 +87,7 @@ class DiskIoGraph implements GraphDefinition
             $readColor  = self::GREENS[$i % count(self::GREENS)];
             $writeColor = self::BLUES[$i % count(self::BLUES)];
             $rrdName    = ['ucd_diskio', $disk->diskio_descr];
+            $diskDescr  = $disk->diskio_descr;
 
             $readSeries[] = new GraphSeriesDefinition(
                 name:        $disk->diskio_descr . ' Reads',
@@ -93,7 +99,18 @@ class DiskIoGraph implements GraphDefinition
                 areaOpacity: $areaOpacity,
                 lineOpacity: $areaOpacity,
                 stack:       'diskio_reads',
-                bindings:    [new RrdMetricBinding($rrdName, 'reads')],
+                bindings:    MetricSeries::expression(
+                    new RrdMetricBinding($rrdName, 'reads'),
+                    fn (array $entities) => sprintf(
+                        'rate(%s[5m])',
+                        VictoriaMetricsGraphDataProvider::buildSelector(
+                            $readsEntry->definition->name,
+                            $readsEntry->identityLabels,
+                            ['device_id' => $entities['device_id'], 'descr' => $diskDescr],
+                        ),
+                    ),
+                    ['device_id'],
+                ),
             );
 
             $writeSeries[] = new GraphSeriesDefinition(
@@ -107,7 +124,18 @@ class DiskIoGraph implements GraphDefinition
                 lineOpacity: $areaOpacity,
                 stack:       'diskio_writes',
                 negate:      ! $mirrorStacked,
-                bindings:    [new RrdMetricBinding($rrdName, 'writes')],
+                bindings:    MetricSeries::expression(
+                    new RrdMetricBinding($rrdName, 'writes'),
+                    fn (array $entities) => sprintf(
+                        'rate(%s[5m])',
+                        VictoriaMetricsGraphDataProvider::buildSelector(
+                            $writesEntry->definition->name,
+                            $writesEntry->identityLabels,
+                            ['device_id' => $entities['device_id'], 'descr' => $diskDescr],
+                        ),
+                    ),
+                    ['device_id'],
+                ),
             );
         }
 
