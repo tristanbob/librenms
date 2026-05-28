@@ -26,77 +26,68 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\Sensor;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Enum\Sensor as SensorClass;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class DeviceSensorGraph implements GraphDefinition
+class DeviceSensorGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     // Matches the 7-color cycle used by includes/html/graphs/device/sensor.inc.php
     private const COLORS = ['CC0000', '008C00', '4096EE', '73880A', 'D01F3C', '36393D', 'FF0084'];
 
-    public function __construct(private readonly SensorClass $sensorClass) {}
-
-    public function graphType(): string { return 'device_' . $this->sensorClass->value; }
-
-    public function id(array $device, GraphQuery $query): string
+    public function __construct(private readonly SensorClass $sensorClass)
     {
-        return $this->graphType() . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string
-    {
-        return $this->sensorClass->label();
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string
-    {
-        return $this->sensorClass->unit();
-    }
-
-    public function entityType(): string { return 'device'; }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => false, 'legend' => true];
+        parent::__construct(
+            graphType: 'device_' . $sensorClass->value,
+            title: $sensorClass->label(),
+            unit: $sensorClass->unit(),
+        );
     }
 
     public function series(array $device, GraphQuery $query): array
     {
-        $sensors = Sensor::where('device_id', $device['device_id'])
+        $sensorEntry = VictoriaMetricsMetricCatalog::get('sensor.value');
+
+        return Sensor::where('device_id', $device['device_id'])
             ->where('sensor_class', $this->sensorClass->value)
             ->orderBy('sensor_descr')
-            ->get();
+            ->get()
+            ->values()
+            ->map(function (Sensor $sensor, int $i) use ($device, $sensorEntry): GraphSeriesDefinition {
+                $color  = self::COLORS[$i % count(self::COLORS)];
+                $isIpmi = $sensor->poller_type === 'ipmi'
+                    || LibrenmsConfig::getOsSetting($device['os'] ?? '', 'sensor_descr');
+                $rrdKey  = $isIpmi ? $sensor->sensor_descr : $sensor->sensor_index;
+                $rrdName = ['sensor', $this->sensorClass->value, $sensor->sensor_type, $rrdKey];
 
-        return $sensors->values()->map(function (Sensor $sensor, int $i) use ($device) {
-            $color = self::COLORS[$i % count(self::COLORS)];
-
-            $isIpmi = $sensor->poller_type === 'ipmi'
-                || LibrenmsConfig::getOsSetting($device['os'] ?? '', 'sensor_descr');
-            $rrdKey  = $isIpmi ? $sensor->sensor_descr : $sensor->sensor_index;
-            $rrdName = ['sensor', $this->sensorClass->value, $sensor->sensor_type, $rrdKey];
-
-            return new GraphSeriesDefinition(
-                name:      $sensor->sensor_descr,
-                key:       'sensor_' . $sensor->sensor_id,
-                unit:      $this->sensorClass->unit(),
-                area:      false,
-                color:     $color,
-                lineWidth: 1.0,
-                bindings:  [new RrdMetricBinding($rrdName, 'sensor')],
-            );
-        })->all();
+                return new GraphSeriesDefinition(
+                    name:      $sensor->sensor_descr,
+                    key:       'sensor_' . $sensor->sensor_id,
+                    unit:      $this->unit,
+                    area:      false,
+                    color:     $color,
+                    lineWidth: 1.0,
+                    bindings:  MetricSeries::expression(
+                        new RrdMetricBinding($rrdName, 'sensor'),
+                        fn (array $entities): string => VictoriaMetricsGraphDataProvider::buildSelector(
+                            $sensorEntry->definition->name,
+                            $sensorEntry->identityLabels,
+                            [
+                                'hostname'     => $entities['hostname'],
+                                'sensor_class' => $this->sensorClass->value,
+                                'sensor_type'  => $sensor->sensor_type,
+                                'sensor_index' => (string) $sensor->sensor_index,
+                            ],
+                        ),
+                        ['hostname'],
+                    ),
+                );
+            })
+            ->all();
     }
-
-    public function markers(array $device, GraphQuery $query): array { return []; }
-
 }

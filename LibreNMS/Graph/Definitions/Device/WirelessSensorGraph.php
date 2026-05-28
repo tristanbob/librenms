@@ -24,110 +24,82 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
-use App\Facades\LibrenmsConfig;
 use App\Models\WirelessSensor;
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Enum\WirelessSensorType;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class WirelessSensorGraph implements GraphDefinition
+class WirelessSensorGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     private const PREFIX = 'device_wireless_';
 
-    public function __construct(private readonly WirelessSensorType $sensorClass) {}
-
-    public function graphType(): string
+    public function __construct(private readonly WirelessSensorType $sensorClass)
     {
-        return self::PREFIX . $this->sensorClass->value;
-    }
-
-    public function entityType(): string
-    {
-        return 'device';
-    }
-
-    public function id(array $device, GraphQuery $query): string
-    {
-        return $this->graphType() . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string
-    {
-        return __("wireless.{$this->sensorClass->value}.long");
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'] ?? '';
-    }
-
-    public function unit(array $device, GraphQuery $query): string
-    {
-        return match ($this->sensorClass) {
-            WirelessSensorType::Frequency => 'Hz',
-            WirelessSensorType::Distance => 'm',
-            default => __("wireless.{$this->sensorClass->value}.unit"),
-        };
-    }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => false, 'area' => false, 'legend' => true];
+        parent::__construct(
+            graphType: self::PREFIX . $sensorClass->value,
+            title: __("wireless.{$sensorClass->value}.long"),
+            unit: match ($sensorClass) {
+                WirelessSensorType::Frequency => 'Hz',
+                WirelessSensorType::Distance  => 'm',
+                default                       => __("wireless.{$sensorClass->value}.unit"),
+            },
+        );
     }
 
     public function series(array $device, GraphQuery $query): array
     {
+        $wsEntry = VictoriaMetricsMetricCatalog::get('wireless_sensor.value');
+
         return WirelessSensor::query()
             ->where('device_id', $device['device_id'])
             ->where('sensor_class', $this->sensorClass->value)
             ->orderBy('sensor_index')
             ->get()
             ->values()
-            ->map(function (WirelessSensor $sensor, int $index) use ($device, $query): GraphSeriesDefinition {
-                $color = $this->paletteColor($index);
+            ->map(function (WirelessSensor $sensor, int $index) use ($wsEntry): GraphSeriesDefinition {
+                $color = $this->paletteColor('mixed', $index, '0000cc');
 
                 return new GraphSeriesDefinition(
                     name:      $sensor->sensor_descr ?? 'wireless',
                     key:       "wireless_{$sensor->sensor_id}",
-                    unit:      $this->unit($device, $query),
+                    unit:      $this->unit,
                     color:     $color,
                     lineColor: $color,
                     lineWidth: 1.5,
-                    bindings:  [new RrdMetricBinding(
-                        rrdName: ['wireless-sensor', $this->sensorClass->value, $sensor->sensor_type ?? '', $sensor->sensor_index ?? ''],
-                        ds:      'sensor',
-                        transform: $this->valueTransform(),
-                    )],
+                    bindings:  MetricSeries::expression(
+                        new RrdMetricBinding(
+                            rrdName: ['wireless-sensor', $this->sensorClass->value, $sensor->sensor_type ?? '', $sensor->sensor_index ?? ''],
+                            ds:      'sensor',
+                            transform: $this->valueTransform(),
+                        ),
+                        fn (array $entities): string => VictoriaMetricsGraphDataProvider::buildSelector(
+                            $wsEntry->definition->name,
+                            $wsEntry->identityLabels,
+                            [
+                                'hostname'     => $entities['hostname'],
+                                'sensor_class' => $this->sensorClass->value,
+                                'sensor_type'  => $sensor->sensor_type ?? '',
+                                'sensor_index' => (string) ($sensor->sensor_index ?? ''),
+                            ],
+                        ),
+                        ['hostname'],
+                    ),
                 );
             })
             ->all();
-    }
-
-    public function markers(array $device, GraphQuery $query): array
-    {
-        return [];
     }
 
     private function valueTransform(): ?callable
     {
         return match ($this->sensorClass) {
             WirelessSensorType::Frequency => fn (float $value): float => $value * 1000000,
-            WirelessSensorType::Distance => fn (float $value): float => $value * 1000,
-            default => null,
+            WirelessSensorType::Distance  => fn (float $value): float => $value * 1000,
+            default                       => null,
         };
-    }
-
-    private function paletteColor(int $index): string
-    {
-        $colors = (array) LibrenmsConfig::get('graph_colours.mixed', []);
-        if ($colors === []) {
-            return '0000cc';
-        }
-
-        return $colors[$index % count($colors)] ?? '0000cc';
     }
 }

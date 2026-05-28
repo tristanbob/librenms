@@ -26,50 +26,23 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\DeviceCache;
 use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class PollerModulesPerfGraph implements GraphDefinition
+class PollerModulesPerfGraph extends GraphTemplate
 {
-    use \LibreNMS\Graph\DefaultVariables;
-
     public const GRAPH_TYPE = 'device_poller_modules_perf';
 
-    public function graphType(): string
+    public function __construct()
     {
-        return self::GRAPH_TYPE;
-    }
-
-    public function id(array $device, GraphQuery $query): string
-    {
-        return self::GRAPH_TYPE . ':' . $device['device_id'];
-    }
-
-    public function title(array $device): string
-    {
-        return 'Poller Modules Performance';
-    }
-
-    public function subtitle(array $device, GraphQuery $query): string
-    {
-        return $device['hostname'];
-    }
-
-    public function unit(array $device, GraphQuery $query): string
-    {
-        return 'seconds';
-    }
-
-    public function entityType(): string
-    {
-        return 'device';
-    }
-
-    public function display(): array
-    {
-        return ['kind' => 'line', 'stacked' => true, 'area' => true, 'legend' => true];
+        parent::__construct(
+            graphType: self::GRAPH_TYPE,
+            title:     'Poller Modules Performance',
+            unit:      'seconds',
+            display:   ['stacked' => true, 'area' => true],
+        );
     }
 
     public function series(array $device, GraphQuery $query): array
@@ -94,14 +67,14 @@ class PollerModulesPerfGraph implements GraphDefinition
             }
         }
 
-        $colors   = self::generatePalette(count($enabled));
-        $series   = [];
+        $colors = self::generatePalette(count($enabled));
+        $series = [];
         foreach ($enabled as $i => $module) {
-            $hex = $colors[$i];
+            $hex      = $colors[$i];
             $series[] = new GraphSeriesDefinition(
                 name:        $module,
                 key:         'module_' . str_replace('-', '_', $module),
-                unit:        $this->unit($device, $query),
+                unit:        $this->unit,
                 color:       $hex,
                 lineColor:   self::darken($hex, 0.7),
                 area:        true,
@@ -114,11 +87,6 @@ class PollerModulesPerfGraph implements GraphDefinition
         }
 
         return $series;
-    }
-
-    public function markers(array $device, GraphQuery $query): array
-    {
-        return [];
     }
 
     /**
