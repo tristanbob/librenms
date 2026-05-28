@@ -20,7 +20,8 @@
  *
  * @link       https://www.librenms.org
  *
- * @copyright  2026 LibreNMS Contributors
+ * @copyright  2026 Tristan Rhodes
+ * @author     Tristan Rhodes <tristan.rhodes@gmail.com>
  */
 
 namespace LibreNMS\Tests\Feature\Api;
