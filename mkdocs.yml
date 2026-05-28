@@ -286,6 +286,7 @@ nav:
       - Validating Code: Developing/Validating-Code.md
       - Code Structure: Developing/Code-Structure.md
       - Graph Data Architecture: Developing/Graph-Data-Architecture.md
+      - VictoriaMetrics: Developing/VictoriaMetrics.md
       - Fetching SNMP Data: Developing/Using-SnmpQuery.md
       - Creating Documentation: Developing/Creating-Documentation.md
       - Component: Extensions/Component.md

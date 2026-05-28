@@ -18,7 +18,7 @@ final class GraphSettingsTranslationTest extends TestCase
         }
     }
 
-    public function testVictoriaMetricsGraphReadsRequireWritesAndAreSecondSetting(): void
+    public function testVictoriaMetricsGraphReadsDependOnEchartsRendererAndSortFirst(): void
     {
         $definitions = json_decode(
             file_get_contents(resource_path('definitions/config_definitions.json')),
@@ -29,11 +29,11 @@ final class GraphSettingsTranslationTest extends TestCase
 
         $setting = $definitions['config']['victoriametrics.query_enabled'];
 
-        $this->assertSame(2, $setting['order']);
+        $this->assertSame(-2, $setting['order']);
         $this->assertSame([
-            'setting' => 'victoriametrics.enable',
+            'setting' => 'graphs.renderer',
             'operator' => 'equals',
-            'value' => true,
+            'value' => 'echarts',
         ], $setting['when']);
     }
 
