@@ -76,7 +76,7 @@ if (! function_exists('device_overview_echart_tag')) {
 
     function device_overview_echart_overlib_content(array $graph_array, array $device, string $title): ?string
     {
-        return device_overview_echart_overlib_grid_content($graph_array, $device, $title, false);
+        return device_overview_echart_overlib_grid_content($graph_array, $device, $title, true);
     }
 
     function device_overview_echart_overlib_grid_content(array $graph_array, array $device, string $title, bool $include_history = true): ?string
@@ -120,7 +120,9 @@ if (! function_exists('device_overview_echart_tag')) {
                 . '></div>';
         }
 
-        return '<div class=overlib>'
+        $overlibWidth = $gridWidth + 8; // account for small overlib padding/border
+
+        return '<div class=overlib style="width:' . $overlibWidth . 'px;max-width:calc(100vw - 32px);">'
             . '<span class=overlib-text>' . e(str_replace("'", '&#039;', $title)) . '</span><br />'
             . '<div style="display:grid;grid-template-columns:repeat(' . $columns . ', ' . $width . 'px);gap:6px;width:' . $gridWidth . 'px;max-width:calc(100vw - 48px);">'
             . $graphs
