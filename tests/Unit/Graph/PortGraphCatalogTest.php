@@ -7,7 +7,11 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\Definitions\Templates\PortLineGraph;
+use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\PercentileBinding;
+use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 use LibreNMS\Tests\DBTestCase;
 
 final class PortGraphCatalogTest extends DBTestCase
@@ -134,6 +138,45 @@ final class PortGraphCatalogTest extends DBTestCase
         $markers = $def->markers($this->device->toArray(), $query);
 
         $this->assertEmpty($markers);
+    }
+
+    public function testPortBitsMarkersContainBothRrdAndVmBindings(): void
+    {
+        LibrenmsConfig::set('percentile_value', 95);
+
+        $def     = $this->definitionFor('port_bits');
+        $query   = $this->makeQuery('port_bits');
+        $markers = $def->markers($this->device->toArray(), $query);
+
+        $this->assertCount(4, $markers);
+
+        $sources = array_map(function (GraphMarkerDefinition $m): string {
+            $this->assertInstanceOf(PercentileBinding::class, $m->value);
+            return $m->value->inner->source();
+        }, $markers);
+
+        $this->assertContains(RrdMetricBinding::SOURCE, $sources, 'Must have at least one RRD marker');
+        $this->assertContains(VictoriaMetricsMetricBinding::SOURCE, $sources, 'Must have at least one VM marker');
+    }
+
+    public function testDualPercentileReturnsTwoMarkersWithMatchingProperties(): void
+    {
+        $rrd  = new RrdMetricBinding('my-rrd', 'INOCTETS');
+        $pair = GraphMarkerDefinition::dualPercentile('95th in', $rrd, 'port.if_in_bits_rate', 95.0, 'aa0000');
+
+        $this->assertCount(2, $pair);
+        $this->assertSame('95th in', $pair[0]->name);
+        $this->assertSame('95th in', $pair[1]->name);
+        $this->assertSame('aa0000', $pair[0]->color);
+        $this->assertSame('aa0000', $pair[1]->color);
+
+        $this->assertInstanceOf(PercentileBinding::class, $pair[0]->value);
+        $this->assertInstanceOf(PercentileBinding::class, $pair[1]->value);
+        $this->assertSame(95.0, $pair[0]->value->percentile);
+        $this->assertSame(95.0, $pair[1]->value->percentile);
+
+        $this->assertSame(RrdMetricBinding::SOURCE,                $pair[0]->value->inner->source());
+        $this->assertSame(VictoriaMetricsMetricBinding::SOURCE,    $pair[1]->value->inner->source());
     }
 
     private function makeQuery(string $graphType): GraphQuery

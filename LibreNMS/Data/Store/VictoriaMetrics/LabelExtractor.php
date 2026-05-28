@@ -40,6 +40,7 @@ class LabelExtractor
         'sla_nr',
         'processor_type', 'processor_index',  // processor identity (no numeric ID in write path)
         'mempool_type', 'mempool_class', 'mempool_index',
+        'supply_type', 'supply_index',         // printer supply identity
     ];
 
     /**
@@ -88,6 +89,10 @@ class LabelExtractor
 
         if (isset($tags['mempool_type'], $tags['mempool_class'], $tags['mempool_index'])) {
             return 'mempool';
+        }
+
+        if (isset($tags['supply_type'], $tags['supply_index'])) {
+            return 'printer_supply';
         }
 
         if (isset($tags['type'], $tags['descr'])) {

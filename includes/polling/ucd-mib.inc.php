@@ -87,7 +87,7 @@ if (isset($ss[0])) {
             ];
 
             $tags = ['oid' => $oid, 'rrd_name' => $rrd_name, 'rrd_def' => $rrd_def];
-            app('Datastore')->put($device, 'ucd_cpu', $tags, $fields);
+            app('Datastore')->put($device, $rrd_name, $tags, $fields);
 
             $os->enableGraph('ucd_cpu');
         }

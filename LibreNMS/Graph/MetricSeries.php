@@ -28,6 +28,55 @@ use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 
 final class MetricSeries
 {
+    /**
+     * Aggregate binding for multi-entity device graphs (e.g. per-port, per-processor).
+     *
+     * Issues ONE VictoriaMetrics query for all series that share the same batch
+     * expression, then routes each result series to the matching GraphSeriesDefinition
+     * using $demuxValues as the discriminator.
+     *
+     * @param array<string,string> $demuxValues
+     *        Per-series label matchers that distinguish this entity from others in the
+     *        batch result. E.g. ['ifIndex' => '2'] or ['processor_type' => 'X', 'processor_index' => '0'].
+     *        These labels are omitted from the shared batch expression so all entities
+     *        are returned in one query.
+     */
+    public static function aggregate(
+        string $catalogKey,
+        RrdMetricBinding $rrd,
+        array $demuxValues,
+        ?string $window = '5m',
+        mixed $transform = null,
+    ): array {
+        $entry = VictoriaMetricsMetricCatalog::get($catalogKey);
+        if ($entry === null) {
+            throw new \InvalidArgumentException("Unknown VictoriaMetrics metric catalog key '{$catalogKey}'.");
+        }
+
+        $demuxLabels = array_keys($demuxValues);
+        $batchLabels = array_values(array_diff($entry->identityLabels, $demuxLabels));
+
+        return [
+            $rrd,
+            new VictoriaMetricsBatchBinding(
+                batchExprBuilder: static function (array $entities) use ($entry, $batchLabels, $window): string {
+                    $selector = VictoriaMetricsGraphDataProvider::buildSelector(
+                        $entry->definition->name,
+                        $batchLabels,
+                        $entities,
+                    );
+
+                    return $entry->definition->type === 'counter'
+                        ? sprintf('rate(%s[%s])', $selector, $window ?? '5m')
+                        : $selector;
+                },
+                demuxValues: $demuxValues,
+                labelKeys: $batchLabels,
+                transform: $transform,
+            ),
+        ];
+    }
+
     public static function gauge(string $catalogKey, RrdMetricBinding $rrd, mixed $transform = null): array
     {
         return [$rrd, VictoriaMetricsMetricBinding::catalog($catalogKey, $transform)];

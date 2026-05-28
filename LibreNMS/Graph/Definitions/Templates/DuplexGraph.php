@@ -88,7 +88,7 @@ class DuplexGraph extends GraphTemplate
     private function metricBindings(string $metric, RrdMetricBinding $rrd): array
     {
         return $this->vmKind === 'rate'
-            ? MetricSeries::rate($metric, $rrd)
-            : MetricSeries::gauge($metric, $rrd);
+            ? MetricSeries::rate($metric, $rrd, transform: $this->transform)
+            : MetricSeries::gauge($metric, $rrd, transform: $this->transform);
     }
 }

@@ -126,6 +126,26 @@ final class VictoriaMetricsMetricCatalog
             self::entry('diskio.reads', 'ucd_diskio', 'reads', 'librenms_diskio_reads_total', 'counter', 'operations', ['hostname', 'descr']),
             self::entry('diskio.writes', 'ucd_diskio', 'writes', 'librenms_diskio_writes_total', 'counter', 'operations', ['hostname', 'descr']),
 
+            // ucd-mib system stats (each OID written with its own measurement name: 'ucd_<oid>')
+            self::entry('ucd.io.received', 'ucd_ssIORawReceived', 'value', 'librenms_ucd_io_received_blocks_total', 'counter', 'blocks'),
+            self::entry('ucd.io.sent',     'ucd_ssIORawSent',     'value', 'librenms_ucd_io_sent_blocks_total',     'counter', 'blocks'),
+            self::entry('ucd.swap.in',     'ucd_ssRawSwapIn',     'value', 'librenms_ucd_swap_in_blocks_total',     'counter', 'blocks'),
+            self::entry('ucd.swap.out',    'ucd_ssRawSwapOut',    'value', 'librenms_ucd_swap_out_blocks_total',    'counter', 'blocks'),
+
+            // ucd-mib load averages (all in measurement 'ucd_load', stored as raw laLoadInt × 100)
+            self::entry('ucd.load.1min',  'ucd_load', '1min',  'librenms_ucd_load_1min',  'gauge', 'load'),
+            self::entry('ucd.load.5min',  'ucd_load', '5min',  'librenms_ucd_load_5min',  'gauge', 'load'),
+            self::entry('ucd.load.15min', 'ucd_load', '15min', 'librenms_ucd_load_15min', 'gauge', 'load'),
+
+            // ucd-mib CPU raw ticks (measurement 'ucd_cpu', COUNTER type)
+            self::entry('ucd.cpu.user',   'ucd_cpu', 'user',   'librenms_ucd_cpu_user_ticks_total',   'counter', 'ticks'),
+            self::entry('ucd.cpu.nice',   'ucd_cpu', 'nice',   'librenms_ucd_cpu_nice_ticks_total',   'counter', 'ticks'),
+            self::entry('ucd.cpu.system', 'ucd_cpu', 'system', 'librenms_ucd_cpu_system_ticks_total', 'counter', 'ticks'),
+            self::entry('ucd.cpu.idle',   'ucd_cpu', 'idle',   'librenms_ucd_cpu_idle_ticks_total',   'counter', 'ticks'),
+
+            // printer supplies (measurement 'toner', gauge percent)
+            self::entry('printer_supply.level', 'toner', 'toner', 'librenms_printer_supply_level_percent', 'gauge', 'percent', ['hostname', 'supply_type', 'supply_index']),
+
             // netstats-icmp
             self::entry('netstats.icmpInMsgs',        'netstats-icmp', 'icmpInMsgs',        'librenms_netstats_icmp_in_msgs_total',          'counter', 'packets'),
             self::entry('netstats.icmpOutMsgs',       'netstats-icmp', 'icmpOutMsgs',       'librenms_netstats_icmp_out_msgs_total',         'counter', 'packets'),

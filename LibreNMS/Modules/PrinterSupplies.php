@@ -105,10 +105,12 @@ class PrinterSupplies implements Module
             Log::info('Checking toner ' . $toner['supply_descr'] . "... $tonerperc %");
 
             $tags = [
-                'rrd_def' => RrdDefinition::make()->addDataset('toner', 'GAUGE', 0, 20000),
-                'rrd_name' => ['toner', $toner['supply_type'], $toner['supply_index']],
-                'rrd_oldname' => ['toner', $toner['supply_descr']],
-                'index' => $toner['supply_index'],
+                'rrd_def'      => RrdDefinition::make()->addDataset('toner', 'GAUGE', 0, 20000),
+                'rrd_name'     => ['toner', $toner['supply_type'], $toner['supply_index']],
+                'rrd_oldname'  => ['toner', $toner['supply_descr']],
+                'index'        => $toner['supply_index'],
+                'supply_type'  => $toner['supply_type'],
+                'supply_index' => (string) $toner['supply_index'],
             ];
             $datastore->put($device, 'toner', $tags, $tonerperc);
 

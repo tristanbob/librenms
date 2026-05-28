@@ -8,6 +8,8 @@ use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphVariableDefinition;
 use LibreNMS\Graph\PercentileBinding;
 use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsExpressionBinding;
+use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 use LibreNMS\Tests\TestCase;
 
 final class GraphExpressionDefinitionTest extends TestCase
@@ -31,12 +33,42 @@ final class GraphExpressionDefinitionTest extends TestCase
         $variableNames = array_map(fn ($v) => $v->name, $graph->variables());
         $this->assertSame(['duration'], $variableNames);
 
-        $query = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
+        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
         $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
 
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
         $this->assertSame(['availability', 172800], $binding->rrdName);
+    }
+
+    public function testAvailabilityPrimarySeriesHasVmBindingWithDurationLabel(): void
+    {
+        $graph = $this->definition('device_availability');
+
+        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
+        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
+
+        $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
+        $this->assertInstanceOf(VictoriaMetricsExpressionBinding::class, $vmBinding);
+
+        $expr = $vmBinding->expression(['hostname' => 'router1']);
+        $this->assertStringContainsString('librenms_device_availability_percent', $expr);
+        $this->assertStringContainsString('hostname="router1"', $expr);
+        $this->assertStringContainsString('name="172800"', $expr);
+    }
+
+    public function testAvailabilityVmBindingUsesDefaultDurationWhenNotSet(): void
+    {
+        $graph = $this->definition('device_availability');
+
+        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1]);
+        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
+
+        $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
+        $this->assertInstanceOf(VictoriaMetricsExpressionBinding::class, $vmBinding);
+
+        $expr = $vmBinding->expression(['hostname' => 'router1']);
+        $this->assertStringContainsString('name="86400"', $expr);
     }
 
     public function testSimpleStatsEmitPercentileMarkers(): void

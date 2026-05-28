@@ -30,7 +30,6 @@ use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\RrdMetricBinding;
-use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 
 class PortGraphCatalog
 {
@@ -51,10 +50,8 @@ class PortGraphCatalog
                 $label   = rtrim(rtrim((string) $percentile, '0'), '.');
 
                 return [
-                    GraphMarkerDefinition::percentile("{$label}th percentile in",  new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS',  transform: fn ($v) => $v * 8),  $percentile, 'aa0000'),
-                    GraphMarkerDefinition::percentile("{$label}th percentile in",  VictoriaMetricsMetricBinding::catalog('port.if_in_bits_rate'),                             $percentile, 'aa0000'),
-                    GraphMarkerDefinition::percentile("{$label}th percentile out", new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: fn ($v) => $v * -8), $percentile, 'aa0000'),
-                    GraphMarkerDefinition::percentile("{$label}th percentile out", VictoriaMetricsMetricBinding::catalog('port.if_out_bits_rate', fn ($v) => $v * -1),        $percentile, 'aa0000'),
+                    ...GraphMarkerDefinition::dualPercentile("{$label}th percentile in",  new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS',  transform: fn ($v) => $v * 8),  'port.if_in_bits_rate',  $percentile, 'aa0000'),
+                    ...GraphMarkerDefinition::dualPercentile("{$label}th percentile out", new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: fn ($v) => $v * -8), 'port.if_out_bits_rate', $percentile, 'aa0000', fn ($v) => $v * -1),
                 ];
             }),
 

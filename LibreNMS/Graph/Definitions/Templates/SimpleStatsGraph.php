@@ -47,6 +47,7 @@ class SimpleStatsGraph extends GraphTemplate
         private readonly ?string $metric = null,
         private readonly string $vmKind = 'gauge',
         private readonly mixed $vmTransform = null,
+        private readonly mixed $vmExprBuilder = null,
     ) {
         parent::__construct($graphType, $title, $unit, $display + [
             'kind' => 'line',
@@ -74,6 +75,7 @@ class SimpleStatsGraph extends GraphTemplate
 
         $primaryRrd      = $binding(null);
         $primaryBindings = match (true) {
+            $this->vmExprBuilder !== null                      => ($this->vmExprBuilder)($primaryRrd, $query),
             $this->metric !== null && $this->vmKind === 'rate' => MetricSeries::rate($this->metric, $primaryRrd, null, $this->vmTransform),
             $this->metric !== null                             => MetricSeries::gauge($this->metric, $primaryRrd, $this->vmTransform),
             default                                            => [$primaryRrd],

@@ -26,13 +26,11 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\Processor;
-use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
-use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class ProcessorGraph extends GraphTemplate
 {
@@ -51,11 +49,10 @@ class ProcessorGraph extends GraphTemplate
             ->orderBy('processor_index')
             ->get();
 
-        $colors     = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
-        $stacked    = (bool) LibrenmsConfig::getOsSetting($device['os'] ?? '', 'processor_stacked');
-        $usageEntry = VictoriaMetricsMetricCatalog::get('processor.usage');
+        $colors  = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
+        $stacked = (bool) LibrenmsConfig::getOsSetting($device['os'] ?? '', 'processor_stacked');
 
-        return $processors->values()->map(function (Processor $processor, int $i) use ($colors, $stacked, $usageEntry) {
+        return $processors->values()->map(function (Processor $processor, int $i) use ($colors, $stacked) {
             $color = $colors[$i % max(count($colors), 1)] ?? 'CC0000';
             $name  = short_hrDeviceDescr($processor->processor_descr);
 
@@ -67,21 +64,16 @@ class ProcessorGraph extends GraphTemplate
                 stack:       $stacked ? 'processor_usage' : null,
                 color:       $color,
                 areaOpacity: 0.25,
-                bindings:    MetricSeries::expression(
+                bindings:    MetricSeries::aggregate(
+                    'processor.usage',
                     new RrdMetricBinding(
                         rrdName: ['processor', $processor->processor_type, $processor->processor_index],
                         ds: 'usage',
                     ),
-                    fn(array $entities): string => VictoriaMetricsGraphDataProvider::buildSelector(
-                        $usageEntry->definition->name,
-                        $usageEntry->identityLabels,
-                        [
-                            'hostname'        => $entities['hostname'],
-                            'processor_type'  => $processor->processor_type,
-                            'processor_index' => (string) $processor->processor_index,
-                        ],
-                    ),
-                    ['hostname'],
+                    [
+                        'processor_type'  => $processor->processor_type,
+                        'processor_index' => (string) $processor->processor_index,
+                    ],
                 ),
             );
         })->all();

@@ -27,6 +27,7 @@ namespace LibreNMS\Graph\Definitions\Toner;
 use LibreNMS\Graph\Definitions\Templates\EntityGraph;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
+use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
 
 class UsageGraph extends EntityGraph
@@ -49,10 +50,13 @@ class UsageGraph extends EntityGraph
             area: true,
             color: 'CC0000',
             areaOpacity: 0.25,
-            bindings: [new RrdMetricBinding(
-                rrdName: ['toner', $e['supply_type'] ?? '', $e['supply_index'] ?? ''],
-                ds: 'toner',
-            )],
+            bindings: MetricSeries::gauge(
+                'printer_supply.level',
+                new RrdMetricBinding(
+                    rrdName: ['toner', $e['supply_type'] ?? '', $e['supply_index'] ?? ''],
+                    ds: 'toner',
+                ),
+            ),
         )];
     }
 

@@ -26,13 +26,11 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\LibrenmsConfig;
 use App\Models\Port;
-use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
-use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Util\Rewrite;
 
 class BitsGraph extends GraphTemplate
@@ -55,8 +53,6 @@ class BitsGraph extends GraphTemplate
         $mirrorOutbound = $this->stackedMultiplier() === 1;
         $opacity        = $mirrorOutbound ? 0x88 / 0xff : 1.0;
         $ports          = $this->includedPorts($device);
-        $inEntry        = VictoriaMetricsMetricCatalog::get('port.if_in_bits_rate');
-        $outEntry       = VictoriaMetricsMetricCatalog::get('port.if_out_bits_rate');
 
         foreach ($ports as $i => $port) {
             $portId   = (int) $port['port_id'];
@@ -76,14 +72,10 @@ class BitsGraph extends GraphTemplate
                 areaOpacity: $opacity,
                 lineOpacity: $opacity,
                 stack:       'device_bits_in',
-                bindings:    MetricSeries::expression(
+                bindings:    MetricSeries::aggregate(
+                    'port.if_in_bits_rate',
                     new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: $toBits),
-                    fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
-                        $inEntry->definition->name,
-                        $inEntry->identityLabels,
-                        ['hostname' => $entities['hostname'], 'ifIndex' => $ifIndex],
-                    ),
-                    ['hostname'],
+                    ['ifIndex' => $ifIndex],
                 ),
             );
 
@@ -98,14 +90,10 @@ class BitsGraph extends GraphTemplate
                 lineOpacity: $opacity,
                 stack:       'device_bits_out',
                 negate:      ! $mirrorOutbound,
-                bindings:    MetricSeries::expression(
+                bindings:    MetricSeries::aggregate(
+                    'port.if_out_bits_rate',
                     new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: $toBits),
-                    fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
-                        $outEntry->definition->name,
-                        $outEntry->identityLabels,
-                        ['hostname' => $entities['hostname'], 'ifIndex' => $ifIndex],
-                    ),
-                    ['hostname'],
+                    ['ifIndex' => $ifIndex],
                 ),
             );
         }

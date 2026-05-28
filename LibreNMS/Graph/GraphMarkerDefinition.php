@@ -24,6 +24,8 @@
 
 namespace LibreNMS\Graph;
 
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
+
 class GraphMarkerDefinition
 {
     public function __construct(
@@ -38,5 +40,26 @@ class GraphMarkerDefinition
     public static function percentile(string $name, MetricBinding $inner, float $percentile, ?string $color = null): self
     {
         return new self($name, new PercentileBinding($inner, $percentile), color: $color);
+    }
+
+    /**
+     * Returns two markers — one backed by RRD, one by VictoriaMetrics — so the
+     * correct one is used regardless of which backend is active. Each backend
+     * silently returns an empty result for the marker type it doesn't own.
+     *
+     * @return list<self>
+     */
+    public static function dualPercentile(
+        string $name,
+        RrdMetricBinding $rrd,
+        string $catalogKey,
+        float $percentile,
+        ?string $color = null,
+        mixed $vmTransform = null,
+    ): array {
+        return [
+            self::percentile($name, $rrd, $percentile, $color),
+            self::percentile($name, VictoriaMetricsMetricBinding::catalog($catalogKey, $vmTransform), $percentile, $color),
+        ];
     }
 }

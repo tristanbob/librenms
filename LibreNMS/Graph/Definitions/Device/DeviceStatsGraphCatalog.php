@@ -24,10 +24,14 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
+use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\SimpleStatsGraph;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphVariableDefinition;
+use LibreNMS\Graph\MetricSeries;
+use LibreNMS\Graph\RrdMetricBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
 class DeviceStatsGraphCatalog
 {
@@ -48,6 +52,20 @@ class DeviceStatsGraphCatalog
                 '',
                 display: ['yAxisMin' => 0, 'yAxisMax' => 100],
                 graphVariables: [GraphVariableDefinition::integer('duration', 86400, 1)],
+                vmExprBuilder: static function (RrdMetricBinding $primaryRrd, GraphQuery $query): array {
+                    $duration = (string) ($query->options['duration'] ?? 86400);
+                    $entry    = VictoriaMetricsMetricCatalog::get('device.availability');
+
+                    return MetricSeries::expression(
+                        $primaryRrd,
+                        fn (array $entities) => VictoriaMetricsGraphDataProvider::buildSelector(
+                            $entry->definition->name,
+                            ['hostname', 'name'],
+                            ['hostname' => $entities['hostname'], 'name' => $duration],
+                        ),
+                        ['hostname'],
+                    );
+                },
             ),
             new SimpleStatsGraph('device_hr_processes', 'Processes', 'Processes', 'hr_processes', 'procs'),
             new SimpleStatsGraph('device_hr_users', 'Users', 'Users', 'hr_users', 'users'),
