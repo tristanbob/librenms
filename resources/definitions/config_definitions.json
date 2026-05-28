@@ -6521,21 +6521,21 @@
         "victoriametrics.query_enabled": {
             "default": false,
             "type": "boolean",
-            "group": "poller",
-            "section": "victoriametrics",
-            "order": 2,
+            "group": "webui",
+            "section": "graph",
+            "order": -2,
             "when": {
-                "setting": "victoriametrics.enable",
+                "setting": "graphs.renderer",
                 "operator": "equals",
-                "value": true
+                "value": "echarts"
             }
         },
         "victoriametrics.query_url": {
             "default": "http://127.0.0.1:8428",
             "type": "text",
-            "group": "poller",
-            "section": "victoriametrics",
-            "order": 11,
+            "group": "webui",
+            "section": "graph",
+            "order": -1,
             "when": {
                 "setting": "victoriametrics.query_enabled",
                 "operator": "equals",
