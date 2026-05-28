@@ -58,7 +58,6 @@ final class PortGraphVmFallbackTest extends DBTestCase
             $registry->register($def);
         }
         $definition = $registry->definitionFor($graphType);
-        $this->assertNotNull($definition, "$graphType must be registered");
 
         $query = GraphQuery::fromRequest(
             'port',

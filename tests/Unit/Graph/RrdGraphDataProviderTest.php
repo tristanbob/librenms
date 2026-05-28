@@ -25,8 +25,8 @@ final class RrdGraphDataProviderTest extends TestCase
             transform: fn (array $values) => $values['used'] / ($values['used'] + $values['free']) * 100,
         );
 
-        $provider = new class(new \LibreNMS\Graph\GraphDefinitionRegistry()) extends RrdGraphDataProvider {
-            public function __construct(\LibreNMS\Graph\GraphDefinitionRegistry $registry) {}
+        $provider = new class extends RrdGraphDataProvider {
+            public function __construct() {}
 
             public function expose(array $allData, \LibreNMS\Graph\RrdMetricBinding $binding): array
             {

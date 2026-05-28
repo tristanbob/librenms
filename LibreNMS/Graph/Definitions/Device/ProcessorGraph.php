@@ -50,17 +50,15 @@ class ProcessorGraph extends GraphTemplate
                         rrdName: ['processor', $processor->processor_type, $processor->processor_index],
                         ds: 'usage',
                     ),
-                    function (array $entities) use ($processor, $usageEntry): string {
-                        return VictoriaMetricsGraphDataProvider::buildSelector(
-                            $usageEntry->definition->name,
-                            $usageEntry->identityLabels,
-                            [
-                                'hostname'        => $entities['hostname'],
-                                'processor_type'  => $processor->processor_type,
-                                'processor_index' => (string) $processor->processor_index,
-                            ],
-                        );
-                    },
+                    fn(array $entities): string => VictoriaMetricsGraphDataProvider::buildSelector(
+                        $usageEntry->definition->name,
+                        $usageEntry->identityLabels,
+                        [
+                            'hostname'        => $entities['hostname'],
+                            'processor_type'  => $processor->processor_type,
+                            'processor_index' => (string) $processor->processor_index,
+                        ],
+                    ),
                     ['hostname'],
                 ),
             );

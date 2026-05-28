@@ -69,45 +69,43 @@ class SensorGraphDataTest extends DBTestCase
         ]);
 
         // Stub GraphDataProvider: returns a realistic sensor result without hitting rrdtool.
-        $this->app->bind(GraphDataProvider::class, function () {
-            return new class implements GraphDataProvider {
-                public function query(GraphQuery $query): GraphDataResult
-                {
-                    $isSensor   = str_starts_with($query->graphType, 'sensor_');
-                    $isWireless = str_starts_with($query->graphType, 'wireless_');
+        $this->app->bind(GraphDataProvider::class, fn() => new class implements GraphDataProvider {
+            public function query(GraphQuery $query): GraphDataResult
+            {
+                $isSensor   = str_starts_with($query->graphType, 'sensor_');
+                $isWireless = str_starts_with($query->graphType, 'wireless_');
 
-                    if (! $isSensor && ! $isWireless) {
-                        throw new \RuntimeException("Graph type '{$query->graphType}' is not supported by this stub.");
-                    }
-
-                    $result = new GraphDataResult(
-                        id:       $query->graphType . ':' . $query->entities['sensor_id'],
-                        type:     $query->graphType,
-                        title:    'Sensor',
-                        subtitle: ($query->entities['sensor_descr'] ?? 'sensor'),
-                        unit:     $query->entities['sensor_class'] === 'temperature' ? '°C' : '',
-                        from:     $query->from,
-                        to:       $query->to,
-                        step:     $query->step,
-                    );
-                    $result->setSource('rrd');
-                    $result->setDisplay(['renderer' => 'timeseries', 'kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true, 'tooltip' => true]);
-
-                    $series = new GraphSeries(name: $query->entities['sensor_descr'] ?? 'sensor', key: 'sensor', unit: '°C', area: true);
-                    $series->addPoint($query->from * 1000, 42.5);
-                    $result->addSeries($series);
-
-                    // Include threshold markers when limits are configured
-                    if (isset($query->entities['sensor_limit'])) {
-                        $result->addMarker(['type' => 'horizontal_line', 'name' => 'High critical', 'value' => (float) $query->entities['sensor_limit'], 'severity' => 'critical']);
-                    }
-                    if (isset($query->entities['sensor_limit_warn'])) {
-                        $result->addMarker(['type' => 'horizontal_line', 'name' => 'High warning', 'value' => (float) $query->entities['sensor_limit_warn'], 'severity' => 'warning']);
-                    }
-
-                    return $result;
+                if (! $isSensor && ! $isWireless) {
+                    throw new \RuntimeException("Graph type '{$query->graphType}' is not supported by this stub.");
                 }
-            };
+
+                $result = new GraphDataResult(
+                    id:       $query->graphType . ':' . $query->entities['sensor_id'],
+                    type:     $query->graphType,
+                    title:    'Sensor',
+                    subtitle: ($query->entities['sensor_descr'] ?? 'sensor'),
+                    unit:     $query->entities['sensor_class'] === 'temperature' ? '°C' : '',
+                    from:     $query->from,
+                    to:       $query->to,
+                    step:     $query->step,
+                );
+                $result->setSource('rrd');
+                $result->setDisplay(['renderer' => 'timeseries', 'kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true, 'tooltip' => true]);
+
+                $series = new GraphSeries(name: $query->entities['sensor_descr'] ?? 'sensor', key: 'sensor', unit: '°C', area: true);
+                $series->addPoint($query->from * 1000, 42.5);
+                $result->addSeries($series);
+
+                // Include threshold markers when limits are configured
+                if (isset($query->entities['sensor_limit'])) {
+                    $result->addMarker(['type' => 'horizontal_line', 'name' => 'High critical', 'value' => (float) $query->entities['sensor_limit'], 'severity' => 'critical']);
+                }
+                if (isset($query->entities['sensor_limit_warn'])) {
+                    $result->addMarker(['type' => 'horizontal_line', 'name' => 'High warning', 'value' => (float) $query->entities['sensor_limit_warn'], 'severity' => 'warning']);
+                }
+
+                return $result;
+            }
         });
     }
 

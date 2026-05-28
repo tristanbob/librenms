@@ -30,12 +30,8 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
-use LibreNMS\Graph\GraphDataBackendSelector;
-use LibreNMS\Graph\GraphDataProvider;
-use LibreNMS\Graph\GraphDataResult;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\GraphQuery;
-use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Tests\DBTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -44,7 +40,6 @@ final class SensorGraphVmFallbackTest extends DBTestCase
     use DatabaseTransactions;
 
     private Device $device;
-    private GraphDataBackendSelector $selector;
 
     protected function setUp(): void
     {
@@ -52,30 +47,6 @@ final class SensorGraphVmFallbackTest extends DBTestCase
 
         $this->device = Device::factory()->create();
 
-        $registry = new GraphDefinitionRegistry();
-        $registry->registerResolver(new WirelessGraphDefinitionResolver());
-
-        $vm = new VictoriaMetricsGraphDataProvider($registry);
-        $rrd = new class implements GraphDataProvider {
-            public function query(GraphQuery $query): GraphDataResult
-            {
-                $result = new GraphDataResult(
-                    id: $query->graphType . ':' . ($query->entities['sensor_id'] ?? 0),
-                    type: $query->graphType,
-                    title: 'Sensor',
-                    subtitle: 'stub',
-                    unit: '',
-                    from: $query->from,
-                    to: $query->to,
-                    step: $query->step,
-                );
-                $result->setSource('rrd');
-
-                return $result;
-            }
-        };
-
-        $this->selector = new GraphDataBackendSelector($rrd, $vm);
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
     }
 
@@ -85,7 +56,6 @@ final class SensorGraphVmFallbackTest extends DBTestCase
         $registry->registerResolver(new WirelessGraphDefinitionResolver());
 
         $definition = $registry->definitionFor('wireless_rssi');
-        $this->assertNotNull($definition, 'wireless_rssi must be registered');
 
         $query = GraphQuery::fromRequest(
             'wireless_sensor',
