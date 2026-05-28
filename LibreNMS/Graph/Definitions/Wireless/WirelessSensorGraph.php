@@ -71,10 +71,10 @@ class WirelessSensorGraph extends SensorBaseGraph
         $e       = $query->entities;
         $markers = [];
 
-        if (isset($e['sensor_limit_low']) && $e['sensor_limit_low'] !== null) {
+        if (isset($e['sensor_limit_low'])) {
             $markers[] = $this->marker('Low limit', $e['sensor_limit_low'], 'limit');
         }
-        if (isset($e['sensor_limit']) && $e['sensor_limit'] !== null) {
+        if (isset($e['sensor_limit'])) {
             $markers[] = $this->marker('High limit', $e['sensor_limit'], 'limit');
         }
 

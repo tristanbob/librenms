@@ -147,11 +147,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             return $lo === $hi ? $points[$lo] : $points[$lo] + ($points[$hi] - $points[$lo]) * ($idx - $lo);
         }
 
-        if ($value instanceof TotalBinding) {
-            return array_sum($points);
-        }
-
-        return null;
+        return array_sum($points);
     }
 
     protected function emptySeries(GraphSeriesDefinition $seriesDef): GraphSeries

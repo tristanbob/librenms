@@ -63,7 +63,7 @@ class LabelExtractor
         ];
 
         foreach (self::EXTRA_TAGS as $key) {
-            if (isset($tags[$key]) && $tags[$key] !== '' && $tags[$key] !== null) {
+            if (isset($tags[$key]) && $tags[$key] !== '') {
                 $labels[$key] = (string) $tags[$key];
             }
         }

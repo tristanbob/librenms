@@ -78,16 +78,16 @@ class SensorGraph extends SensorBaseGraph
         $e       = $query->entities;
         $markers = [];
 
-        if (isset($e['sensor_limit_low']) && $e['sensor_limit_low'] !== null) {
+        if (isset($e['sensor_limit_low'])) {
             $markers[] = $this->marker('Low critical', $e['sensor_limit_low'], 'low_critical');
         }
-        if (isset($e['sensor_limit_low_warn']) && $e['sensor_limit_low_warn'] !== null) {
+        if (isset($e['sensor_limit_low_warn'])) {
             $markers[] = $this->marker('Low warning', $e['sensor_limit_low_warn'], 'low_warning');
         }
-        if (isset($e['sensor_limit_warn']) && $e['sensor_limit_warn'] !== null) {
+        if (isset($e['sensor_limit_warn'])) {
             $markers[] = $this->marker('High warning', $e['sensor_limit_warn'], 'high_warning');
         }
-        if (isset($e['sensor_limit']) && $e['sensor_limit'] !== null) {
+        if (isset($e['sensor_limit'])) {
             $markers[] = $this->marker('High critical', $e['sensor_limit'], 'high_critical');
         }
 

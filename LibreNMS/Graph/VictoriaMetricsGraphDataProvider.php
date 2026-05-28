@@ -204,6 +204,9 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         }
     }
 
+    /**
+     * @phpstan-assert-if-true VictoriaMetricsMetricBinding|VictoriaMetricsExpressionBinding $binding
+     */
     private function isVictoriaMetricsBinding(?MetricBinding $binding): bool
     {
         return $binding instanceof VictoriaMetricsMetricBinding
