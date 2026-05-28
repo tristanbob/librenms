@@ -48,6 +48,7 @@ final class DeviceGraphDefinitionTest extends TestCase
     {
         $series = $this->definition('device_uptime')->series($this->device(), $this->query('device_uptime'))[0];
         $binding = $series->binding(RrdMetricBinding::SOURCE);
+        $this->assertInstanceOf(RrdMetricBinding::class, $binding);
 
         $this->assertSame('uptime', $binding->rrdName);
         $this->assertSame('uptime', $binding->ds);
@@ -74,6 +75,7 @@ final class DeviceGraphDefinitionTest extends TestCase
         $this->assertSame('ucd_cpu', $series[0]->stack);
 
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
+        $this->assertInstanceOf(RrdMetricBinding::class, $binding);
         $this->assertSame(25.0, ($binding->transform)(['user' => 25, 'nice' => 25, 'system' => 25, 'idle' => 25]));
     }
 
@@ -81,6 +83,7 @@ final class DeviceGraphDefinitionTest extends TestCase
     {
         $series = $this->definition('device_ipsystemstats_ipv4_frag')->series($this->device(), $this->query('device_ipsystemstats_ipv4_frag'));
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
+        $this->assertInstanceOf(RrdMetricBinding::class, $binding);
 
         $this->assertTrue($series[0]->negate);
         $this->assertSame(5.0, ($binding->transform)(['OutFragFails' => 5, 'InDelivers' => 100]));

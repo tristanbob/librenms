@@ -98,10 +98,10 @@ class SensorGraphDataTest extends DBTestCase
                     $result->addSeries($series);
 
                     // Include threshold markers when limits are configured
-                    if (isset($query->entities['sensor_limit']) && $query->entities['sensor_limit'] !== null) {
+                    if (isset($query->entities['sensor_limit'])) {
                         $result->addMarker(['type' => 'horizontal_line', 'name' => 'High critical', 'value' => (float) $query->entities['sensor_limit'], 'severity' => 'critical']);
                     }
-                    if (isset($query->entities['sensor_limit_warn']) && $query->entities['sensor_limit_warn'] !== null) {
+                    if (isset($query->entities['sensor_limit_warn'])) {
                         $result->addMarker(['type' => 'horizontal_line', 'name' => 'High warning', 'value' => (float) $query->entities['sensor_limit_warn'], 'severity' => 'warning']);
                     }
 

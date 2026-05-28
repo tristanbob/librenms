@@ -30,12 +30,8 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
-use LibreNMS\Graph\GraphDataBackendSelector;
-use LibreNMS\Graph\GraphDataProvider;
-use LibreNMS\Graph\GraphDataResult;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\GraphQuery;
-use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Tests\DBTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -44,39 +40,12 @@ final class PortGraphVmFallbackTest extends DBTestCase
     use DatabaseTransactions;
 
     private Device $device;
-    private GraphDataBackendSelector $selector;
-    private GraphDataResult $rrdResult;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->device = Device::factory()->create();
-
-        $registry = new GraphDefinitionRegistry();
-        foreach (PortGraphCatalog::definitions() as $definition) {
-            $registry->register($definition);
-        }
-
-        $vm = new VictoriaMetricsGraphDataProvider($registry);
-
-        $rrdResult = new GraphDataResult(
-            id: 'stub', type: 'stub', title: 'Stub', subtitle: 'stub',
-            unit: 'pps', from: time() - 3600, to: time(), step: 300,
-        );
-        $rrdResult->setSource('rrd');
-        $this->rrdResult = $rrdResult;
-
-        $rrd = new class($rrdResult) implements GraphDataProvider {
-            public function __construct(private readonly GraphDataResult $result) {}
-
-            public function query(GraphQuery $query): GraphDataResult
-            {
-                return $this->result;
-            }
-        };
-
-        $this->selector = new GraphDataBackendSelector($rrd, $vm);
 
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
     }

@@ -33,14 +33,14 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
 {
     private const DEFAULT_QUERY_URL = 'http://127.0.0.1:8428';
 
-    private string $queryUrl;
-    private float  $timeout;
-    private bool   $verifySsl;
+    private readonly string $queryUrl;
+    private readonly float  $timeout;
+    private readonly bool   $verifySsl;
 
     public function __construct(GraphDefinitionRegistry $registry)
     {
         parent::__construct($registry);
-        $this->queryUrl  = rtrim(LibrenmsConfig::get('victoriametrics.query_url', self::DEFAULT_QUERY_URL), '/');
+        $this->queryUrl  = rtrim((string) LibrenmsConfig::get('victoriametrics.query_url', self::DEFAULT_QUERY_URL), '/');
         $this->timeout   = (float) LibrenmsConfig::get('victoriametrics.timeout', 10.0);
         $this->verifySsl = (bool) LibrenmsConfig::get('victoriametrics.verify_ssl', true);
     }

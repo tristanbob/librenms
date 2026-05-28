@@ -106,6 +106,6 @@ class SensorGraph extends SensorBaseGraph
             return null;
         }
 
-        return fn (float $value): float => Rewrite::celsiusToFahrenheit($value);
+        return Rewrite::celsiusToFahrenheit(...);
     }
 }
