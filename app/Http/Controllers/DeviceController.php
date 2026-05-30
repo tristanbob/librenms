@@ -29,6 +29,8 @@ class DeviceController
             abort(404);
         }
 
+        $this->authorize('view', $device);
+
         DeviceCache::setPrimary($device_id);
 
         $current_tab = str_replace('tab=', '', $current_tab) ?: 'overview';
@@ -86,6 +88,8 @@ class DeviceController
 
     public function rediscover(Device $device): JsonResponse
     {
+        $this->authorize('update', $device);
+
         $device->last_discovered = null;
         $saved = $device->save();
 
@@ -97,7 +101,7 @@ class DeviceController
 
     public function deleteIndex(): View
     {
-        $this->authorize('delete', Device::class);
+        $this->authorize('device.delete');
 
         return view('device.delete', [
             'data_warn' => [
