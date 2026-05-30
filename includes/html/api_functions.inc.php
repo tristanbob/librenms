@@ -293,7 +293,7 @@ function graph_data_response(\LibreNMS\Graph\GraphDataResult $result, \LibreNMS\
 {
     $response = response()->json($result->toArray());
     if ($query->to < time() - 60) {
-        $response->header('Cache-Control', 'public, max-age=300');
+        $response->header('Cache-Control', 'private, max-age=300');
     } else {
         $response->header('Cache-Control', 'no-store');
     }

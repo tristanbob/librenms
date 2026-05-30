@@ -22,14 +22,16 @@ if (! function_exists('device_overview_echart_tag')) {
         unset($link_array['height'], $link_array['width'], $link_array['legend'], $link_array['bg']);
         $link = \LibreNMS\Util\Url::generate($link_array);
 
+        $isSparkline = ($options['sparkline'] ?? true);
+
         return '<div'
             . ' class="lnms-echart"'
             . ' style="width:' . $width . 'px;height:' . $height . 'px"'
             . ' data-graph-url="' . e($dataUrl) . '"'
             . (($options['link'] ?? true) ? ' data-link-url="' . e($link) . '"' : '')
             . ' data-hide-legend="' . (($options['hideLegend'] ?? true) ? 'true' : 'false') . '"'
-            . ' data-hide-tooltip="' . (($options['hideTooltip'] ?? true) ? 'true' : 'false') . '"'
-            . ' data-sparkline="' . (($options['sparkline'] ?? true) ? 'true' : 'false') . '"'
+            . ' data-hide-tooltip="' . (($options['hideTooltip'] ?? $isSparkline) ? 'true' : 'false') . '"'
+            . ' data-sparkline="' . ($isSparkline ? 'true' : 'false') . '"'
             . '></div>';
     }
 

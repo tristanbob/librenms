@@ -27,6 +27,10 @@ export function mountEChartsGraphs() {
         if (el.dataset.echartsMounted === 'true') return;
         el.dataset.echartsMounted = 'true';
 
+        if (el.dataset.sparkline !== 'true') {
+            el.style.width = '100%';
+        }
+
         const url     = el.dataset.graphUrl;
         const refresh = parseInt(el.dataset.refresh || '0', 10);
 
