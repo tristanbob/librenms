@@ -6,6 +6,7 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Tests\DBTestCase;
@@ -43,7 +44,7 @@ final class PortGraphVmFallbackTest extends DBTestCase
             time(),
         );
 
-        $series = $definition->series($this->device->toArray(), $query);
+        $series = $definition->series(new GraphContext($this->device, $query));
         $this->assertNotEmpty($series, "$graphType must return at least one series");
 
         foreach ($series as $s) {

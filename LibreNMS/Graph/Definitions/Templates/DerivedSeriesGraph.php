@@ -24,7 +24,7 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -32,7 +32,7 @@ use LibreNMS\Graph\RrdMetricBinding;
 class DerivedSeriesGraph extends GraphTemplate
 {
     /**
-     * @param list<array{name:string,key:string,ds:string|array,transform?:mixed,color:string,lineColor?:string,area?:bool,stack?:string,negate?:bool,lineWidth?:float,metric?:string,vm_kind?:string,vm_expression?:\Closure,vm_label_keys?:string[]}> $series
+     * @param list<array{name:string,key:string,ds:string|array,transform?:mixed,color:string,lineColor?:string,area?:bool,stack?:string,negate?:bool,lineWidth?:float,metric?:string,vm_expression?:\Closure,vm_label_keys?:string[]}> $series
      */
     public function __construct(
         string $graphType,
@@ -45,7 +45,7 @@ class DerivedSeriesGraph extends GraphTemplate
         parent::__construct($graphType, $title, $unit, $display + ['kind' => 'line']);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
         $series = [];
         foreach ($this->series as $def) {
@@ -53,10 +53,7 @@ class DerivedSeriesGraph extends GraphTemplate
             if (isset($def['vm_expression'])) {
                 $bindings = MetricSeries::expression($rrd, $def['vm_expression'], $def['vm_label_keys'] ?? ['hostname']);
             } elseif (isset($def['metric']) && is_string($def['ds'])) {
-                $transform = $def['transform'] ?? null;
-                $bindings = ($def['vm_kind'] ?? 'rate') === 'gauge'
-                    ? MetricSeries::gauge($def['metric'], $rrd, $transform)
-                    : MetricSeries::rate($def['metric'], $rrd, transform: $transform);
+                $bindings = MetricSeries::metric($def['metric'], $rrd, transform: $def['transform'] ?? null);
             } else {
                 $bindings = [$rrd];
             }
@@ -64,7 +61,7 @@ class DerivedSeriesGraph extends GraphTemplate
             $series[] = new GraphSeriesDefinition(
                 name: $def['name'],
                 key: $def['key'],
-                unit: $this->unit($device, $query),
+                unit: $this->unit($context),
                 color: $def['color'],
                 lineColor: $def['lineColor'] ?? null,
                 area: (bool) ($def['area'] ?? false),

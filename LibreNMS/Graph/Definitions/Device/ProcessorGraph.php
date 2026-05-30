@@ -27,7 +27,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Facades\LibrenmsConfig;
 use App\Models\Processor;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -41,8 +41,9 @@ class ProcessorGraph extends GraphTemplate
         parent::__construct(self::GRAPH_TYPE, 'CPU Usage', '%', ['area' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $processors = Processor::query()
             ->where('device_id', $device['device_id'])
             ->orderBy('processor_type')

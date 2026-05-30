@@ -29,7 +29,7 @@ use App\Models\Sensor;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Enum\Sensor as SensorClass;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -49,8 +49,9 @@ class DeviceSensorGraph extends GraphTemplate
         );
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $sensorEntry = VictoriaMetricsMetricCatalog::get('sensor.value');
 
         return Sensor::where('device_id', $device['device_id'])

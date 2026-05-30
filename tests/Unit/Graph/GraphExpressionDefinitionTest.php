@@ -2,7 +2,9 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
+use App\Models\Device;
 use LibreNMS\Graph\Definitions\Device\DeviceStatsGraphCatalog;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphVariableDefinition;
@@ -34,7 +36,7 @@ final class GraphExpressionDefinitionTest extends TestCase
         $this->assertSame(['duration'], $variableNames);
 
         $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
-        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
+        $series = $graph->series($this->context($query));
 
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
@@ -46,7 +48,7 @@ final class GraphExpressionDefinitionTest extends TestCase
         $graph = $this->definition('device_availability');
 
         $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
-        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
+        $series = $graph->series($this->context($query));
 
         $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
         $this->assertInstanceOf(VictoriaMetricsExpressionBinding::class, $vmBinding);
@@ -62,7 +64,7 @@ final class GraphExpressionDefinitionTest extends TestCase
         $graph = $this->definition('device_availability');
 
         $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1]);
-        $series = $graph->series(['device_id' => 1, 'hostname' => 'router1'], $query);
+        $series = $graph->series($this->context($query));
 
         $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
         $this->assertInstanceOf(VictoriaMetricsExpressionBinding::class, $vmBinding);
@@ -76,7 +78,7 @@ final class GraphExpressionDefinitionTest extends TestCase
         $graph = $this->definition('device_hr_processes');
 
         $query   = new GraphQuery('device', 'device_hr_processes', 1000, 2000, 1200, 300, ['device_id' => 1]);
-        $markers = $graph->markers(['device_id' => 1, 'hostname' => 'router1'], $query);
+        $markers = $graph->markers($this->context($query));
 
         $this->assertCount(3, $markers);
         $this->assertContainsOnlyInstancesOf(GraphMarkerDefinition::class, $markers);
@@ -98,5 +100,13 @@ final class GraphExpressionDefinitionTest extends TestCase
         }
 
         throw new \RuntimeException("Missing definition $type");
+    }
+
+    private function context(GraphQuery $query): GraphContext
+    {
+        return new GraphContext(
+            (new Device())->forceFill(['device_id' => 1, 'hostname' => 'router1']),
+            $query,
+        );
     }
 }

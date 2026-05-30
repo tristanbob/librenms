@@ -25,8 +25,8 @@
 namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\DefaultVariables;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinition;
-use LibreNMS\Graph\GraphQuery;
 
 abstract class SensorBaseGraph implements GraphDefinition
 {
@@ -36,14 +36,14 @@ abstract class SensorBaseGraph implements GraphDefinition
     /** @var callable|null */
     private $transform = null;
 
-    public function id(array $device, GraphQuery $query): string
+    public function id(GraphContext $context): string
     {
-        return $this->graphType() . ':' . ($query->entities['sensor_id'] ?? '');
+        return $this->graphType() . ':' . ($context->query->entities['sensor_id'] ?? '');
     }
 
-    public function subtitle(array $device, GraphQuery $query): string
+    public function subtitle(GraphContext $context): string
     {
-        return ($device['hostname'] ?? '') . ' — ' . ($query->entities['sensor_descr'] ?? '');
+        return ($context['hostname'] ?? '') . ' — ' . ($context->query->entities['sensor_descr'] ?? '');
     }
 
     public function display(): array

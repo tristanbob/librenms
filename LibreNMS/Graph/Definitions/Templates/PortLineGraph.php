@@ -24,7 +24,7 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -35,7 +35,7 @@ use LibreNMS\Graph\RrdMetricBinding;
  * rrdName from "port-id{port_id}". Series are driven by a declarative
  * $seriesDefs array; optional $markerBuilder handles dynamic markers.
  *
- * Series def keys: name, key, ds, color, lineColor?, metric?, vmKind? (default 'rate'),
+ * Series def keys: name, key, ds, color, lineColor?, metric? (kind derived from catalog),
  *                  transform? (RRD-only), area? (default true), negate? (default false), stack?
  */
 class PortLineGraph extends GraphTemplate
@@ -56,16 +56,17 @@ class PortLineGraph extends GraphTemplate
         return 'port';
     }
 
-    public function id(array $device, GraphQuery $query): string
+    public function id(GraphContext $context): string
     {
-        return $this->graphType . ':' . $query->entities['port_id'];
+        return $this->graphType . ':' . $context->query->entities['port_id'];
     }
 
-    public function subtitle(array $device, GraphQuery $query): string
+    public function subtitle(GraphContext $context): string
     {
+        $query    = $context->query;
         $portName = $query->entities['port_name'] ?? ('port ' . ($query->entities['port_id'] ?? '?'));
 
-        return $device['hostname'] . ' ' . $portName;
+        return $context['hostname'] . ' ' . $portName;
     }
 
     public function display(): array
@@ -73,27 +74,24 @@ class PortLineGraph extends GraphTemplate
         return $this->display + ['kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true];
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $rrdName = 'port-id' . $query->entities['port_id'];
+        $rrdName = 'port-id' . $context->query->entities['port_id'];
 
-        return array_map(function (array $def) use ($device, $query, $rrdName) {
+        return array_map(function (array $def) use ($context, $rrdName) {
             $rrd = new RrdMetricBinding(
                 rrdName:   $rrdName,
                 ds:        $def['ds'],
                 transform: $def['transform'] ?? null,
             );
-            $vmKind   = $def['vmKind'] ?? 'rate';
             $bindings = isset($def['metric'])
-                ? ($vmKind === 'gauge'
-                    ? [...MetricSeries::gauge($def['metric'], $rrd)]
-                    : [...MetricSeries::rate($def['metric'], $rrd)])
+                ? MetricSeries::metric($def['metric'], $rrd)
                 : [$rrd];
 
             return new GraphSeriesDefinition(
                 name:      $def['name'],
                 key:       $def['key'],
-                unit:      $this->unit($device, $query),
+                unit:      $this->unit($context),
                 color:     $def['color'],
                 lineColor: $def['lineColor'] ?? null,
                 area:      $def['area'] ?? true,
@@ -104,8 +102,8 @@ class PortLineGraph extends GraphTemplate
         }, $this->seriesDefs);
     }
 
-    public function markers(array $device, GraphQuery $query): array
+    public function markers(GraphContext $context): array
     {
-        return $this->markerBuilder ? ($this->markerBuilder)($device, $query) : [];
+        return $this->markerBuilder ? ($this->markerBuilder)($context) : [];
     }
 }

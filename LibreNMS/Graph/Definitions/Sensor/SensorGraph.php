@@ -28,7 +28,7 @@ use App\Facades\LibrenmsConfig;
 use App\Models\UserPref;
 use LibreNMS\Enum\Sensor as SensorClass;
 use LibreNMS\Graph\Definitions\Templates\SensorBaseGraph;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -42,24 +42,24 @@ class SensorGraph extends SensorBaseGraph
 
     public function entityType(): string { return 'sensor'; }
 
-    public function unit(array $device, GraphQuery $query): string
+    public function unit(GraphContext $context): string
     {
         return $this->sensorClass->unit();
     }
 
-    public function title(array $device): string
+    public function title(GraphContext $context): string
     {
         return $this->sensorClass->label();
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $e = $query->entities;
+        $e = $context->query->entities;
         $isIpmi = ($e['poller_type'] ?? '') === 'ipmi'
-            || LibrenmsConfig::getOsSetting($device['os'] ?? '', 'sensor_descr');
+            || LibrenmsConfig::getOsSetting($context['os'] ?? '', 'sensor_descr');
         $rrdKey  = $isIpmi ? ($e['sensor_descr'] ?? '') : ($e['sensor_index'] ?? '');
         $rrdName = ['sensor', $this->sensorClass->value, $e['sensor_type'] ?? '', $rrdKey];
-        $unit    = $this->unit($device, $query);
+        $unit    = $this->unit($context);
 
         return [new GraphSeriesDefinition(
             name:      $e['sensor_descr'] ?? 'sensor',
@@ -74,9 +74,9 @@ class SensorGraph extends SensorBaseGraph
         )];
     }
 
-    public function markers(array $device, GraphQuery $query): array
+    public function markers(GraphContext $context): array
     {
-        $e       = $query->entities;
+        $e       = $context->query->entities;
         $markers = [];
 
         if (isset($e['sensor_limit_low'])) {

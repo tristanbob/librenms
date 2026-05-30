@@ -24,6 +24,7 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeriesDefinition;
@@ -45,7 +46,6 @@ class SimpleStatsGraph extends GraphTemplate
         array $display = [],
         private readonly array $graphVariables = [],
         private readonly ?string $metric = null,
-        private readonly string $vmKind = 'gauge',
         private readonly mixed $vmTransform = null,
         private readonly mixed $vmExprBuilder = null,
     ) {
@@ -60,9 +60,9 @@ class SimpleStatsGraph extends GraphTemplate
         return $this->graphVariables;
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $timeDiff    = $query->to - $query->from;
+        $query       = $context->query;
         $label       = $this->label !== '' ? $this->label : $this->title;
         $scale       = is_numeric($this->transform) ? (float) $this->transform : null;
         $rrdTransform = $scale !== null ? fn ($v) => $v * $scale : null;
@@ -75,61 +75,38 @@ class SimpleStatsGraph extends GraphTemplate
 
         $primaryRrd      = $binding(null);
         $primaryBindings = match (true) {
-            $this->vmExprBuilder !== null                      => ($this->vmExprBuilder)($primaryRrd, $query),
-            $this->metric !== null && $this->vmKind === 'rate' => MetricSeries::rate($this->metric, $primaryRrd, null, $this->vmTransform),
-            $this->metric !== null                             => MetricSeries::gauge($this->metric, $primaryRrd, $this->vmTransform),
-            default                                            => [$primaryRrd],
+            $this->vmExprBuilder !== null => ($this->vmExprBuilder)($primaryRrd, $query),
+            $this->metric !== null        => MetricSeries::metric($this->metric, $primaryRrd, transform: $this->vmTransform),
+            default                       => [$primaryRrd],
         };
 
         $series = [
             new GraphSeriesDefinition(
                 name:        $label,
                 key:         $this->key('value'),
-                unit:        $this->unit($device, $query),
+                unit:        $this->unit($context),
                 color:       $this->paletteColor($this->palette, 0, '663399'),
                 area:        true,
                 areaOpacity: 0x33 / 0xff,
                 bindings:    $primaryBindings,
             ),
-            new GraphSeriesDefinition(
-                name:     '1 hour avg',
-                key:      $this->key('1h'),
-                unit:     $this->unit($device, $query),
-                color:    $this->paletteColor($this->palette, 4, '3366BB'),
-                bindings: [$binding(3600)],
-            ),
         ];
 
-        if ($timeDiff >= 129600) {
-            $series[] = new GraphSeriesDefinition(
-                name:     '1 day avg',
-                key:      $this->key('1d'),
-                unit:     $this->unit($device, $query),
-                color:    $this->paletteColor($this->palette, 5, 'AA3355'),
-                bindings: [$binding(86400)],
-            );
-        }
-
-        if ($timeDiff >= 691200) {
-            $series[] = new GraphSeriesDefinition(
-                name:     '1 week avg',
-                key:      $this->key('1w'),
-                unit:     $this->unit($device, $query),
-                color:    $this->paletteColor($this->palette, 6, '881177'),
-                bindings: [$binding(604800)],
-            );
-        }
-
-        return $series;
+        return array_merge($series, $this->trailingAverageSeries(
+            $context,
+            str_replace('-', '_', $this->graphType),
+            $this->palette,
+            fn (int $step) => [$binding($step)],
+        ));
     }
 
-    public function markers(array $device, GraphQuery $query): array
+    public function markers(GraphContext $context): array
     {
         if (\App\Facades\LibrenmsConfig::get('graph_stat_percentile_disable')) {
             return [];
         }
 
-        $inner = new RrdMetricBinding($this->resolvedRrdName($query), $this->ds);
+        $inner = new RrdMetricBinding($this->resolvedRrdName($context->query), $this->ds);
 
         return [
             GraphMarkerDefinition::percentile('25th Percentile', $inner, 25, $this->paletteColor($this->palette, 1, '22CCBB')),

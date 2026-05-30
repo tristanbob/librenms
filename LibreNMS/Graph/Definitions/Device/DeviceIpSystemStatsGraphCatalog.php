@@ -26,8 +26,9 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use LibreNMS\Graph\Definitions\Templates\DerivedSeriesGraph;
 use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\ProvidesGraphDefinitions;
 
-class DeviceIpSystemStatsGraphCatalog
+class DeviceIpSystemStatsGraphCatalog implements ProvidesGraphDefinitions
 {
     /**
      * @return GraphDefinition[]
@@ -75,11 +76,11 @@ class DeviceIpSystemStatsGraphCatalog
     private static function ipSystemGraph(string $type, string $title, string $rrdName, string $suffix, string $catalogPrefix): DerivedSeriesGraph
     {
         return new DerivedSeriesGraph($type, $title, 'Packets/s', $rrdName, [
-            ['name' => "InReceives $suffix",  'key' => 'in_receives',  'ds' => 'InReceives',     'metric' => "ipsystemstats.$catalogPrefix.InReceives",      'vm_kind' => 'rate', 'color' => '7D9B5B'],
-            ['name' => "InForward $suffix",   'key' => 'in_forward',   'ds' => 'InForwDatagrams','metric' => "ipsystemstats.$catalogPrefix.InForwDatagrams",  'vm_kind' => 'rate', 'color' => 'AF63AF', 'area' => true, 'stack' => 'ip_in'],
-            ['name' => "InDelivers $suffix",  'key' => 'in_delivers',  'ds' => 'InDelivers',     'metric' => "ipsystemstats.$catalogPrefix.InDelivers",       'vm_kind' => 'rate', 'color' => 'CDEB8B', 'area' => true, 'stack' => 'ip_in'],
-            ['name' => "OutRequests $suffix", 'key' => 'out_requests', 'ds' => 'OutRequests',    'metric' => "ipsystemstats.$catalogPrefix.OutRequests",      'vm_kind' => 'rate', 'color' => 'C3D9FF', 'area' => true, 'negate' => true],
-            ['name' => "OutForward $suffix",  'key' => 'out_forward',  'ds' => 'OutForwDatagrams','metric' => "ipsystemstats.$catalogPrefix.OutForwDatagrams",'vm_kind' => 'rate', 'color' => 'AF63AF', 'area' => true],
+            ['name' => "InReceives $suffix",  'key' => 'in_receives',  'ds' => 'InReceives',     'metric' => "ipsystemstats.$catalogPrefix.InReceives",      'color' => '7D9B5B'],
+            ['name' => "InForward $suffix",   'key' => 'in_forward',   'ds' => 'InForwDatagrams','metric' => "ipsystemstats.$catalogPrefix.InForwDatagrams",  'color' => 'AF63AF', 'area' => true, 'stack' => 'ip_in'],
+            ['name' => "InDelivers $suffix",  'key' => 'in_delivers',  'ds' => 'InDelivers',     'metric' => "ipsystemstats.$catalogPrefix.InDelivers",       'color' => 'CDEB8B', 'area' => true, 'stack' => 'ip_in'],
+            ['name' => "OutRequests $suffix", 'key' => 'out_requests', 'ds' => 'OutRequests',    'metric' => "ipsystemstats.$catalogPrefix.OutRequests",      'color' => 'C3D9FF', 'area' => true, 'negate' => true],
+            ['name' => "OutForward $suffix",  'key' => 'out_forward',  'ds' => 'OutForwDatagrams','metric' => "ipsystemstats.$catalogPrefix.OutForwDatagrams",'color' => 'AF63AF', 'area' => true],
         ], ['area' => true]);
     }
 }

@@ -25,7 +25,7 @@
 namespace LibreNMS\Graph\Definitions\Toner;
 
 use LibreNMS\Graph\Definitions\Templates\EntityGraph;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -39,9 +39,9 @@ class UsageGraph extends EntityGraph
         parent::__construct(self::GRAPH_TYPE, 'Supply Level', '%', 'printer_supply', 'supply_id', 'supply_descr');
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $e = $query->entities;
+        $e = $context->query->entities;
 
         return [new GraphSeriesDefinition(
             name: $e['supply_descr'] ?? 'supply',

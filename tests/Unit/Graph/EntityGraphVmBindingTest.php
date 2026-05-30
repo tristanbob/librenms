@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Graph\Definitions\Processor\UsageGraph as ProcessorUsageGraph;
 use LibreNMS\Graph\Definitions\Storage\UsageGraph as StorageUsageGraph;
 use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Tests\DBTestCase;
@@ -43,7 +44,7 @@ final class EntityGraphVmBindingTest extends DBTestCase
             time(),
         );
 
-        $series = $definition->series($this->device->toArray(), $query);
+        $series = $definition->series(new GraphContext($this->device, $query));
         $this->assertNotEmpty($series);
 
         foreach ($series as $s) {
@@ -73,7 +74,7 @@ final class EntityGraphVmBindingTest extends DBTestCase
             time(),
         );
 
-        $series = $definition->series($this->device->toArray(), $query);
+        $series = $definition->series(new GraphContext($this->device, $query));
         $this->assertNotEmpty($series);
 
         foreach ($series as $s) {
@@ -100,7 +101,7 @@ final class EntityGraphVmBindingTest extends DBTestCase
             time(),
         );
 
-        $series = $definition->series($this->device->toArray(), $query);
+        $series = $definition->series(new GraphContext($this->device, $query));
         $this->assertNotEmpty($series);
 
         foreach ($series as $s) {

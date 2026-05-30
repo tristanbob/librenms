@@ -3,7 +3,9 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use App\Facades\LibrenmsConfig;
+use App\Models\Device;
 use LibreNMS\Graph\Definitions\Device\DeviceGraphCatalog;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Tests\TestCase;
@@ -25,7 +27,7 @@ final class DeviceGraphDefinitionTest extends TestCase
     {
         $graph = $this->definition('device_availability');
         $query = new GraphQuery('device', 'device_availability', 1000000, 1003600, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
-        $series = $graph->series($this->device(), $query);
+        $series = $graph->series($this->context($query));
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
 
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
@@ -36,17 +38,17 @@ final class DeviceGraphDefinitionTest extends TestCase
     {
         $graph = $this->definition('device_hr_processes');
 
-        $short = $graph->series($this->device(), $this->query('device_hr_processes', 86400));
+        $short = $graph->series($this->context($this->query('device_hr_processes', 86400)));
         $this->assertCount(2, $short);
         $this->assertSame('1 hour avg', $short[1]->name);
 
-        $long = $graph->series($this->device(), $this->query('device_hr_processes', 700000));
+        $long = $graph->series($this->context($this->query('device_hr_processes', 700000)));
         $this->assertSame(['Processes', '1 hour avg', '1 day avg', '1 week avg'], array_map(fn ($s) => $s->name, $long));
     }
 
     public function testUptimeMungesSecondsToDays(): void
     {
-        $series = $this->definition('device_uptime')->series($this->device(), $this->query('device_uptime'))[0];
+        $series = $this->definition('device_uptime')->series($this->context($this->query('device_uptime')))[0];
         $binding = $series->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
 
@@ -58,17 +60,17 @@ final class DeviceGraphDefinitionTest extends TestCase
     public function testStackedConfigControlsInvertedSeries(): void
     {
         LibrenmsConfig::set('webui.graph_stacked', false);
-        $tcp = $this->definition('device_netstat_tcp')->series($this->device(), $this->query('device_netstat_tcp'));
+        $tcp = $this->definition('device_netstat_tcp')->series($this->context($this->query('device_netstat_tcp')));
         $this->assertTrue($tcp[1]->negate);
 
         LibrenmsConfig::set('webui.graph_stacked', true);
-        $tcp = $this->definition('device_netstat_tcp')->series($this->device(), $this->query('device_netstat_tcp'));
+        $tcp = $this->definition('device_netstat_tcp')->series($this->context($this->query('device_netstat_tcp')));
         $this->assertFalse($tcp[1]->negate);
     }
 
     public function testUcdCpuDefinesStackedPercentSeries(): void
     {
-        $series = $this->definition('device_ucd_cpu')->series($this->device(), $this->query('device_ucd_cpu'));
+        $series = $this->definition('device_ucd_cpu')->series($this->context($this->query('device_ucd_cpu')));
 
         $this->assertSame(['user', 'nice', 'system', 'idle'], array_map(fn ($s) => $s->name, $series));
         $this->assertSame(['c02020', '008f00', 'ea8f00', '000077'], array_map(fn ($s) => $s->color, $series));
@@ -81,7 +83,7 @@ final class DeviceGraphDefinitionTest extends TestCase
 
     public function testIpFragmentGraphUsesPercentTransformAndNegation(): void
     {
-        $series = $this->definition('device_ipsystemstats_ipv4_frag')->series($this->device(), $this->query('device_ipsystemstats_ipv4_frag'));
+        $series = $this->definition('device_ipsystemstats_ipv4_frag')->series($this->context($this->query('device_ipsystemstats_ipv4_frag')));
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
 
@@ -109,5 +111,10 @@ final class DeviceGraphDefinitionTest extends TestCase
     private function device(): array
     {
         return ['device_id' => 1, 'hostname' => 'router1'];
+    }
+
+    private function context(GraphQuery $query): GraphContext
+    {
+        return new GraphContext((new Device())->forceFill($this->device()), $query);
     }
 }

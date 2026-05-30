@@ -6,6 +6,7 @@ use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Wireless\WirelessGraphDefinitionResolver;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Tests\DBTestCase;
@@ -48,7 +49,7 @@ final class SensorGraphVmFallbackTest extends DBTestCase
             time(),
         );
 
-        $series = $definition->series($this->device->toArray(), $query);
+        $series = $definition->series(new GraphContext($this->device, $query));
         $this->assertNotEmpty($series);
 
         $hasVmBinding = false;

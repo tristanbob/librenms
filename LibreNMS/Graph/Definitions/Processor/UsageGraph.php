@@ -25,7 +25,7 @@
 namespace LibreNMS\Graph\Definitions\Processor;
 
 use LibreNMS\Graph\Definitions\Templates\EntityGraph;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -39,9 +39,9 @@ class UsageGraph extends EntityGraph
         parent::__construct(self::GRAPH_TYPE, 'Processor Usage', '%', 'processor', 'processor_id', 'processor_descr');
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $e = $query->entities;
+        $e = $context->query->entities;
 
         return [new GraphSeriesDefinition(
             name: short_hrDeviceDescr($e['processor_descr'] ?? 'processor'),

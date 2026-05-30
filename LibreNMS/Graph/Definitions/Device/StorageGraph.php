@@ -27,7 +27,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Models\Storage;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -45,8 +45,9 @@ class StorageGraph extends GraphTemplate
         parent::__construct(self::GRAPH_TYPE, 'Disk Usage', '%', ['legend' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $storages  = Storage::where('device_id', $device['device_id'])
             ->orderBy('storage_descr')
             ->get();

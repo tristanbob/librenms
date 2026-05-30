@@ -40,22 +40,16 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
     protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        array           $device,
-        GraphQuery      $query
+        GraphContext    $context
     ): void {
+        $device = $context;
+        $query  = $context->query;
         $groups = [];
-        foreach ($def->series($device, $query) as $seriesDef) {
-            $binding      = $seriesDef->binding(RrdMetricBinding::SOURCE);
-            $seriesQuery  = $query;
-            $shiftMs      = 0;
-            if ($binding instanceof ShiftBinding) {
-                $shiftMs     = $binding->offsetSeconds * 1000;
-                $seriesQuery = $query->withTimeRange(
-                    $query->from - $binding->offsetSeconds,
-                    $query->to - $binding->offsetSeconds,
-                );
-                $binding = $binding->inner;
-            }
+        foreach ($def->series($context) as $seriesDef) {
+            $rawBinding = $seriesDef->binding(RrdMetricBinding::SOURCE);
+            [$binding, $seriesQuery, $shiftMs] = $rawBinding === null
+                ? [null, $query, 0]
+                : $this->unwrapShift($rawBinding, $query);
             if (! $binding instanceof RrdMetricBinding) {
                 $result->addWarning("Series '{$seriesDef->key}' has no RRD binding; empty series returned.");
                 $result->addSeries($this->emptySeries($seriesDef));
@@ -108,11 +102,11 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
     /**
      * @inheritDoc
      */
-    protected function evaluateBindingPoints(MetricBinding $binding, array $device, GraphQuery $query): array
+    protected function evaluateBindingPoints(MetricBinding $binding, GraphContext $context): array
     {
-        if ($binding instanceof ShiftBinding) {
-            $binding = $binding->inner;
-        }
+        $device = $context;
+        $query  = $context->query;
+        $binding = $this->innerBinding($binding);
 
         if (! $binding instanceof RrdMetricBinding) {
             return [];
@@ -197,14 +191,18 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
      */
     private function fetchRrdData(string $rrdFile, GraphQuery $query, string $consolidation): array
     {
-        $command = $this->rrd->buildCommand('fetch', $rrdFile, [
-            $consolidation,
-            '--start', (string) $query->from,
-            '--end', (string) $query->to,
-            '--resolution', (string) $query->step,
-        ]);
+        $cacheKey = implode('|', ['rrd', $rrdFile, $query->from, $query->to, $query->step, $consolidation]);
 
-        return self::parseRrdFetchOutput($this->executeRrdFetch($command));
+        return $this->memoizeFetch($cacheKey, function () use ($rrdFile, $query, $consolidation): array {
+            $command = $this->rrd->buildCommand('fetch', $rrdFile, [
+                $consolidation,
+                '--start', (string) $query->from,
+                '--end', (string) $query->to,
+                '--resolution', (string) $query->step,
+            ]);
+
+            return self::parseRrdFetchOutput($this->executeRrdFetch($command));
+        });
     }
 
     private function executeRrdFetch(array $command): string
@@ -252,10 +250,13 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
             $tsMs   = (int) trim($tsRaw) * 1000;
 
             foreach ($dsNames as $i => $ds) {
-                $val           = $values[$i] ?? null;
+                $val = $values[$i] ?? null;
+                // rrdtool renders unknown/non-finite samples as NaN/-nan/nan/inf depending on
+                // platform; is_numeric() rejects them all so they become a gap (null) rather
+                // than (float) casting "-nan" to 0.0 and fabricating data the legacy graph omits.
                 $result[$ds][] = [
                     $tsMs,
-                    ($val === null || strtolower($val) === 'nan') ? null : (float) $val,
+                    ($val === null || ! is_numeric($val)) ? null : (float) $val,
                 ];
             }
         }

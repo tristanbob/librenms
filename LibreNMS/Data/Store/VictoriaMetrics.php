@@ -31,8 +31,8 @@ use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Interfaces\Data\Datastore;
 use LibreNMS\Util\Http;
 use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
-use LibreNMS\Data\Store\VictoriaMetrics\MetricMapper;
 use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
+use LibreNMS\Metrics\MetricCatalog;
 
 /**
  * Optional dual-write datastore that sends metrics to VictoriaMetrics or
@@ -113,8 +113,8 @@ class VictoriaMetrics extends BaseDatastore implements Datastore
                 continue;
             }
 
-            $metric = MetricMapper::map($measurement, (string) $field);
-            if ($metric === null) {
+            $entry = MetricCatalog::getByMeasurementField($measurement, (string) $field);
+            if ($entry === null) {
                 if ($this->debug) {
                     Log::debug("VictoriaMetrics skipped unmapped metric {$measurement}.{$field}");
                 }
@@ -122,7 +122,7 @@ class VictoriaMetrics extends BaseDatastore implements Datastore
                 continue;
             }
 
-            $this->batch[] = PrometheusTextFormatter::format($metric, $labels, (float) $value, $timestamp);
+            $this->batch[] = PrometheusTextFormatter::format($entry->definition, $labels, (float) $value, $timestamp);
             $wroteSamples = true;
         }
 

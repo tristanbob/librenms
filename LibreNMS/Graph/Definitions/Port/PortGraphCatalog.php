@@ -26,26 +26,27 @@ namespace LibreNMS\Graph\Definitions\Port;
 
 use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Templates\PortLineGraph;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphMarkerDefinition;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\ProvidesGraphDefinitions;
 use LibreNMS\Graph\RrdMetricBinding;
 
-class PortGraphCatalog
+class PortGraphCatalog implements ProvidesGraphDefinitions
 {
     /** @return GraphDefinition[] */
     public static function definitions(): array
     {
         return [
             new PortLineGraph('port_bits', 'Traffic', 'bps', [
-                ['name' => 'In',  'key' => 'bits_in',  'ds' => 'INOCTETS',  'metric' => 'port.if_in_bits_rate',  'vmKind' => 'gauge', 'transform' => fn ($v) => $v * 8, 'color' => '90B040', 'lineColor' => '608720'],
-                ['name' => 'Out', 'key' => 'bits_out', 'ds' => 'OUTOCTETS', 'metric' => 'port.if_out_bits_rate', 'vmKind' => 'gauge', 'transform' => fn ($v) => $v * 8, 'color' => '8080C0', 'lineColor' => '606090', 'negate' => true],
-            ], markerBuilder: static function (array $device, GraphQuery $query): array {
+                ['name' => 'In',  'key' => 'bits_in',  'ds' => 'INOCTETS',  'metric' => 'port.if_in_bits_rate',  'transform' => fn ($v) => $v * 8, 'color' => '90B040', 'lineColor' => '608720'],
+                ['name' => 'Out', 'key' => 'bits_out', 'ds' => 'OUTOCTETS', 'metric' => 'port.if_out_bits_rate', 'transform' => fn ($v) => $v * 8, 'color' => '8080C0', 'lineColor' => '606090', 'negate' => true],
+            ], markerBuilder: static function (GraphContext $context): array {
                 $percentile = (float) LibrenmsConfig::get('percentile_value', 95);
                 if ($percentile <= 0 || $percentile > 100) {
                     return [];
                 }
-                $portId  = $query->entities['port_id'];
+                $portId  = $context->query->entities['port_id'];
                 $rrdName = "port-id$portId";
                 $label   = rtrim(rtrim((string) $percentile, '0'), '.');
 

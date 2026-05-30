@@ -27,7 +27,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Facades\LibrenmsConfig;
 use App\Models\Port;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -45,8 +45,9 @@ class BitsGraph extends GraphTemplate
         parent::__construct(self::GRAPH_TYPE, 'Device Traffic', 'bps', ['stacked' => true, 'area' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device         = $context;
         $toBits         = fn ($value) => $value * 8;
         $inSeries       = [];
         $outSeries      = [];
@@ -65,7 +66,7 @@ class BitsGraph extends GraphTemplate
             $inSeries[] = new GraphSeriesDefinition(
                 name:        "$label In",
                 key:         "port_{$portId}_bits_in",
-                unit:        $this->unit($device, $query),
+                unit:        $this->unit($context),
                 color:       $inColor,
                 lineColor:   $inColor,
                 area:        true,
@@ -82,7 +83,7 @@ class BitsGraph extends GraphTemplate
             $outSeries[] = new GraphSeriesDefinition(
                 name:        "$label Out",
                 key:         "port_{$portId}_bits_out",
-                unit:        $this->unit($device, $query),
+                unit:        $this->unit($context),
                 color:       $outColor,
                 lineColor:   $outColor,
                 area:        true,
@@ -105,7 +106,7 @@ class BitsGraph extends GraphTemplate
      * Mirrors includes/html/graphs/device/bits.inc.php so the JSON graph includes
      * the same non-disabled, non-deleted ports as the legacy RRD image graph.
      */
-    private function includedPorts(array $device): array
+    private function includedPorts(GraphContext $device): array
     {
         return Port::query()
             ->where('device_id', $device['device_id'])
@@ -120,7 +121,7 @@ class BitsGraph extends GraphTemplate
             ->all();
     }
 
-    private function isIgnoredPort(array $device, array $port): bool
+    private function isIgnoredPort(GraphContext $device, array $port): bool
     {
         $os = $device['os'] ?? '';
 

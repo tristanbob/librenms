@@ -25,8 +25,8 @@
 namespace LibreNMS\Graph\Definitions\Templates;
 
 use LibreNMS\Graph\DefaultVariables;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinition;
-use LibreNMS\Graph\GraphQuery;
 
 abstract class EntityGraph implements GraphDefinition
 {
@@ -44,19 +44,19 @@ abstract class EntityGraph implements GraphDefinition
 
     public function graphType(): string { return $this->graphType; }
 
-    public function id(array $device, GraphQuery $query): string
+    public function id(GraphContext $context): string
     {
-        return $this->graphType . ':' . ($query->entities[$this->entityIdKey] ?? '');
+        return $this->graphType . ':' . ($context->query->entities[$this->entityIdKey] ?? '');
     }
 
-    public function title(array $device): string { return $this->title; }
+    public function title(GraphContext $context): string { return $this->title; }
 
-    public function subtitle(array $device, GraphQuery $query): string
+    public function subtitle(GraphContext $context): string
     {
-        return ($device['hostname'] ?? '') . ' - ' . ($query->entities[$this->entityDescrKey] ?? '');
+        return ($context['hostname'] ?? '') . ' - ' . ($context->query->entities[$this->entityDescrKey] ?? '');
     }
 
-    public function unit(array $device, GraphQuery $query): string { return $this->unit; }
+    public function unit(GraphContext $context): string { return $this->unit; }
 
     public function entityType(): string { return $this->entityType; }
 
@@ -65,7 +65,7 @@ abstract class EntityGraph implements GraphDefinition
         return $this->display + ['kind' => 'line', 'stacked' => false, 'area' => true];
     }
 
-    public function markers(array $device, GraphQuery $query): array { return []; }
+    public function markers(GraphContext $context): array { return []; }
 
-    abstract public function series(array $device, GraphQuery $query): array;
+    abstract public function series(GraphContext $context): array;
 }

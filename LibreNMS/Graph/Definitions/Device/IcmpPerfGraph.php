@@ -26,7 +26,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -52,7 +52,7 @@ class IcmpPerfGraph extends GraphTemplate
         );
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
         return [
             new GraphSeriesDefinition(

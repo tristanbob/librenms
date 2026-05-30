@@ -30,10 +30,11 @@ use LibreNMS\Graph\GraphDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphVariableDefinition;
 use LibreNMS\Graph\MetricSeries;
+use LibreNMS\Graph\ProvidesGraphDefinitions;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class DeviceStatsGraphCatalog
+class DeviceStatsGraphCatalog implements ProvidesGraphDefinitions
 {
     /**
      * @return GraphDefinition[]

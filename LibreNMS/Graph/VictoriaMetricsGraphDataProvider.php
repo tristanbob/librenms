@@ -49,10 +49,10 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
     protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        array           $device,
-        GraphQuery      $query
+        GraphContext    $context
     ): void {
-        $series = $def->series($device, $query);
+        $query  = $context->query;
+        $series = $def->series($context);
 
         $hasVmBinding = false;
         foreach ($series as $seriesDef) {
@@ -71,17 +71,10 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         $batchCache = $this->prefetchBatchGroups($series, $query);
 
         foreach ($series as $seriesDef) {
-            $binding     = $seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE);
-            $seriesQuery = $query;
-            $shiftMs     = 0;
-            if ($binding instanceof ShiftBinding) {
-                $shiftMs     = $binding->offsetSeconds * 1000;
-                $seriesQuery = $query->withTimeRange(
-                    $query->from - $binding->offsetSeconds,
-                    $query->to - $binding->offsetSeconds,
-                );
-                $binding = $binding->inner;
-            }
+            $rawBinding = $seriesDef->binding(VictoriaMetricsMetricBinding::SOURCE);
+            [$binding, $seriesQuery, $shiftMs] = $rawBinding === null
+                ? [null, $query, 0]
+                : $this->unwrapShift($rawBinding, $query);
 
             // Batch binding: route from pre-fetched results by demux label matching.
             if ($binding instanceof VictoriaMetricsBatchBinding) {
@@ -141,11 +134,10 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
     /**
      * @inheritDoc
      */
-    protected function evaluateBindingPoints(MetricBinding $binding, array $device, GraphQuery $query): array
+    protected function evaluateBindingPoints(MetricBinding $binding, GraphContext $context): array
     {
-        if ($binding instanceof ShiftBinding) {
-            $binding = $binding->inner;
-        }
+        $query = $context->query;
+        $binding = $this->innerBinding($binding);
 
         if (! $this->isVictoriaMetricsBinding($binding)) {
             return [];
@@ -245,6 +237,17 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
      */
     private function fetchRange(string $expr, int $from, int $to, int $step): array
     {
+        $cacheKey = implode('|', ['vm', $expr, $from, $to, $step]);
+
+        return $this->memoizeFetch($cacheKey, fn () => $this->fetchRangeUncached($expr, $from, $to, $step));
+    }
+
+    /**
+     * @return list<array{int, float|null}>
+     * @throws \RuntimeException on connection failure, HTTP error, or unexpected response shape
+     */
+    private function fetchRangeUncached(string $expr, int $from, int $to, int $step): array
+    {
         try {
             $response = Http::client()
                 ->timeout($this->timeout)
@@ -271,8 +274,19 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
     /**
      * Parse a Prometheus JSON matrix response into [tsMs, value] pairs.
      *
-     * Expects exactly one result series. Returns an empty array when the result set is empty.
-     * Throws when multiple series are returned (label matchers were non-selective).
+     * A single-entity binding is expected to resolve to one series. If more than one is
+     * returned (e.g. ifIndex was reused so two physical ports share the same identity, or a
+     * selector was under-constrained), we no longer throw: we select the most-recently-active
+     * series and log a warning, so the graph still renders for the live entity.
+     *
+     * Selection rule (deterministic):
+     *   1. pick the series whose newest non-null sample has the greatest timestamp;
+     *   2. on a tie, pick the series with the lexicographically smallest JSON-encoded label set.
+     *
+     * Known failure mode (no surrogate key, identity = hostname+ifIndex): if an ifIndex is
+     * reused by a different physical interface, the rule returns whichever interface reported
+     * most recently and can stitch two interfaces' histories into one line. A hostname rename
+     * simply yields no match (empty series) until the new name accrues data.
      *
      * @return list<array{int, float|null}>
      * @throws \RuntimeException on malformed JSON or unexpected resultType
@@ -299,20 +313,69 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
             return [];
         }
 
-        if (count($results) > 1) {
-            throw new \RuntimeException(
-                "VictoriaMetrics returned " . count($results) . " series for expr '{$expr}'. " .
-                "Check that label matchers uniquely identify one series."
-            );
-        }
+        $series = count($results) === 1
+            ? $results[0]
+            : self::selectMostRecentSeries($results, $expr);
 
-        $values = $results[0]['values'] ?? [];
+        $values = $series['values'] ?? [];
         $points = [];
         foreach ($values as [$ts, $val]) {
             $points[] = [(int) $ts * 1000, is_numeric($val) ? (float) $val : null];
         }
 
         return $points;
+    }
+
+    /**
+     * Pick the most-recently-active series from an over-broad matrix result and warn.
+     * See {@see parseQueryRangeResponse} for the rule and its failure mode.
+     *
+     * @param  list<array{metric?: array<string,string>, values?: list<array{int|string, string}>}> $results
+     * @return array{metric?: array<string,string>, values?: list<array{int|string, string}>}
+     */
+    private static function selectMostRecentSeries(array $results, string $expr): array
+    {
+        $best = null;
+        $bestTs = PHP_INT_MIN;
+        $bestKey = null;
+
+        foreach ($results as $result) {
+            $newest = self::newestNonNullTimestamp($result['values'] ?? []);
+            $key    = json_encode($result['metric'] ?? [], JSON_THROW_ON_ERROR);
+
+            if ($best === null || $newest > $bestTs || ($newest === $bestTs && $key < $bestKey)) {
+                $best    = $result;
+                $bestTs  = $newest;
+                $bestKey = $key;
+            }
+        }
+
+        Log::warning(sprintf(
+            'VictoriaMetrics returned %d series for expr %s; selected the most recently active one (labels %s). '
+            . 'A single-entity selector should match one series - check for ifIndex reuse or an under-constrained query.',
+            count($results),
+            $expr,
+            (string) $bestKey,
+        ));
+
+        return $best ?? $results[0];
+    }
+
+    /**
+     * Greatest timestamp (seconds) among non-null samples, or PHP_INT_MIN if none.
+     *
+     * @param list<array{int|string, string}> $values
+     */
+    private static function newestNonNullTimestamp(array $values): int
+    {
+        $newest = PHP_INT_MIN;
+        foreach ($values as [$ts, $val]) {
+            if (is_numeric($val)) {
+                $newest = max($newest, (int) $ts);
+            }
+        }
+
+        return $newest;
     }
 
     /**

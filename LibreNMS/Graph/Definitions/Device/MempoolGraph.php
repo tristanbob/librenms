@@ -28,7 +28,7 @@ use App\Facades\LibrenmsConfig;
 use App\Models\Mempool;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -43,8 +43,9 @@ class MempoolGraph extends GraphTemplate
         parent::__construct(self::GRAPH_TYPE, 'Memory Usage', '%', ['area' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $classes = [
             'system' => 0,
             'buffers' => 1,

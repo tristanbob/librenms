@@ -26,7 +26,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Models\DiskIo;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -44,8 +44,9 @@ class DiskIoGraph extends GraphTemplate
         parent::__construct(self::GRAPH_TYPE, 'Disk I/O', 'ops/s', ['area' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $disks = DiskIo::where('device_id', $device['device_id'])
             ->orderBy('diskio_descr')
             ->get();

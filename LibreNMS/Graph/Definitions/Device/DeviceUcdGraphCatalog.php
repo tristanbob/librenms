@@ -28,9 +28,10 @@ use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Graph\Definitions\Templates\DerivedSeriesGraph;
 use LibreNMS\Graph\Definitions\Templates\DuplexGraph;
 use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\ProvidesGraphDefinitions;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 
-class DeviceUcdGraphCatalog
+class DeviceUcdGraphCatalog implements ProvidesGraphDefinitions
 {
     /**
      * @return GraphDefinition[]
@@ -67,17 +68,17 @@ class DeviceUcdGraphCatalog
             new DuplexGraph(
                 'device_ucd_io', 'I/O', 'bps',
                 'ucd_ssIORawReceived', 'ucd_ssIORawSent', 'value', 'value', $blocksToBits,
-                metricIn: 'ucd.io.received', metricOut: 'ucd.io.sent', vmKind: 'rate',
+                metricIn: 'ucd.io.received', metricOut: 'ucd.io.sent',
             ),
             new DuplexGraph(
                 'device_ucd_swap_io', 'Swap I/O', 'bps',
                 'ucd_ssRawSwapIn', 'ucd_ssRawSwapOut', 'value', 'value', $blocksToBits,
-                metricIn: 'ucd.swap.in', metricOut: 'ucd.swap.out', vmKind: 'rate',
+                metricIn: 'ucd.swap.in', metricOut: 'ucd.swap.out',
             ),
             new DerivedSeriesGraph('device_ucd_load', 'Load Average', 'Load', 'ucd_load', [
-                ['name' => '1 Min',  'key' => 'load_1min',  'ds' => '1min',  'transform' => $load, 'color' => 'ffeeaa', 'lineColor' => 'c5aa00', 'area' => true, 'metric' => 'ucd.load.1min',  'vm_kind' => 'gauge'],
-                ['name' => '5 Min',  'key' => 'load_5min',  'ds' => '5min',  'transform' => $load, 'color' => 'ea8f00',                                          'metric' => 'ucd.load.5min',  'vm_kind' => 'gauge'],
-                ['name' => '15 Min', 'key' => 'load_15min', 'ds' => '15min', 'transform' => $load, 'color' => 'cc0000',                                          'metric' => 'ucd.load.15min', 'vm_kind' => 'gauge'],
+                ['name' => '1 Min',  'key' => 'load_1min',  'ds' => '1min',  'transform' => $load, 'color' => 'ffeeaa', 'lineColor' => 'c5aa00', 'area' => true, 'metric' => 'ucd.load.1min'],
+                ['name' => '5 Min',  'key' => 'load_5min',  'ds' => '5min',  'transform' => $load, 'color' => 'ea8f00',                                          'metric' => 'ucd.load.5min'],
+                ['name' => '15 Min', 'key' => 'load_15min', 'ds' => '15min', 'transform' => $load, 'color' => 'cc0000',                                          'metric' => 'ucd.load.15min'],
             ], ['area' => true, 'yAxisMin' => 0]),
             new DerivedSeriesGraph('device_ucd_cpu', 'UCD CPU', '%', 'ucd_cpu', [
                 ['name' => 'user',   'key' => 'cpu_user',   'ds' => ['user', 'nice', 'system', 'idle'], 'transform' => $cpuPercent('user'),   'color' => 'c02020', 'area' => true, 'stack' => 'ucd_cpu', 'vm_expression' => $cpuExpr('user')],

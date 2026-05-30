@@ -85,21 +85,42 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
         $this->assertSame(3.0, $points[1][1]);
     }
 
-    public function testThrowsWhenMatrixResponseHasMultipleSeries(): void
+    public function testSelectsMostRecentlyActiveSeriesWhenMatrixHasMultipleSeries(): void
     {
+        // Series 'b' has the newest non-null sample (1300 > 1000), so it wins.
         $body = json_encode([
             'status' => 'success',
             'data'   => [
                 'resultType' => 'matrix',
                 'result'     => [
-                    ['metric' => ['instance' => 'a'], 'values' => [[1000, '1']]],
-                    ['metric' => ['instance' => 'b'], 'values' => [[1000, '2']]],
+                    ['metric' => ['ifIndex' => '2'], 'values' => [[1000, '1']]],
+                    ['metric' => ['ifIndex' => '7'], 'values' => [[1000, '2'], [1300, '5']]],
                 ],
             ],
         ]);
 
-        $this->expectException(\RuntimeException::class);
-        VictoriaMetricsGraphDataProvider::parseQueryRangeResponse($body, 'my_metric');
+        $points = VictoriaMetricsGraphDataProvider::parseQueryRangeResponse($body, 'my_metric');
+
+        $this->assertSame([[1000_000, 2.0], [1300_000, 5.0]], $points);
+    }
+
+    public function testMultiSeriesTieBreaksOnLexicographicallySmallestLabelSet(): void
+    {
+        // Both newest at 1000; deterministic tie-break picks the smaller JSON-encoded label set.
+        $body = json_encode([
+            'status' => 'success',
+            'data'   => [
+                'resultType' => 'matrix',
+                'result'     => [
+                    ['metric' => ['ifIndex' => '9'], 'values' => [[1000, '9']]],
+                    ['metric' => ['ifIndex' => '1'], 'values' => [[1000, '1']]],
+                ],
+            ],
+        ]);
+
+        $points = VictoriaMetricsGraphDataProvider::parseQueryRangeResponse($body, 'my_metric');
+
+        $this->assertSame([[1000_000, 1.0]], $points);
     }
 
     // ── buildExpr ───────────────────────────────────────────────────────────

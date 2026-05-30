@@ -26,7 +26,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -47,16 +47,15 @@ class PollerPerfGraph extends GraphTemplate
         );
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
-        $timeDiff = $query->to - $query->from;
-        $p        = self::PALETTE;
+        $p = self::PALETTE;
 
         $series = [
             new GraphSeriesDefinition(
                 name:        'Poller time',
                 key:         'poller_time',
-                unit:        $this->unit($device, $query),
+                unit:        $this->unit($context),
                 color:       LibrenmsConfig::get("graph_colours.$p.0"),
                 area:        true,
                 areaOpacity: 0.2,
@@ -64,37 +63,13 @@ class PollerPerfGraph extends GraphTemplate
                     ...MetricSeries::gauge('device.poller.duration', new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller')),
                 ],
             ),
-            new GraphSeriesDefinition(
-                name:    '1 hour avg',
-                key:     'poller_time_1h',
-                unit:    $this->unit($device, $query),
-                color:   LibrenmsConfig::get("graph_colours.$p.4"),
-                bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 3600)],
-            ),
         ];
 
-        // Mirrors generic_stats.inc.php: daily line only shown for windows > ~36 hours
-        if ($timeDiff >= 129600) {
-            $series[] = new GraphSeriesDefinition(
-                name:    '1 day avg',
-                key:     'poller_time_1d',
-                unit:    $this->unit($device, $query),
-                color:   LibrenmsConfig::get("graph_colours.$p.5"),
-                bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 86400)],
-            );
-        }
-
-        // Weekly line only shown for windows > 8 days
-        if ($timeDiff >= 691200) {
-            $series[] = new GraphSeriesDefinition(
-                name:    '1 week avg',
-                key:     'poller_time_1w',
-                unit:    $this->unit($device, $query),
-                color:   LibrenmsConfig::get("graph_colours.$p.6"),
-                bindings: [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: 604800)],
-            );
-        }
-
-        return $series;
+        return array_merge($series, $this->trailingAverageSeries(
+            $context,
+            'poller_time',
+            $p,
+            fn (int $step) => [new RrdMetricBinding(rrdName: 'poller-perf', ds: 'poller', step: $step)],
+        ));
     }
 }

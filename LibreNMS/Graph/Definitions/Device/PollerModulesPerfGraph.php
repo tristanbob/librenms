@@ -27,7 +27,7 @@ namespace LibreNMS\Graph\Definitions\Device;
 use App\Facades\DeviceCache;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\RrdMetricBinding;
 
@@ -45,8 +45,9 @@ class PollerModulesPerfGraph extends GraphTemplate
         );
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $modules = LibrenmsConfig::get('poller_modules', []);
         ksort($modules);
 

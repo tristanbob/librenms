@@ -28,7 +28,7 @@ use App\Models\WirelessSensor;
 use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
 use LibreNMS\Enum\WirelessSensorType;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -51,8 +51,9 @@ class WirelessSensorGraph extends GraphTemplate
         );
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
+        $device = $context;
         $wsEntry = VictoriaMetricsMetricCatalog::get('wireless_sensor.value');
 
         return WirelessSensor::query()

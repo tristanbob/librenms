@@ -28,6 +28,16 @@ use App\Models\Device;
 
 abstract class AbstractGraphDataProvider implements GraphDataProvider
 {
+    /**
+     * Per-query memo of raw backend fetches, keyed by the fetch inputs (RRD file/expr +
+     * range/step). Lets markers reuse the series fetch instead of issuing a second
+     * rrdtool/VM round-trip. Stores RAW points only; each consumer still applies its own
+     * transform, so caching cannot change a computed value.
+     *
+     * @var array<string, mixed>
+     */
+    private array $rawFetchCache = [];
+
     public function __construct(
         protected readonly GraphDefinitionRegistry $registry,
     ) {}
@@ -35,6 +45,8 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
     /** @throws \RuntimeException if device_id is missing or the graph type is not registered */
     final public function query(GraphQuery $query): GraphDataResult
     {
+        $this->rawFetchCache = [];
+
         $deviceId = $query->entities['device_id'] ?? null;
         if ($deviceId === null) {
             throw new \RuntimeException(
@@ -42,7 +54,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             );
         }
 
-        $device = Device::findOrFail($deviceId)->toArray();
+        $deviceModel = Device::findOrFail($deviceId);
         $def    = $this->registry->definitionFor($query->graphType);
         $variables = [];
         foreach ($def->variables() as $variable) {
@@ -52,12 +64,14 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
             $query = $query->withOptions($variables + $query->options);
         }
 
+        $context = new GraphContext($deviceModel, $query);
+
         $result = new GraphDataResult(
-            id:       $def->id($device, $query),
+            id:       $def->id($context),
             type:     $query->graphType,
-            title:    $def->title($device),
-            subtitle: $def->subtitle($device, $query),
-            unit:     $def->unit($device, $query),
+            title:    $def->title($context),
+            subtitle: $def->subtitle($context),
+            unit:     $def->unit($context),
             from:     $query->from,
             to:       $query->to,
             step:     $query->step,
@@ -73,10 +87,10 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         if (isset($query->options['scale_max'])) {
             $result->overrideYAxisMax((int) $query->options['scale_max']);
         }
-        $this->fillSeries($result, $def, $device, $query);
-        foreach ($def->markers($device, $query) as $marker) {
+        $this->fillSeries($result, $def, $context);
+        foreach ($def->markers($context) as $marker) {
             if ($marker instanceof GraphMarkerDefinition) {
-                $value = $this->resolveMarkerValue($marker->value, $device, $query);
+                $value = $this->resolveMarkerValue($marker->value, $context);
                 if ($value === null || ! is_finite($value)) {
                     continue;
                 }
@@ -96,15 +110,10 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         return $result;
     }
 
-    /**
-     * @param array{device_id: int, hostname: string, os: string, sysName?: string,
-     *             display?: string, location_id?: int} $device  Eloquent Device model as array
-     */
     abstract protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        array           $device,
-        GraphQuery      $query
+        GraphContext    $context
     ): void;
 
     /**
@@ -116,8 +125,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
      */
     abstract protected function evaluateBindingPoints(
         MetricBinding $binding,
-        array $device,
-        GraphQuery $query,
+        GraphContext $context,
     ): array;
 
     /**
@@ -127,14 +135,13 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
      */
     protected function resolveMarkerValue(
         PercentileBinding|TotalBinding|float|int $value,
-        array $device,
-        GraphQuery $query,
+        GraphContext $context,
     ): ?float {
         if (is_float($value) || is_int($value)) {
             return (float) $value;
         }
 
-        $points = array_values($this->evaluateBindingPoints($value->inner, $device, $query));
+        $points = array_values($this->evaluateBindingPoints($value->inner, $context));
         if ($points === []) {
             return null;
         }
@@ -149,6 +156,52 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         }
 
         return array_sum($points);
+    }
+
+    /**
+     * Unwrap a possible ShiftBinding once, shared by every backend so the
+     * "current vs. previous period" offset logic is not re-implemented per provider.
+     *
+     * @return array{0: MetricBinding, 1: GraphQuery, 2: int}
+     *         [inner binding, time-shifted query, shift in milliseconds]
+     */
+    protected function unwrapShift(MetricBinding $binding, GraphQuery $query): array
+    {
+        if ($binding instanceof ShiftBinding) {
+            return [
+                $binding->inner,
+                $query->withTimeRange($query->from - $binding->offsetSeconds, $query->to - $binding->offsetSeconds),
+                $binding->offsetSeconds * 1000,
+            ];
+        }
+
+        return [$binding, $query, 0];
+    }
+
+    /**
+     * Return the underlying binding, unwrapping a ShiftBinding if present. Used where
+     * the time shift is irrelevant (e.g. percentile/total marker aggregation).
+     */
+    protected function innerBinding(MetricBinding $binding): MetricBinding
+    {
+        return $binding instanceof ShiftBinding ? $binding->inner : $binding;
+    }
+
+    /**
+     * Memoize a raw backend fetch for the lifetime of the current query() call.
+     * Failures are not cached, so a transient error is retried by later consumers.
+     *
+     * @template T
+     * @param  callable(): T $fetch
+     * @return T
+     */
+    protected function memoizeFetch(string $key, callable $fetch): mixed
+    {
+        if (! array_key_exists($key, $this->rawFetchCache)) {
+            $this->rawFetchCache[$key] = $fetch();
+        }
+
+        return $this->rawFetchCache[$key];
     }
 
     protected function emptySeries(GraphSeriesDefinition $seriesDef): GraphSeries

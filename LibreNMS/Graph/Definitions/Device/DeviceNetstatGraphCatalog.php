@@ -28,8 +28,9 @@ use LibreNMS\Graph\Definitions\Templates\DuplexGraph;
 use LibreNMS\Graph\Definitions\Templates\MultiLineGraph;
 use LibreNMS\Graph\Definitions\Templates\StackedAreaGraph;
 use LibreNMS\Graph\GraphDefinition;
+use LibreNMS\Graph\ProvidesGraphDefinitions;
 
-class DeviceNetstatGraphCatalog
+class DeviceNetstatGraphCatalog implements ProvidesGraphDefinitions
 {
     /**
      * @return GraphDefinition[]
@@ -38,14 +39,14 @@ class DeviceNetstatGraphCatalog
     {
         return [
             new MultiLineGraph('device_netstat_icmp', 'ICMP Statistics', 'Packets/s', 'netstats-icmp', [
-                ['ds' => 'icmpInMsgs',      'label' => 'InMsgs',      'color' => '00cc00', 'metric' => 'netstats.icmpInMsgs',      'vm_kind' => 'rate'],
-                ['ds' => 'icmpOutMsgs',     'label' => 'OutMsgs',     'color' => '006600', 'metric' => 'netstats.icmpOutMsgs',     'vm_kind' => 'rate', 'invert' => true],
-                ['ds' => 'icmpInErrors',    'label' => 'InErrors',    'color' => 'cc0000', 'metric' => 'netstats.icmpInErrors',    'vm_kind' => 'rate'],
-                ['ds' => 'icmpOutErrors',   'label' => 'OutErrors',   'color' => '660000', 'metric' => 'netstats.icmpOutErrors',   'vm_kind' => 'rate', 'invert' => true],
-                ['ds' => 'icmpInEchos',     'label' => 'InEchos',     'color' => '0066cc', 'metric' => 'netstats.icmpInEchos',     'vm_kind' => 'rate'],
-                ['ds' => 'icmpOutEchos',    'label' => 'OutEchos',    'color' => '003399', 'metric' => 'netstats.icmpOutEchos',    'vm_kind' => 'rate', 'invert' => true],
-                ['ds' => 'icmpInEchoReps',  'label' => 'InEchoReps',  'color' => 'cc00cc', 'metric' => 'netstats.icmpInEchoReps',  'vm_kind' => 'rate'],
-                ['ds' => 'icmpOutEchoReps', 'label' => 'OutEchoReps', 'color' => '990099', 'metric' => 'netstats.icmpOutEchoReps', 'vm_kind' => 'rate', 'invert' => true],
+                ['ds' => 'icmpInMsgs',      'label' => 'InMsgs',      'color' => '00cc00', 'metric' => 'netstats.icmpInMsgs'],
+                ['ds' => 'icmpOutMsgs',     'label' => 'OutMsgs',     'color' => '006600', 'metric' => 'netstats.icmpOutMsgs',     'invert' => true],
+                ['ds' => 'icmpInErrors',    'label' => 'InErrors',    'color' => 'cc0000', 'metric' => 'netstats.icmpInErrors'],
+                ['ds' => 'icmpOutErrors',   'label' => 'OutErrors',   'color' => '660000', 'metric' => 'netstats.icmpOutErrors',   'invert' => true],
+                ['ds' => 'icmpInEchos',     'label' => 'InEchos',     'color' => '0066cc', 'metric' => 'netstats.icmpInEchos'],
+                ['ds' => 'icmpOutEchos',    'label' => 'OutEchos',    'color' => '003399', 'metric' => 'netstats.icmpOutEchos',    'invert' => true],
+                ['ds' => 'icmpInEchoReps',  'label' => 'InEchoReps',  'color' => 'cc00cc', 'metric' => 'netstats.icmpInEchoReps'],
+                ['ds' => 'icmpOutEchoReps', 'label' => 'OutEchoReps', 'color' => '990099', 'metric' => 'netstats.icmpOutEchoReps', 'invert' => true],
             ]),
             new MultiLineGraph('device_netstat_icmp_info', 'ICMP Informational Statistics', 'Packets/s', 'netstats-icmp', self::legacyStats([
                 'icmpInSrcQuenchs', 'icmpOutSrcQuenchs', 'icmpInRedirects', 'icmpOutRedirects',
@@ -73,7 +74,6 @@ class DeviceNetstatGraphCatalog
                 outLine: 'FF6600',
                 metricIn: 'netstats.snmpInPkts',
                 metricOut: 'netstats.snmpOutPkts',
-                vmKind: 'rate',
             ),
             new MultiLineGraph('device_netstat_tcp', 'TCP Statistics', 'Segments/s', 'netstats-tcp', self::legacyStats([
                 'tcpInSegs', 'tcpOutSegs', 'tcpActiveOpens', 'tcpPassiveOpens',
@@ -99,7 +99,7 @@ class DeviceNetstatGraphCatalog
      *
      * @param string[] $stats
      * @param string[] $invertNeedles
-     * @return list<array{ds:string,label:string,invert:bool,metric:string,vm_kind:string}>
+     * @return list<array{ds:string,label:string,invert:bool,metric:string}>
      */
     private static function legacyStats(array $stats, string $prefix, array $invertNeedles = ['Out']): array
     {
@@ -117,7 +117,6 @@ class DeviceNetstatGraphCatalog
                 'label'   => str_replace($prefix, '', $stat),
                 'invert'  => $invert,
                 'metric'  => 'netstats.' . $stat,
-                'vm_kind' => 'rate',
             ];
         }, $stats);
     }

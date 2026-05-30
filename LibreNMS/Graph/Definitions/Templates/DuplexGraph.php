@@ -24,7 +24,7 @@
 
 namespace LibreNMS\Graph\Definitions\Templates;
 
-use LibreNMS\Graph\GraphQuery;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
 use LibreNMS\Graph\MetricSeries;
 use LibreNMS\Graph\RrdMetricBinding;
@@ -47,12 +47,11 @@ class DuplexGraph extends GraphTemplate
         array $display = [],
         private readonly ?string $metricIn = null,
         private readonly ?string $metricOut = null,
-        private readonly string $vmKind = 'gauge',
     ) {
         parent::__construct($graphType, $title, $unit, $display + ['kind' => 'line', 'area' => true]);
     }
 
-    public function series(array $device, GraphQuery $query): array
+    public function series(GraphContext $context): array
     {
         $mirror = $this->stackedMultiplier() > 0;
         $rrdIn = new RrdMetricBinding($this->rrdNameIn, $this->dsIn, transform: $this->transform);
@@ -64,7 +63,7 @@ class DuplexGraph extends GraphTemplate
             new GraphSeriesDefinition(
                 name: 'In',
                 key: str_replace('-', '_', $this->graphType) . '_in',
-                unit: $this->unit($device, $query),
+                unit: $this->unit($context),
                 color: $this->inArea,
                 lineColor: $this->inLine,
                 area: true,
@@ -74,7 +73,7 @@ class DuplexGraph extends GraphTemplate
             new GraphSeriesDefinition(
                 name: 'Out',
                 key: str_replace('-', '_', $this->graphType) . '_out',
-                unit: $this->unit($device, $query),
+                unit: $this->unit($context),
                 color: $this->outArea,
                 lineColor: $this->outLine,
                 area: true,
@@ -87,8 +86,7 @@ class DuplexGraph extends GraphTemplate
 
     private function metricBindings(string $metric, RrdMetricBinding $rrd): array
     {
-        return $this->vmKind === 'rate'
-            ? MetricSeries::rate($metric, $rrd, transform: $this->transform)
-            : MetricSeries::gauge($metric, $rrd, transform: $this->transform);
+        // VM binding kind (gauge vs counter-rate) is derived from the metric catalog.
+        return MetricSeries::metric($metric, $rrd, transform: $this->transform);
     }
 }

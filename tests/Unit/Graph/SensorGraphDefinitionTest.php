@@ -12,6 +12,7 @@ use LibreNMS\Enum\WirelessSensorType;
 use LibreNMS\Graph\Definitions\Device\WirelessSensorGraph as DeviceWirelessSensorGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraph;
 use LibreNMS\Graph\Definitions\Wireless\WirelessSensorGraph;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\RrdMetricBinding;
 use LibreNMS\Tests\DBTestCase;
@@ -27,10 +28,10 @@ final class SensorGraphDefinitionTest extends DBTestCase
         $query = $this->sensorQuery('sensor_temperature', 'temperature');
 
         $this->assertSame('sensor_temperature', $graph->graphType());
-        $this->assertSame('sensor_temperature:123', $graph->id($this->device(), $query));
-        $this->assertSame('°C', $graph->unit($this->device(), $query));
+        $this->assertSame('sensor_temperature:123', $graph->id($this->context($query)));
+        $this->assertSame('°C', $graph->unit($this->context($query)));
 
-        $binding = $graph->series($this->device(), $query)[0]->binding(RrdMetricBinding::SOURCE);
+        $binding = $graph->series($this->context($query))[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
         $this->assertSame(['sensor', 'temperature', 'dummy', 5], $binding->rrdName);
         $this->assertSame('sensor', $binding->ds);
@@ -44,11 +45,11 @@ final class SensorGraphDefinitionTest extends DBTestCase
 
         $graph = new SensorGraph(SensorClass::Temperature);
         $query = $this->sensorQuery('sensor_temperature', 'temperature', ['sensor_limit' => 80.0]);
-        $binding = $graph->series($this->device(), $query)[0]->binding(RrdMetricBinding::SOURCE);
+        $binding = $graph->series($this->context($query))[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
-        $markers = $graph->markers($this->device(), $query);
+        $markers = $graph->markers($this->context($query));
 
-        $this->assertSame('°F', $graph->unit($this->device(), $query));
+        $this->assertSame('°F', $graph->unit($this->context($query)));
         $this->assertSame(212.0, ($binding->transform)(100.0));
         $this->assertSame(176.0, $markers[0]['value']);
     }
@@ -57,37 +58,37 @@ final class SensorGraphDefinitionTest extends DBTestCase
     {
         $graph = new WirelessSensorGraph(WirelessSensorType::Frequency);
         $query = $this->sensorQuery('wireless_frequency', 'frequency', ['sensor_limit' => 5800.0]);
-        $binding = $graph->series($this->device(), $query)[0]->binding(RrdMetricBinding::SOURCE);
+        $binding = $graph->series($this->context($query))[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
-        $markers = $graph->markers($this->device(), $query);
+        $markers = $graph->markers($this->context($query));
 
         $this->assertSame('wireless_frequency', $graph->graphType());
-        $this->assertSame('MHz', $graph->unit($this->device(), $query));
+        $this->assertSame('MHz', $graph->unit($this->context($query)));
         $this->assertNull($binding->transform);
         $this->assertSame(5800.0, $markers[0]['value']);
     }
 
     public function testSensorGraphTitleReturnsClassLabel(): void
     {
-        $this->assertSame('Temperature', (new SensorGraph(SensorClass::Temperature))->title($this->device()));
-        $this->assertSame('Voltage', (new SensorGraph(SensorClass::Voltage))->title($this->device()));
+        $this->assertSame('Temperature', (new SensorGraph(SensorClass::Temperature))->title($this->context()));
+        $this->assertSame('Voltage', (new SensorGraph(SensorClass::Voltage))->title($this->context()));
     }
 
     public function testWirelessGraphTitleReturnsLongLabel(): void
     {
-        $this->assertSame('Frequency', (new WirelessSensorGraph(WirelessSensorType::Frequency))->title($this->device()));
-        $this->assertSame('Received Signal Strength Indicator', (new WirelessSensorGraph(WirelessSensorType::Rssi))->title($this->device()));
+        $this->assertSame('Frequency', (new WirelessSensorGraph(WirelessSensorType::Frequency))->title($this->context()));
+        $this->assertSame('Received Signal Strength Indicator', (new WirelessSensorGraph(WirelessSensorType::Rssi))->title($this->context()));
     }
 
     public function testWirelessDistanceGraphTransformsKmBackedValuesToMeters(): void
     {
         $graph = new WirelessSensorGraph(WirelessSensorType::Distance);
         $query = $this->sensorQuery('wireless_distance', 'distance', ['sensor_limit' => 3.5]);
-        $binding = $graph->series($this->device(), $query)[0]->binding(RrdMetricBinding::SOURCE);
+        $binding = $graph->series($this->context($query))[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
-        $markers = $graph->markers($this->device(), $query);
+        $markers = $graph->markers($this->context($query));
 
-        $this->assertSame('m', $graph->unit($this->device(), $query));
+        $this->assertSame('m', $graph->unit($this->context($query)));
         $this->assertSame(3500.0, ($binding->transform)(3.5));
         $this->assertSame(3500.0, $markers[0]['value']);
     }
@@ -124,12 +125,12 @@ final class SensorGraphDefinitionTest extends DBTestCase
         ]);
 
         $graph = new DeviceWirelessSensorGraph(WirelessSensorType::Clients);
-        $series = $graph->series($this->device(), $this->sensorQuery('device_wireless_clients', 'clients'));
+        $series = $graph->series($this->context($this->sensorQuery('device_wireless_clients', 'clients')));
 
         $this->assertCount(2, $series);
         $this->assertSame('Clients A', $series[0]->name);
         $this->assertSame('Clients B', $series[1]->name);
-        $this->assertSame('', $graph->unit($this->device(), $this->sensorQuery('device_wireless_clients', 'clients')));
+        $this->assertSame('', $graph->unit($this->context($this->sensorQuery('device_wireless_clients', 'clients'))));
         $clientsBinding = $series[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $clientsBinding);
         $this->assertSame(['wireless-sensor', 'clients', 'dummy', '1'], $clientsBinding->rrdName);
@@ -149,11 +150,11 @@ final class SensorGraphDefinitionTest extends DBTestCase
         ]);
 
         $graph = new DeviceWirelessSensorGraph(WirelessSensorType::Frequency);
-        $series = $graph->series($this->device(), $this->sensorQuery('device_wireless_frequency', 'frequency'));
+        $series = $graph->series($this->context($this->sensorQuery('device_wireless_frequency', 'frequency')));
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
         $this->assertInstanceOf(RrdMetricBinding::class, $binding);
 
-        $this->assertSame('Hz', $graph->unit($this->device(), $this->sensorQuery('device_wireless_frequency', 'frequency')));
+        $this->assertSame('Hz', $graph->unit($this->context($this->sensorQuery('device_wireless_frequency', 'frequency'))));
         $this->assertSame(5800000000.0, ($binding->transform)(5800.0));
     }
 
@@ -161,7 +162,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
     {
         $graph  = new SensorGraph(SensorClass::Temperature);
         $query  = $this->sensorQuery('sensor_temperature', 'temperature');
-        $series = $graph->series($this->device(), $query)[0];
+        $series = $graph->series($this->context($query))[0];
 
         $this->assertSame('theme-ink', $series->color);
         $this->assertFalse($series->area);
@@ -177,7 +178,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
             'sensor_limit_low'     => 10.0,
             'sensor_limit_low_warn' => 15.0,
         ]);
-        $markers = $graph->markers($this->device(), $query);
+        $markers = $graph->markers($this->context($query));
 
         $severities = array_column($markers, 'severity');
         $this->assertContains('low_critical',  $severities);
@@ -192,7 +193,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
     {
         $graph  = new WirelessSensorGraph(WirelessSensorType::Rssi);
         $query  = $this->sensorQuery('wireless_rssi', 'rssi');
-        $series = $graph->series($this->device(), $query)[0];
+        $series = $graph->series($this->context($query))[0];
 
         $this->assertSame('0000cc', $series->color);
         $this->assertSame(1.5, $series->lineWidth);
@@ -204,7 +205,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
     {
         $graph  = new WirelessSensorGraph($type);
         $query  = $this->sensorQuery('wireless_' . $type->value, $type->value);
-        $series = $graph->series($this->device(), $query)[0];
+        $series = $graph->series($this->context($query))[0];
 
         $this->assertSame($expectedArea, $series->area, "Unexpected area fill for {$type->value}");
     }
@@ -263,7 +264,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
             'sensor_limit_low'  => -90.0,
             'sensor_limit_low_warn' => -80.0,
         ]);
-        $markers = $graph->markers($this->device(), $query);
+        $markers = $graph->markers($this->context($query));
 
         $this->assertCount(2, $markers, 'Wireless markers should include only sensor_limit and sensor_limit_low');
         foreach ($markers as $marker) {
@@ -294,5 +295,13 @@ final class SensorGraphDefinitionTest extends DBTestCase
     private function device(): array
     {
         return ['device_id' => 1, 'hostname' => 'localhost', 'os' => 'linux'];
+    }
+
+    private function context(?GraphQuery $query = null): GraphContext
+    {
+        return new GraphContext(
+            (new Device())->forceFill($this->device()),
+            $query ?? $this->sensorQuery('sensor_temperature', 'temperature'),
+        );
     }
 }

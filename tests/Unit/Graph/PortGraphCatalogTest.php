@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\Definitions\Templates\PortLineGraph;
+use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphMarkerDefinition;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\PercentileBinding;
@@ -57,7 +58,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         foreach ($this->definitions as $def) {
             $query = $this->makeQuery($def->graphType());
-            $this->assertSame($def->graphType() . ':42', $def->id($this->device->toArray(), $query));
+            $this->assertSame($def->graphType() . ':42', $def->id($this->ctx($query)));
         }
     }
 
@@ -65,7 +66,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         foreach ($this->definitions as $def) {
             $query    = $this->makeQuery($def->graphType());
-            $subtitle = $def->subtitle($this->device->toArray(), $query);
+            $subtitle = $def->subtitle($this->ctx($query));
             $this->assertStringContainsString($this->device->hostname, $subtitle);
             $this->assertStringContainsString('eth0', $subtitle);
         }
@@ -75,7 +76,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         foreach ($this->definitions as $def) {
             $query  = $this->makeQuery($def->graphType());
-            $series = $def->series($this->device->toArray(), $query);
+            $series = $def->series($this->ctx($query));
             $this->assertNotEmpty($series, "{$def->graphType()} must return at least one series");
 
             foreach ($series as $s) {
@@ -91,7 +92,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         $def    = $this->definitionFor('port_bits');
         $query  = $this->makeQuery('port_bits');
-        $series = $def->series($this->device->toArray(), $query);
+        $series = $def->series($this->ctx($query));
 
         $this->assertCount(2, $series);
         $this->assertSame('bits_in', $series[0]->key);
@@ -106,7 +107,7 @@ final class PortGraphCatalogTest extends DBTestCase
 
         $def     = $this->definitionFor('port_bits');
         $query   = $this->makeQuery('port_bits');
-        $markers = $def->markers($this->device->toArray(), $query);
+        $markers = $def->markers($this->ctx($query));
 
         $this->assertCount(4, $markers, 'port_bits must return 4 percentile markers at default percentile');
     }
@@ -117,7 +118,7 @@ final class PortGraphCatalogTest extends DBTestCase
 
         $def     = $this->definitionFor('port_bits');
         $query   = $this->makeQuery('port_bits');
-        $markers = $def->markers($this->device->toArray(), $query);
+        $markers = $def->markers($this->ctx($query));
 
         $this->assertEmpty($markers, 'port_bits must return no markers when percentile_value is 0');
     }
@@ -126,7 +127,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         $def    = $this->definitionFor('port_errors');
         $query  = $this->makeQuery('port_errors');
-        $series = $def->series($this->device->toArray(), $query);
+        $series = $def->series($this->ctx($query));
 
         $this->assertCount(4, $series);
     }
@@ -135,7 +136,7 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         $def     = $this->definitionFor('port_packets');
         $query   = $this->makeQuery('port_packets');
-        $markers = $def->markers($this->device->toArray(), $query);
+        $markers = $def->markers($this->ctx($query));
 
         $this->assertEmpty($markers);
     }
@@ -146,7 +147,7 @@ final class PortGraphCatalogTest extends DBTestCase
 
         $def     = $this->definitionFor('port_bits');
         $query   = $this->makeQuery('port_bits');
-        $markers = $def->markers($this->device->toArray(), $query);
+        $markers = $def->markers($this->ctx($query));
 
         $this->assertCount(4, $markers);
 
@@ -177,6 +178,11 @@ final class PortGraphCatalogTest extends DBTestCase
 
         $this->assertSame(RrdMetricBinding::SOURCE,                $pair[0]->value->inner->source());
         $this->assertSame(VictoriaMetricsMetricBinding::SOURCE,    $pair[1]->value->inner->source());
+    }
+
+    private function ctx(GraphQuery $query): GraphContext
+    {
+        return new GraphContext($this->device, $query);
     }
 
     private function makeQuery(string $graphType): GraphQuery

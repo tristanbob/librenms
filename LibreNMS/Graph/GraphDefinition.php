@@ -25,37 +25,38 @@
 namespace LibreNMS\Graph;
 
 /**
- * All methods receive $device as a Device model array (keys: device_id, hostname, os, …)
- * and $query->entities as an entity-specific array whose required keys vary by graph type.
- * See GraphQuery for the documented entity shape.
+ * Every method receives a single {@see GraphContext} carrying the resolved Device model
+ * and the GraphQuery. $context behaves like the old $device array (ArrayAccess) and also
+ * exposes $context->device (model) and $context->query (GraphQuery). The entity-specific
+ * keys required for a query live in $context->query->entities and vary by graph type.
  */
 interface GraphDefinition
 {
     public function graphType(): string;
 
-    public function id(array $device, GraphQuery $query): string;
+    public function id(GraphContext $context): string;
 
-    public function title(array $device): string;
+    public function title(GraphContext $context): string;
 
-    public function subtitle(array $device, GraphQuery $query): string;
+    public function subtitle(GraphContext $context): string;
 
-    public function unit(array $device, GraphQuery $query): string;
+    public function unit(GraphContext $context): string;
 
     /**
      * Return the series to render for this graph.
      *
-     * Receiving $query lets definitions make time-range decisions (e.g. skip
+     * The context's query lets definitions make time-range decisions (e.g. skip
      * the weekly average line when the window is less than 8 days).
      *
      * @return GraphSeriesDefinition[]
      */
-    public function series(array $device, GraphQuery $query): array;
+    public function series(GraphContext $context): array;
 
     /**
      * Horizontal reference lines rendered on the graph (e.g. sensor alert thresholds).
      * Each entry: ['type' => 'horizontal_line', 'name' => string, 'value' => float, 'severity' => 'warning'|'critical']
      */
-    public function markers(array $device, GraphQuery $query): array;
+    public function markers(GraphContext $context): array;
 
     /**
      * The primary entity type this graph belongs to ('device', 'port', 'sensor', 'wireless_sensor', 'bill').

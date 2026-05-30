@@ -25,24 +25,10 @@
 namespace LibreNMS\Data\Store\VictoriaMetrics;
 
 use App\Models\Device;
+use LibreNMS\Metrics\MetricCatalog;
 
 class LabelExtractor
 {
-    // Stable polling identity and low-cardinality context labels. Database IDs are
-    // intentionally excluded because LibreNMS does not soft-delete every entity.
-    private const EXTRA_TAGS = [
-        'ifIndex', 'ifName',
-        'sensor_class', 'sensor_type', 'sensor_index',
-        'module',
-        'af',             // IP version for ipSystemStats (ipv4/ipv6)
-        'name',           // duration window for availability
-        'descr', 'type',
-        'sla_nr',
-        'processor_type', 'processor_index',  // processor identity (no numeric ID in write path)
-        'mempool_type', 'mempool_class', 'mempool_index',
-        'supply_type', 'supply_index',         // printer supply identity
-    ];
-
     /**
      * Build the VictoriaMetrics label set for one write() call.
      *
@@ -64,7 +50,10 @@ class LabelExtractor
             'entity_type' => self::deriveEntityType($tags),
         ];
 
-        foreach (self::EXTRA_TAGS as $key) {
+        // The candidate label allowlist is derived from the metric schema (identity +
+        // descriptive labels) so the writer and the readers stay in sync. Database IDs
+        // are never in the schema, so they are never written as labels.
+        foreach (MetricCatalog::writeLabels() as $key) {
             if (isset($tags[$key]) && $tags[$key] !== '') {
                 $labels[$key] = (string) $tags[$key];
             }

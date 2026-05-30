@@ -1,7 +1,7 @@
 <?php
 
 /**
- * VictoriaMetricsMetricCatalog.php
+ * ProvidesGraphDefinitions.php
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,20 @@
  * @author     Tristan Rhodes <tristan.rhodes@gmail.com>
  */
 
-namespace LibreNMS\Data\Store\VictoriaMetrics;
-
-use LibreNMS\Metrics\MetricCatalog;
+namespace LibreNMS\Graph;
 
 /**
- * Back-compat alias for the backend-neutral {@see MetricCatalog}.
+ * Marker for catalog classes that contribute a group of declarative graph rows.
  *
- * The metric schema is no longer VictoriaMetrics-specific; it is the single source of
- * truth shared by the RRD reader, the VictoriaMetrics reader, and the datastore writer.
- * This subclass is retained so existing references continue to resolve.
+ * Implementing this interface opts the class into auto-discovery: the
+ * {@see GraphDefinitionDiscovery} scanner registers everything returned by
+ * definitions() so new graph families no longer have to be hand-listed in
+ * GraphServiceProvider.
  */
-final class VictoriaMetricsMetricCatalog extends MetricCatalog
+interface ProvidesGraphDefinitions
 {
+    /**
+     * @return iterable<GraphDefinition>
+     */
+    public static function definitions(): iterable;
 }

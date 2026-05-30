@@ -24,8 +24,6 @@
 
 namespace LibreNMS\Graph;
 
-use LibreNMS\Data\Store\VictoriaMetrics\VictoriaMetricsMetricCatalog;
-
 class GraphMarkerDefinition
 {
     public function __construct(
@@ -59,7 +57,7 @@ class GraphMarkerDefinition
     ): array {
         return [
             self::percentile($name, $rrd, $percentile, $color),
-            self::percentile($name, VictoriaMetricsMetricBinding::catalog($catalogKey, $vmTransform), $percentile, $color),
+            self::percentile($name, MetricSeries::vmBinding($catalogKey, $vmTransform), $percentile, $color),
         ];
     }
 }
