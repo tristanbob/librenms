@@ -26,6 +26,7 @@
 
 namespace LibreNMS\Tests\Feature\Api;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use App\Models\User;
 use Database\Seeders\RolesSeeder;
@@ -39,6 +40,8 @@ class GraphDataTest extends DBTestCase
 
     private User   $adminUser;
     private Device $device;
+    private string $rrdDir;
+    private string $rrdtool;
 
     protected function setUp(): void
     {
@@ -46,6 +49,22 @@ class GraphDataTest extends DBTestCase
         $this->seed(RolesSeeder::class);
         $this->adminUser = User::factory()->admin()->create();
         $this->device = Device::factory()->create();
+        $this->fakeRrdtool();
+    }
+
+    protected function tearDown(): void
+    {
+        if (isset($this->rrdtool) && is_file($this->rrdtool)) {
+            unlink($this->rrdtool);
+        }
+
+        if (isset($this->rrdDir) && is_dir($this->rrdDir . '/' . $this->device->hostname)) {
+            unlink($this->rrdDir . '/' . $this->device->hostname . '/poller-perf.rrd');
+            rmdir($this->rrdDir . '/' . $this->device->hostname);
+            rmdir($this->rrdDir);
+        }
+
+        parent::tearDown();
     }
 
     public function testGraphDataEndpointReturnsJson(): void
@@ -73,6 +92,23 @@ class GraphDataTest extends DBTestCase
             ]);
     }
 
+    public function testGraphDataEndpointReturnsRrdData(): void
+    {
+        Sanctum::actingAs($this->adminUser);
+
+        $response = $this->getJson(
+            "/api/v1/devices/{$this->device->hostname}/graphs/device_poller_perf/data?from=1000&to=1600&width=2"
+        )->assertStatus(200);
+
+        $response->assertJsonPath('graph.series.0.key', 'poller_time')
+            ->assertJsonPath('graph.series.0.data.0', [1000000, 1.25])
+            ->assertJsonPath('graph.series.0.data.1', [1300000, 2.5])
+            ->assertJsonPath('graph.series.0.stats.min', 1.25)
+            ->assertJsonPath('graph.series.0.stats.max', 2.5)
+            ->assertJsonPath('graph.series.0.stats.avg', 1.875)
+            ->assertJsonPath('graph.meta.empty_reason', null);
+    }
+
     public function testGraphDataEndpointRequiresAuth(): void
     {
         $this->getJson("/api/v1/devices/{$this->device->hostname}/graphs/device_poller_perf/data")
@@ -86,6 +122,23 @@ class GraphDataTest extends DBTestCase
         $this->getJson("/api/v1/devices/{$this->device->hostname}/graphs/nonexistent_graph/data")
             ->assertStatus(404)
             ->assertJson(['status' => 'error']);
+    }
+
+    public function testGraphDataEndpointReturnsValidationErrorForInvalidQuery(): void
+    {
+        Sanctum::actingAs($this->adminUser);
+
+        $this->getJson("/api/v1/devices/{$this->device->hostname}/graphs/device_poller_perf/data?from=2000&to=1000")
+            ->assertStatus(422)
+            ->assertJson(['status' => 'error']);
+    }
+
+    public function testGraphDataEndpointHonorsDevicePolicy(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson("/api/v1/devices/{$this->device->hostname}/graphs/device_poller_perf/data")
+            ->assertStatus(403);
     }
 
     public function testGraphDataRespectsTimeRange(): void
@@ -131,5 +184,20 @@ class GraphDataTest extends DBTestCase
         )->assertStatus(200);
 
         $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
+    }
+
+    private function fakeRrdtool(): void
+    {
+        $this->rrdDir = sys_get_temp_dir() . '/librenms-rrd-' . uniqid('', true);
+        $this->rrdtool = sys_get_temp_dir() . '/librenms-rrdtool-' . uniqid('', true);
+
+        mkdir($this->rrdDir . '/' . $this->device->hostname, 0777, true);
+        file_put_contents($this->rrdDir . '/' . $this->device->hostname . '/poller-perf.rrd', '');
+        file_put_contents($this->rrdtool, "#!/bin/sh\nprintf 'poller\\n\\n1000: 1.250000e+00\\n1300: 2.500000e+00\\n'\n");
+        chmod($this->rrdtool, 0755);
+
+        LibrenmsConfig::set('rrd_dir', $this->rrdDir);
+        LibrenmsConfig::set('rrdtool', $this->rrdtool);
+        LibrenmsConfig::set('rrdcached', '');
     }
 }

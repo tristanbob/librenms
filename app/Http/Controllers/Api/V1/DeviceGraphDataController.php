@@ -31,9 +31,13 @@ class DeviceGraphDataController extends Controller
                 'device_id' => $device->device_id,
                 'hostname' => $device->hostname,
             ], $from, $to, $width, $height);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
 
+        try {
             $result = app(RrdGraphDataProvider::class)->query($query);
-        } catch (\InvalidArgumentException|\RuntimeException $e) {
+        } catch (\RuntimeException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
         }
 
