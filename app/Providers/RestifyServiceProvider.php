@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\Api\V1\DeviceGraphDataController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\OpenApiController;
 use App\Http\Controllers\Api\V1\SystemController;
@@ -114,6 +115,9 @@ class RestifyServiceProvider extends RestifyApplicationServiceProvider
                 ->name('v1.system');
             Route::get('openapi.json', [OpenApiController::class, 'spec'])->name('v1.openapi');
             Route::get('docs', [OpenApiController::class, 'docs'])->name('v1.docs');
+            Route::get('devices/{hostname}/graphs/{graphType}/data', DeviceGraphDataController::class)
+                ->middleware(['auth:sanctum'])
+                ->name('v1.device.graph-data');
         });
 
         parent::routes();
