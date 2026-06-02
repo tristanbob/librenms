@@ -40,7 +40,8 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
 
     public function __construct(
         protected readonly GraphDefinitionRegistry $registry,
-    ) {}
+    ) {
+    }
 
     /** @throws \RuntimeException if device_id is missing or the graph type is not registered */
     final public function query(GraphQuery $query): GraphDataResult
@@ -55,7 +56,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         }
 
         $deviceModel = Device::findOrFail($deviceId);
-        $def    = $this->registry->definitionFor($query->graphType);
+        $def = $this->registry->definitionFor($query->graphType);
         $variables = [];
         foreach ($def->variables() as $variable) {
             $variables[$variable->name] = $variable->resolve($query->options);
@@ -113,7 +114,7 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
     abstract protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        GraphContext    $context
+        GraphContext $context
     ): void;
 
     /**
@@ -149,8 +150,8 @@ abstract class AbstractGraphDataProvider implements GraphDataProvider
         if ($value instanceof PercentileBinding) {
             sort($points, SORT_NUMERIC);
             $idx = (count($points) - 1) * ($value->percentile / 100);
-            $lo  = (int) floor($idx);
-            $hi  = (int) ceil($idx);
+            $lo = (int) floor($idx);
+            $hi = (int) ceil($idx);
 
             return $lo === $hi ? $points[$lo] : $points[$lo] + ($points[$hi] - $points[$lo]) * ($idx - $lo);
         }

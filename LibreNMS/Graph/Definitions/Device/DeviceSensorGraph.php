@@ -60,10 +60,10 @@ class DeviceSensorGraph extends GraphTemplate
             ->get()
             ->values()
             ->map(function (Sensor $sensor, int $i) use ($device, $sensorEntry): GraphSeriesDefinition {
-                $color  = self::COLORS[$i % count(self::COLORS)];
+                $color = self::COLORS[$i % count(self::COLORS)];
                 $isIpmi = $sensor->poller_type === 'ipmi'
                     || LibrenmsConfig::getOsSetting($device['os'] ?? '', 'sensor_descr');
-                $rrdKey  = $isIpmi ? $sensor->sensor_descr : $sensor->sensor_index;
+                $rrdKey = $isIpmi ? $sensor->sensor_descr : $sensor->sensor_index;
                 $rrdName = ['sensor', $this->sensorClass->value, $sensor->sensor_type, $rrdKey];
 
                 return new GraphSeriesDefinition(

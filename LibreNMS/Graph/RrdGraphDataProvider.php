@@ -41,10 +41,10 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
     protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        GraphContext    $context
+        GraphContext $context
     ): void {
         $device = $context;
-        $query  = $context->query;
+        $query = $context->query;
         $groups = [];
         foreach ($def->series($context) as $seriesDef) {
             $rawBinding = $seriesDef->binding(RrdMetricBinding::SOURCE);
@@ -57,10 +57,10 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
                 continue;
             }
 
-            $step          = $binding->step ?? $seriesQuery->step;
+            $step = $binding->step ?? $seriesQuery->step;
             $consolidation = strtoupper($binding->consolidation);
-            $rrdFile       = $this->rrd->name($device['hostname'], $binding->rrdName);
-            $key           = implode(':', [$rrdFile, $step, $consolidation, $shiftMs]);
+            $rrdFile = $this->rrd->name($device['hostname'], $binding->rrdName);
+            $key = implode(':', [$rrdFile, $step, $consolidation, $shiftMs]);
             $groups[$key][] = [$seriesDef, $binding, $rrdFile, $step, $consolidation, $seriesQuery, $shiftMs];
         }
 
@@ -106,17 +106,17 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
     protected function evaluateBindingPoints(MetricBinding $binding, GraphContext $context): array
     {
         $device = $context;
-        $query  = $context->query;
+        $query = $context->query;
         $binding = $this->innerBinding($binding);
 
         if (! $binding instanceof RrdMetricBinding) {
             return [];
         }
 
-        $step          = $binding->step ?? $query->step;
+        $step = $binding->step ?? $query->step;
         $consolidation = strtoupper($binding->consolidation);
-        $rrdFile       = $this->rrd->name($device['hostname'], $binding->rrdName);
-        $stepQuery     = $step !== $query->step
+        $rrdFile = $this->rrd->name($device['hostname'], $binding->rrdName);
+        $stepQuery = $step !== $query->step
             ? $query->withStep($step)
             : $query;
 
@@ -236,7 +236,7 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
      */
     public static function parseRrdFetchOutput(string $output): array
     {
-        $lines  = explode("\n", trim($output));
+        $lines = explode("\n", trim($output));
         $header = array_shift($lines);
         if ($header === null || trim($header) === '') {
             return [];
@@ -247,7 +247,7 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
         }
 
         $dsNames = preg_split('/\s+/', trim($header));
-        $result  = array_fill_keys($dsNames, []);
+        $result = array_fill_keys($dsNames, []);
 
         foreach ($lines as $line) {
             if (trim($line) === '') {
@@ -256,7 +256,7 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
 
             [$tsRaw, $valuesRaw] = explode(':', $line, 2);
             $values = preg_split('/\s+/', trim($valuesRaw));
-            $tsMs   = (int) trim($tsRaw) * 1000;
+            $tsMs = (int) trim($tsRaw) * 1000;
 
             foreach ($dsNames as $i => $ds) {
                 $val = $values[$i] ?? null;

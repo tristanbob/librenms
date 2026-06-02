@@ -24,9 +24,9 @@
 
 namespace LibreNMS\Graph;
 
+use App\Facades\LibrenmsConfig;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Exception\NoVmBindingException;
 use LibreNMS\Util\Http;
 
@@ -41,17 +41,17 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
     public function __construct(GraphDefinitionRegistry $registry)
     {
         parent::__construct($registry);
-        $this->queryUrl  = rtrim((string) LibrenmsConfig::get('victoriametrics.query_url', self::DEFAULT_QUERY_URL), '/');
-        $this->timeout   = (float) LibrenmsConfig::get('victoriametrics.timeout', 10.0);
+        $this->queryUrl = rtrim((string) LibrenmsConfig::get('victoriametrics.query_url', self::DEFAULT_QUERY_URL), '/');
+        $this->timeout = (float) LibrenmsConfig::get('victoriametrics.timeout', 10.0);
         $this->verifySsl = (bool) LibrenmsConfig::get('victoriametrics.verify_ssl', true);
     }
 
     protected function fillSeries(
         GraphDataResult $result,
         GraphDefinition $def,
-        GraphContext    $context
+        GraphContext $context
     ): void {
-        $query  = $context->query;
+        $query = $context->query;
         $series = $def->series($context);
 
         $hasVmBinding = false;
@@ -78,9 +78,9 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
 
             // Batch binding: route from pre-fetched results by demux label matching.
             if ($binding instanceof VictoriaMetricsBatchBinding) {
-                $batchExpr   = $binding->batchExpr($query->entities);
+                $batchExpr = $binding->batchExpr($query->entities);
                 $batchResult = $this->demuxBatchResult($batchCache[$batchExpr] ?? [], $binding->demuxValues);
-                $s           = $this->emptySeries($seriesDef);
+                $s = $this->emptySeries($seriesDef);
                 foreach ($batchResult as [$tsMs, $value]) {
                     if ($value !== null) {
                         if ($binding->transform !== null) {
@@ -198,7 +198,7 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
         foreach ($labelKeys as $key) {
             $value = $entities[$key] ?? null;
             if ($value !== null) {
-                $escaped    = str_replace(['\\', '"', "\n"], ['\\\\', '\\"', '\\n'], (string) $value);
+                $escaped = str_replace(['\\', '"', "\n"], ['\\\\', '\\"', '\\n'], (string) $value);
                 $matchers[] = $key . '="' . $escaped . '"';
             }
         }
@@ -335,17 +335,21 @@ class VictoriaMetricsGraphDataProvider extends AbstractGraphDataProvider
      */
     private static function selectMostRecentSeries(array $results, string $expr): array
     {
+        if ($results === []) {
+            throw new \RuntimeException("VictoriaMetrics returned no selectable series for expr $expr.");
+        }
+
         $best = null;
         $bestTs = PHP_INT_MIN;
         $bestKey = null;
 
         foreach ($results as $result) {
             $newest = self::newestNonNullTimestamp($result['values'] ?? []);
-            $key    = json_encode($result['metric'] ?? [], JSON_THROW_ON_ERROR);
+            $key = json_encode($result['metric'] ?? [], JSON_THROW_ON_ERROR);
 
             if ($best === null || $newest > $bestTs || ($newest === $bestTs && $key < $bestKey)) {
-                $best    = $result;
-                $bestTs  = $newest;
+                $best = $result;
+                $bestTs = $newest;
                 $bestKey = $key;
             }
         }

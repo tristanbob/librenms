@@ -37,9 +37,10 @@ class VictoriaMetricsMetricBinding implements MetricBinding
      */
     public function __construct(
         public readonly string $metricName,
-        public readonly array  $labelKeys = ['hostname'],
-        public readonly mixed  $transform = null,
-    ) {}
+        public readonly array $labelKeys = ['hostname'],
+        public readonly mixed $transform = null,
+    ) {
+    }
 
     public static function catalog(string $key, mixed $transform = null): self
     {

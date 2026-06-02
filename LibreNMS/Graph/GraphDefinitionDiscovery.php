@@ -89,7 +89,7 @@ final class GraphDefinitionDiscovery
             }
 
             $relative = substr($file->getPathname(), strlen($baseDir) + 1, -4);
-            $class    = self::NAMESPACE_PREFIX . str_replace('/', '\\', $relative);
+            $class = self::NAMESPACE_PREFIX . str_replace('/', '\\', $relative);
             if (class_exists($class)) {
                 $classes[] = $class;
             }

@@ -35,7 +35,7 @@ final class GraphExpressionDefinitionTest extends TestCase
         $variableNames = array_map(fn ($v) => $v->name, $graph->variables());
         $this->assertSame(['duration'], $variableNames);
 
-        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
+        $query = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
         $series = $graph->series($this->context($query));
 
         $binding = $series[0]->binding(RrdMetricBinding::SOURCE);
@@ -47,7 +47,7 @@ final class GraphExpressionDefinitionTest extends TestCase
     {
         $graph = $this->definition('device_availability');
 
-        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
+        $query = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1], ['duration' => 172800]);
         $series = $graph->series($this->context($query));
 
         $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
@@ -63,7 +63,7 @@ final class GraphExpressionDefinitionTest extends TestCase
     {
         $graph = $this->definition('device_availability');
 
-        $query  = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1]);
+        $query = new GraphQuery('device', 'device_availability', 1000, 2000, 1200, 300, ['device_id' => 1]);
         $series = $graph->series($this->context($query));
 
         $vmBinding = $series[0]->binding(VictoriaMetricsMetricBinding::SOURCE);
@@ -77,7 +77,7 @@ final class GraphExpressionDefinitionTest extends TestCase
     {
         $graph = $this->definition('device_hr_processes');
 
-        $query   = new GraphQuery('device', 'device_hr_processes', 1000, 2000, 1200, 300, ['device_id' => 1]);
+        $query = new GraphQuery('device', 'device_hr_processes', 1000, 2000, 1200, 300, ['device_id' => 1]);
         $markers = $graph->markers($this->context($query));
 
         $this->assertCount(3, $markers);

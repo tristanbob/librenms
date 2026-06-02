@@ -112,7 +112,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testGaugeSamplesPostedWithCorrectLabels(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => Http::response('', 204)]);
 
@@ -148,7 +148,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testNullSamplesAreSkipped(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => Http::response('', 204)]);
 
@@ -173,7 +173,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testBatchFlushesAtBatchSize(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => Http::response('', 204)]);
 
@@ -200,7 +200,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testWithoutCountersFlagNoCounterMetricsArePosted(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => Http::response('', 204)]);
 
@@ -228,7 +228,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testCounterFlagEnablesCounterSynthesis(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => Http::response('', 204)]);
 
@@ -263,7 +263,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
     public function testConnectionFailureReturnsNonZeroButContinues(): void
     {
         $device = $this->makeDevice();
-        $port   = $this->makePort($device);
+        $port = $this->makePort($device);
 
         Http::fake(['*' => fn () => throw new \Illuminate\Http\Client\ConnectionException('Connection refused')]);
 
@@ -348,7 +348,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
      */
     private function registerFakeCommand(string $hostname, array $pollerData, array $portDataByPortId): void
     {
-        $fakeDir    = '/fake-rrd';
+        $fakeDir = '/fake-rrd';
         $allFakeData = [];
 
         // poller-perf
@@ -370,7 +370,7 @@ final class MigrateRrdCommandTest extends InMemoryDbTestCase
         Rrd::shouldReceive('buildCommand')
             ->andReturn([]);
 
-        $fakeCmd           = new FakeMigrateRrd();
+        $fakeCmd = new FakeMigrateRrd();
         $fakeCmd->fakeData = $allFakeData;
 
         // Register before the artisan call resolves the command.

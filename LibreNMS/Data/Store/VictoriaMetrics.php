@@ -24,15 +24,15 @@
 
 namespace LibreNMS\Data\Store;
 
+use App\Facades\LibrenmsConfig;
 use App\Polling\Measure\Measurement;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
-use LibreNMS\Config as LibrenmsConfig;
-use LibreNMS\Interfaces\Data\Datastore;
-use LibreNMS\Util\Http;
 use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
 use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
+use LibreNMS\Interfaces\Data\Datastore;
 use LibreNMS\Metrics\MetricCatalog;
+use LibreNMS\Util\Http;
 
 /**
  * Optional dual-write datastore that sends metrics to VictoriaMetrics or

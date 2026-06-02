@@ -86,9 +86,9 @@ class DeviceNetstatGraphCatalog implements ProvidesGraphDefinitions
                 ['name' => 'Frag OK',    'key' => 'frag_ok',    'metric' => 'ipFragOKs',   'color' => '00cc00'],
                 ['name' => 'Frag Fail',  'key' => 'frag_fail',  'metric' => 'ipFragFails', 'color' => 'cc0000'],
                 ['name' => 'Reasm OK',   'key' => 'reasm_ok',   'metric' => 'ipReasmOKs',  'color' => '006600'],
-                ['name' => 'Reasm Fail', 'key' => 'reasm_fail', 'metric' => 'ipReasmFails','color' => '660000'],
-                ['name' => 'Frag Create','key' => 'frag_create','metric' => 'ipFragCreates','color' => '0000cc'],
-                ['name' => 'Reasm Reqd', 'key' => 'reasm_reqd', 'metric' => 'ipReasmReqds','color' => '000066'],
+                ['name' => 'Reasm Fail', 'key' => 'reasm_fail', 'metric' => 'ipReasmFails', 'color' => '660000'],
+                ['name' => 'Frag Create', 'key' => 'frag_create', 'metric' => 'ipFragCreates', 'color' => '0000cc'],
+                ['name' => 'Reasm Reqd', 'key' => 'reasm_reqd', 'metric' => 'ipReasmReqds', 'color' => '000066'],
             ], 'ipInDelivers'),
         ];
     }

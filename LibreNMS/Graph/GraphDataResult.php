@@ -27,14 +27,14 @@ namespace LibreNMS\Graph;
 class GraphDataResult
 {
     /** @var GraphSeries[] */
-    private array  $series  = [];
+    private array  $series = [];
     private array  $markers = [];
-    private string $source     = 'rrd';
-    private bool   $fallback   = false;
+    private string $source = 'rrd';
+    private bool   $fallback = false;
     private ?string $emptyReason = null;
-    private array   $warnings    = [];
-    private array   $display     = [];
-    private array   $variables   = [];
+    private array   $warnings = [];
+    private array   $display = [];
+    private array   $variables = [];
 
     public function __construct(
         public readonly string $id,
@@ -42,22 +42,62 @@ class GraphDataResult
         public readonly string $title,
         public readonly string $subtitle,
         public readonly string $unit,
-        public readonly int    $from,
-        public readonly int    $to,
-        public readonly int    $step,
+        public readonly int $from,
+        public readonly int $to,
+        public readonly int $step,
         public readonly string $timezone = 'UTC',
-    ) {}
+    ) {
+    }
 
-    public function addSeries(GraphSeries $series): void  { $this->series[] = $series; }
-    public function addMarker(array $marker): void        { $this->markers[] = $marker; }
-    public function setSource(string $source): void       { $this->source = $source; }
-    public function setFallback(bool $fb): void           { $this->fallback = $fb; }
-    public function setEmptyReason(?string $reason): void { $this->emptyReason = $reason; }
-    public function addWarning(string $warning): void     { $this->warnings[] = $warning; }
-    public function setDisplay(array $display): void      { $this->display = $display; }
-    public function setVariables(array $variables): void  { $this->variables = $variables; }
-    public function overrideYAxisMin(int $min): void      { $this->display['yAxisMin'] = $min; }
-    public function overrideYAxisMax(int $max): void      { $this->display['yAxisMax'] = $max; }
+    public function addSeries(GraphSeries $series): void
+    {
+        $this->series[] = $series;
+    }
+
+    public function addMarker(array $marker): void
+    {
+        $this->markers[] = $marker;
+    }
+
+    public function setSource(string $source): void
+    {
+        $this->source = $source;
+    }
+
+    public function setFallback(bool $fb): void
+    {
+        $this->fallback = $fb;
+    }
+
+    public function setEmptyReason(?string $reason): void
+    {
+        $this->emptyReason = $reason;
+    }
+
+    public function addWarning(string $warning): void
+    {
+        $this->warnings[] = $warning;
+    }
+
+    public function setDisplay(array $display): void
+    {
+        $this->display = $display;
+    }
+
+    public function setVariables(array $variables): void
+    {
+        $this->variables = $variables;
+    }
+
+    public function overrideYAxisMin(int $min): void
+    {
+        $this->display['yAxisMin'] = $min;
+    }
+
+    public function overrideYAxisMax(int $max): void
+    {
+        $this->display['yAxisMax'] = $max;
+    }
 
     /**
      * @return GraphSeries[]

@@ -63,8 +63,8 @@ class PrometheusTextFormatter
     private static function escapeLabelValue(string $value): string
     {
         return str_replace(
-            ["\\", "\n", '"'],
-            ["\\\\", "\\n", '\\"'],
+            ['\\', "\n", '"'],
+            ['\\\\', '\\n', '\\"'],
             $value
         );
     }

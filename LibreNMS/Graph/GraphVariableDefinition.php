@@ -33,7 +33,8 @@ class GraphVariableDefinition
         public readonly ?int $min = null,
         public readonly ?int $max = null,
         public readonly array $allowed = [],
-    ) {}
+    ) {
+    }
 
     public static function integer(string $name, int $default, ?int $min = null, ?int $max = null): self
     {

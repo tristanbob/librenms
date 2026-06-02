@@ -3,6 +3,8 @@
 use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\GraphDataUrl;
 
+/** @var array<string, mixed> $device */
+/** @var array<string, mixed> $graph_enable */
 $renderer = LibrenmsConfig::get('graphs.renderer', 'rrd');
 
 foreach ($graph_enable as $graph => $entry) {
@@ -22,10 +24,10 @@ foreach ($graph_enable as $graph => $entry) {
         $chartHeight = $graph === 'poller_modules_perf' ? '320px' : '150px';
         echo '<div class="row">';
         foreach ($periods as $period => $period_text) {
-            $from       = LibrenmsConfig::get("time.$period");
-            $to         = time();
-            $data_url   = GraphDataUrl::device((int) $device['device_id'], $apiGraphType, ['from' => $from, 'to' => $to]);
-            $detail_url = \LibreNMS\Util\Url::generate([
+            $from = LibrenmsConfig::get("time.$period");
+            $to = time();
+            $data_url = GraphDataUrl::device((int) $device['device_id'], $apiGraphType, ['from' => $from, 'to' => $to]);
+            $detail_url = LibreNMS\Util\Url::generate([
                 'page'   => 'graphs',
                 'device' => $device['device_id'],
                 'type'   => 'device_' . $graph,

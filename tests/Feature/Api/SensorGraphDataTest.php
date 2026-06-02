@@ -32,9 +32,9 @@ use App\Models\Sensor;
 use App\Models\User;
 use App\Models\WirelessSensor;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDataResult;
+use LibreNMS\Graph\GraphDataUrl;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeries;
 use LibreNMS\Tests\DBTestCase;
@@ -52,9 +52,9 @@ class SensorGraphDataTest extends DBTestCase
     {
         parent::setUp();
 
-        $this->adminUser  = User::factory()->admin()->create(['enabled' => 1]);
+        $this->adminUser = User::factory()->admin()->create(['enabled' => 1]);
         $this->adminToken = ApiToken::generateToken($this->adminUser);
-        $this->device     = Device::factory()->create();
+        $this->device = Device::factory()->create();
 
         $this->sensor = Sensor::factory()->create([
             'device_id'          => $this->device->device_id,
@@ -70,10 +70,10 @@ class SensorGraphDataTest extends DBTestCase
         ]);
 
         // Stub GraphDataProvider: returns a realistic sensor result without hitting rrdtool.
-        $this->app->bind(GraphDataProvider::class, fn() => new class implements GraphDataProvider {
+        $this->app->bind(GraphDataProvider::class, fn () => new class implements GraphDataProvider {
             public function query(GraphQuery $query): GraphDataResult
             {
-                $isSensor   = str_starts_with($query->graphType, 'sensor_');
+                $isSensor = str_starts_with($query->graphType, 'sensor_');
                 $isWireless = str_starts_with($query->graphType, 'wireless_');
 
                 if (! $isSensor && ! $isWireless) {
@@ -142,7 +142,7 @@ class SensorGraphDataTest extends DBTestCase
                 ],
             ]);
 
-        $data       = $response->json();
+        $data = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
         $this->assertContains('sensor', $seriesKeys);
 
@@ -151,11 +151,11 @@ class SensorGraphDataTest extends DBTestCase
 
         $markerNames = array_column($markers, 'name');
         $this->assertContains('High critical', $markerNames);
-        $this->assertContains('High warning',  $markerNames);
+        $this->assertContains('High warning', $markerNames);
 
         $severities = array_column($markers, 'severity');
         $this->assertContains('critical', $severities);
-        $this->assertContains('warning',  $severities);
+        $this->assertContains('warning', $severities);
     }
 
     public function testSensorEndpointRequiresAuth(): void
@@ -274,7 +274,7 @@ class SensorGraphDataTest extends DBTestCase
                 ],
             ]);
 
-        $data       = $response->json();
+        $data = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
         $this->assertContains('sensor', $seriesKeys);
     }

@@ -24,9 +24,9 @@
 
 namespace LibreNMS\Tests\Unit\VictoriaMetrics;
 
-use LibreNMS\Tests\TestCase;
 use LibreNMS\Data\Store\VictoriaMetrics\MetricDefinition;
 use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
+use LibreNMS\Tests\TestCase;
 
 final class PrometheusTextFormatterTest extends TestCase
 {

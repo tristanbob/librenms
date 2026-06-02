@@ -35,5 +35,6 @@ class TotalBinding
 {
     public function __construct(
         public readonly MetricBinding $inner,
-    ) {}
+    ) {
+    }
 }

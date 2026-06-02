@@ -63,7 +63,7 @@ class PortLineGraph extends GraphTemplate
 
     public function subtitle(GraphContext $context): string
     {
-        $query    = $context->query;
+        $query = $context->query;
         $portName = $query->entities['port_name'] ?? ('port ' . ($query->entities['port_id'] ?? '?'));
 
         return $context['hostname'] . ' ' . $portName;

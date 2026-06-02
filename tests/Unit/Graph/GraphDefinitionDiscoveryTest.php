@@ -105,7 +105,7 @@ final class GraphDefinitionDiscoveryTest extends TestCase
      */
     public function testNoDefinitionRowCarriesABackendKindToken(): void
     {
-        $baseDir  = base_path('LibreNMS/Graph/Definitions');
+        $baseDir = base_path('LibreNMS/Graph/Definitions');
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($baseDir, \FilesystemIterator::SKIP_DOTS)
         );

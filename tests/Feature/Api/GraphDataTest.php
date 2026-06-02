@@ -26,12 +26,12 @@
 
 namespace LibreNMS\Tests\Feature\Api;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\ApiToken;
 use App\Models\Device;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Tests\DBTestCase;
 
 class GraphDataTest extends DBTestCase
@@ -45,9 +45,9 @@ class GraphDataTest extends DBTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->adminUser  = User::factory()->admin()->create();
+        $this->adminUser = User::factory()->admin()->create();
         $this->adminToken = ApiToken::generateToken($this->adminUser);
-        $this->device     = Device::factory()->create();
+        $this->device = Device::factory()->create();
     }
 
     public function testGraphDataEndpointReturnsJson(): void
@@ -99,7 +99,7 @@ class GraphDataTest extends DBTestCase
     public function testGraphDataRespectsTimeRange(): void
     {
         $from = time() - 3600;
-        $to   = time();
+        $to = time();
 
         $response = $this->json(
             'GET',
@@ -112,7 +112,7 @@ class GraphDataTest extends DBTestCase
 
         $data = $response->json();
         $this->assertEquals($from, $data['graph']['from']);
-        $this->assertEquals($to,   $data['graph']['to']);
+        $this->assertEquals($to, $data['graph']['to']);
     }
 
     public function testGraphDataUsesVictoriaMetricsWhenEnabled(): void
@@ -154,7 +154,7 @@ class GraphDataTest extends DBTestCase
     public function testGraphDataSetsCacheControlForPastTimeRange(): void
     {
         $from = time() - 7200;
-        $to   = time() - 3600;
+        $to = time() - 3600;
 
         $response = $this->json(
             'GET',
@@ -171,7 +171,7 @@ class GraphDataTest extends DBTestCase
     public function testGraphDataSetsCacheControlNoStoreForLiveTimeRange(): void
     {
         $from = time() - 3600;
-        $to   = time();
+        $to = time();
 
         $response = $this->json(
             'GET',

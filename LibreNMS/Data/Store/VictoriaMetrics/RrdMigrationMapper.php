@@ -119,7 +119,7 @@ final class RrdMigrationMapper
     public static function synthesizeCounter(array $rateSamples, int $stepSeconds): array
     {
         $cumulative = 0.0;
-        $result     = [];
+        $result = [];
 
         foreach ($rateSamples as [$tsMs, $rate]) {
             if ($rate === null || $rate < 0.0 || ! is_finite($rate)) {
@@ -127,7 +127,7 @@ final class RrdMigrationMapper
             }
 
             $cumulative += $rate * $stepSeconds;
-            $result[]   = [$tsMs, $cumulative];
+            $result[] = [$tsMs, $cumulative];
         }
 
         return $result;

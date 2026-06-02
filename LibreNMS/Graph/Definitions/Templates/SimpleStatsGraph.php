@@ -62,18 +62,18 @@ class SimpleStatsGraph extends GraphTemplate
 
     public function series(GraphContext $context): array
     {
-        $query       = $context->query;
-        $label       = $this->label !== '' ? $this->label : $this->title;
-        $scale       = is_numeric($this->transform) ? (float) $this->transform : null;
+        $query = $context->query;
+        $label = $this->label !== '' ? $this->label : $this->title;
+        $scale = is_numeric($this->transform) ? (float) $this->transform : null;
         $rrdTransform = $scale !== null ? fn ($v) => $v * $scale : null;
-        $binding     = fn (?int $step) => new RrdMetricBinding(
+        $binding = fn (?int $step) => new RrdMetricBinding(
             rrdName:   $this->resolvedRrdName($query),
             ds:        $this->ds,
             step:      $step,
             transform: $rrdTransform,
         );
 
-        $primaryRrd      = $binding(null);
+        $primaryRrd = $binding(null);
         $primaryBindings = match (true) {
             $this->vmExprBuilder !== null => ($this->vmExprBuilder)($primaryRrd, $query),
             $this->metric !== null        => MetricSeries::metric($this->metric, $primaryRrd, transform: $this->vmTransform),

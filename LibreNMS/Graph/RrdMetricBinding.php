@@ -39,7 +39,8 @@ class RrdMetricBinding implements MetricBinding
         public readonly string $consolidation = 'AVERAGE',
         public readonly ?int $step = null,
         public readonly mixed $transform = null,
-    ) {}
+    ) {
+    }
 
     public function source(): string
     {

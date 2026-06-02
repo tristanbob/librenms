@@ -2,7 +2,7 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
-use LibreNMS\Config as LibrenmsConfig;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Tests\TestCase;
 

@@ -2,9 +2,9 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\Definitions\Templates\PortLineGraph;
 use LibreNMS\Graph\GraphContext;
@@ -25,7 +25,7 @@ final class PortGraphCatalogTest extends DBTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->device      = Device::factory()->create();
+        $this->device = Device::factory()->create();
         $this->definitions = PortGraphCatalog::definitions();
     }
 
@@ -65,7 +65,7 @@ final class PortGraphCatalogTest extends DBTestCase
     public function testSubtitleIncludesHostnameAndPortName(): void
     {
         foreach ($this->definitions as $def) {
-            $query    = $this->makeQuery($def->graphType());
+            $query = $this->makeQuery($def->graphType());
             $subtitle = $def->subtitle($this->ctx($query));
             $this->assertStringContainsString($this->device->hostname, $subtitle);
             $this->assertStringContainsString('eth0', $subtitle);
@@ -75,7 +75,7 @@ final class PortGraphCatalogTest extends DBTestCase
     public function testAllSeriesHaveVmBindings(): void
     {
         foreach ($this->definitions as $def) {
-            $query  = $this->makeQuery($def->graphType());
+            $query = $this->makeQuery($def->graphType());
             $series = $def->series($this->ctx($query));
             $this->assertNotEmpty($series, "{$def->graphType()} must return at least one series");
 
@@ -90,8 +90,8 @@ final class PortGraphCatalogTest extends DBTestCase
 
     public function testPortBitsHasTwoSeries(): void
     {
-        $def    = $this->definitionFor('port_bits');
-        $query  = $this->makeQuery('port_bits');
+        $def = $this->definitionFor('port_bits');
+        $query = $this->makeQuery('port_bits');
         $series = $def->series($this->ctx($query));
 
         $this->assertCount(2, $series);
@@ -105,8 +105,8 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         LibrenmsConfig::set('percentile_value', 95);
 
-        $def     = $this->definitionFor('port_bits');
-        $query   = $this->makeQuery('port_bits');
+        $def = $this->definitionFor('port_bits');
+        $query = $this->makeQuery('port_bits');
         $markers = $def->markers($this->ctx($query));
 
         $this->assertCount(4, $markers, 'port_bits must return 4 percentile markers at default percentile');
@@ -116,8 +116,8 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         LibrenmsConfig::set('percentile_value', 0);
 
-        $def     = $this->definitionFor('port_bits');
-        $query   = $this->makeQuery('port_bits');
+        $def = $this->definitionFor('port_bits');
+        $query = $this->makeQuery('port_bits');
         $markers = $def->markers($this->ctx($query));
 
         $this->assertEmpty($markers, 'port_bits must return no markers when percentile_value is 0');
@@ -125,8 +125,8 @@ final class PortGraphCatalogTest extends DBTestCase
 
     public function testPortErrorsHasFourSeries(): void
     {
-        $def    = $this->definitionFor('port_errors');
-        $query  = $this->makeQuery('port_errors');
+        $def = $this->definitionFor('port_errors');
+        $query = $this->makeQuery('port_errors');
         $series = $def->series($this->ctx($query));
 
         $this->assertCount(4, $series);
@@ -134,8 +134,8 @@ final class PortGraphCatalogTest extends DBTestCase
 
     public function testPortPacketsMarkersEmpty(): void
     {
-        $def     = $this->definitionFor('port_packets');
-        $query   = $this->makeQuery('port_packets');
+        $def = $this->definitionFor('port_packets');
+        $query = $this->makeQuery('port_packets');
         $markers = $def->markers($this->ctx($query));
 
         $this->assertEmpty($markers);
@@ -145,14 +145,15 @@ final class PortGraphCatalogTest extends DBTestCase
     {
         LibrenmsConfig::set('percentile_value', 95);
 
-        $def     = $this->definitionFor('port_bits');
-        $query   = $this->makeQuery('port_bits');
+        $def = $this->definitionFor('port_bits');
+        $query = $this->makeQuery('port_bits');
         $markers = $def->markers($this->ctx($query));
 
         $this->assertCount(4, $markers);
 
         $sources = array_map(function (GraphMarkerDefinition $m): string {
             $this->assertInstanceOf(PercentileBinding::class, $m->value);
+
             return $m->value->inner->source();
         }, $markers);
 
@@ -162,7 +163,7 @@ final class PortGraphCatalogTest extends DBTestCase
 
     public function testDualPercentileReturnsTwoMarkersWithMatchingProperties(): void
     {
-        $rrd  = new RrdMetricBinding('my-rrd', 'INOCTETS');
+        $rrd = new RrdMetricBinding('my-rrd', 'INOCTETS');
         $pair = GraphMarkerDefinition::dualPercentile('95th in', $rrd, 'port.if_in_bits_rate', 95.0, 'aa0000');
 
         $this->assertCount(2, $pair);
@@ -176,8 +177,8 @@ final class PortGraphCatalogTest extends DBTestCase
         $this->assertSame(95.0, $pair[0]->value->percentile);
         $this->assertSame(95.0, $pair[1]->value->percentile);
 
-        $this->assertSame(RrdMetricBinding::SOURCE,                $pair[0]->value->inner->source());
-        $this->assertSame(VictoriaMetricsMetricBinding::SOURCE,    $pair[1]->value->inner->source());
+        $this->assertSame(RrdMetricBinding::SOURCE, $pair[0]->value->inner->source());
+        $this->assertSame(VictoriaMetricsMetricBinding::SOURCE, $pair[1]->value->inner->source());
     }
 
     private function ctx(GraphQuery $query): GraphContext

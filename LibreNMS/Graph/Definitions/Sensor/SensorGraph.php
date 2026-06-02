@@ -36,11 +36,19 @@ use LibreNMS\Util\Rewrite;
 
 class SensorGraph extends SensorBaseGraph
 {
-    public function __construct(private readonly SensorClass $sensorClass) {}
+    public function __construct(private readonly SensorClass $sensorClass)
+    {
+    }
 
-    public function graphType(): string { return 'sensor_' . $this->sensorClass->value; }
+    public function graphType(): string
+    {
+        return 'sensor_' . $this->sensorClass->value;
+    }
 
-    public function entityType(): string { return 'sensor'; }
+    public function entityType(): string
+    {
+        return 'sensor';
+    }
 
     public function unit(GraphContext $context): string
     {
@@ -57,9 +65,9 @@ class SensorGraph extends SensorBaseGraph
         $e = $context->query->entities;
         $isIpmi = ($e['poller_type'] ?? '') === 'ipmi'
             || LibrenmsConfig::getOsSetting($context['os'] ?? '', 'sensor_descr');
-        $rrdKey  = $isIpmi ? ($e['sensor_descr'] ?? '') : ($e['sensor_index'] ?? '');
+        $rrdKey = $isIpmi ? ($e['sensor_descr'] ?? '') : ($e['sensor_index'] ?? '');
         $rrdName = ['sensor', $this->sensorClass->value, $e['sensor_type'] ?? '', $rrdKey];
-        $unit    = $this->unit($context);
+        $unit = $this->unit($context);
 
         return [new GraphSeriesDefinition(
             name:      $e['sensor_descr'] ?? 'sensor',
@@ -76,7 +84,7 @@ class SensorGraph extends SensorBaseGraph
 
     public function markers(GraphContext $context): array
     {
-        $e       = $context->query->entities;
+        $e = $context->query->entities;
         $markers = [];
 
         if (isset($e['sensor_limit_low'])) {

@@ -50,12 +50,12 @@ class ProcessorGraph extends GraphTemplate
             ->orderBy('processor_index')
             ->get();
 
-        $colors  = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
+        $colors = (array) LibrenmsConfig::get('graph_colours.mixed', LibrenmsConfig::get('graph_colours.oranges', []));
         $stacked = (bool) LibrenmsConfig::getOsSetting($device['os'] ?? '', 'processor_stacked');
 
         return $processors->values()->map(function (Processor $processor, int $i) use ($colors, $stacked) {
             $color = $colors[$i % max(count($colors), 1)] ?? 'CC0000';
-            $name  = short_hrDeviceDescr($processor->processor_descr);
+            $name = short_hrDeviceDescr($processor->processor_descr);
 
             return new GraphSeriesDefinition(
                 name:        $name,
@@ -79,5 +79,4 @@ class ProcessorGraph extends GraphTemplate
             );
         })->all();
     }
-
 }

@@ -32,12 +32,14 @@ use LibreNMS\Graph\GraphSeriesDefinition;
 abstract class GraphTemplate implements GraphDefinition
 {
     use DefaultVariables;
+
     public function __construct(
         protected readonly string $graphType,
         protected readonly string $title,
         protected readonly string $unit,
         protected readonly array $display = [],
-    ) {}
+    ) {
+    }
 
     public function graphType(): string
     {
@@ -81,7 +83,7 @@ abstract class GraphTemplate implements GraphDefinition
 
     protected function paletteColor(string $palette, int $index, string $fallback): string
     {
-        $colors = (array) \LibreNMS\Config::get("graph_colours.$palette", []);
+        $colors = (array) \App\Facades\LibrenmsConfig::get("graph_colours.$palette", []);
 
         return $colors[$index % max(1, count($colors))] ?? $fallback;
     }
@@ -107,7 +109,7 @@ abstract class GraphTemplate implements GraphDefinition
         callable $bindingFor,
     ): array {
         $timeDiff = $context->query->to - $context->query->from;
-        $unit     = $this->unit($context);
+        $unit = $this->unit($context);
 
         // [key suffix, display name, min window (s) to show, palette index, fallback colour, RRD step (s)]
         $rows = [

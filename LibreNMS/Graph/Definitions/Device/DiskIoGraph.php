@@ -37,7 +37,7 @@ class DiskIoGraph extends GraphTemplate
 
     // Matches graph_colours.greens / graph_colours.blues from config_definitions.json
     private const GREENS = ['CAE853', 'B2D849', '94C63D', '75BA30', '49A81E', '0C990C'];
-    private const BLUES  = ['A9A9F2', '9696DD', '8080C9', '6A6AB7', '5151A3', '3D3D99'];
+    private const BLUES = ['A9A9F2', '9696DD', '8080C9', '6A6AB7', '5151A3', '3D3D99'];
 
     public function __construct()
     {
@@ -55,15 +55,15 @@ class DiskIoGraph extends GraphTemplate
         // stacked=true  → mirror style (both positive, area with 53% opacity)
         // stacked=false → reads up / writes negated (below 0), full opacity
         $mirrorStacked = $this->stackedMultiplier() === 1;
-        $areaOpacity   = $mirrorStacked ? (0x88 / 0xff) : 1.0;
+        $areaOpacity = $mirrorStacked ? (0x88 / 0xff) : 1.0;
 
-        $readSeries  = [];
+        $readSeries = [];
         $writeSeries = [];
 
         foreach ($disks as $i => $disk) {
-            $readColor  = self::GREENS[$i % count(self::GREENS)];
+            $readColor = self::GREENS[$i % count(self::GREENS)];
             $writeColor = self::BLUES[$i % count(self::BLUES)];
-            $rrdName    = ['ucd_diskio', $disk->diskio_descr];
+            $rrdName = ['ucd_diskio', $disk->diskio_descr];
 
             $readSeries[] = new GraphSeriesDefinition(
                 name:        $disk->diskio_descr . ' Reads',
@@ -104,5 +104,4 @@ class DiskIoGraph extends GraphTemplate
         // Reads first (positive), then writes (negative) — matches RRD render order
         return [...$readSeries, ...$writeSeries];
     }
-
 }

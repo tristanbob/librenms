@@ -47,7 +47,8 @@ final class GraphContext implements ArrayAccess
     public function __construct(
         public readonly Device $device,
         public readonly GraphQuery $query,
-    ) {}
+    ) {
+    }
 
     public function offsetExists(mixed $offset): bool
     {

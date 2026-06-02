@@ -53,7 +53,7 @@ abstract class SensorBaseGraph implements GraphDefinition
 
     protected function marker(string $name, mixed $value, string $severity): array
     {
-        $value     = (float) $value;
+        $value = (float) $value;
         $transform = $this->valueTransform();
         if ($transform !== null) {
             $value = $transform($value);
@@ -65,7 +65,7 @@ abstract class SensorBaseGraph implements GraphDefinition
     protected function valueTransform(): ?callable
     {
         if (! $this->transformComputed) {
-            $this->transform        = $this->computeTransform();
+            $this->transform = $this->computeTransform();
             $this->transformComputed = true;
         }
 

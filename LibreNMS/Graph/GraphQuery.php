@@ -24,7 +24,7 @@
 
 namespace LibreNMS\Graph;
 
-use LibreNMS\Config as LibrenmsConfig;
+use App\Facades\LibrenmsConfig;
 
 class GraphQuery
 {
@@ -50,12 +50,12 @@ class GraphQuery
     public function __construct(
         public readonly string $scope,
         public readonly string $graphType,
-        public readonly int    $from,
-        public readonly int    $to,
-        public readonly int    $width,
-        public readonly int    $height,
-        public readonly array  $entities,
-        public readonly array  $options = [],
+        public readonly int $from,
+        public readonly int $to,
+        public readonly int $width,
+        public readonly int $height,
+        public readonly array $entities,
+        public readonly array $options = [],
         ?int $step = null,
     ) {
         if ($this->from >= $this->to) {
@@ -85,14 +85,14 @@ class GraphQuery
     public static function fromRequest(
         string $scope,
         string $graphType,
-        array  $entities,
-        int    $from  = 0,
-        int    $to    = 0,
-        int    $width = 1200,
-        int    $height = 300,
-        array  $options = [],
+        array $entities,
+        int $from = 0,
+        int $to = 0,
+        int $width = 1200,
+        int $height = 300,
+        array $options = [],
     ): self {
-        $to   = $to   ?: time();
+        $to = $to ?: time();
         $from = $from ?: $to - 86400;
 
         return new self($scope, $graphType, $from, $to, $width, $height, $entities, $options);

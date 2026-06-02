@@ -55,7 +55,7 @@ class DeviceStatsGraphCatalog implements ProvidesGraphDefinitions
                 graphVariables: [GraphVariableDefinition::integer('duration', 86400, 1)],
                 vmExprBuilder: static function (RrdMetricBinding $primaryRrd, GraphQuery $query): array {
                     $duration = (string) ($query->options['duration'] ?? 86400);
-                    $entry    = VictoriaMetricsMetricCatalog::get('device.availability');
+                    $entry = VictoriaMetricsMetricCatalog::get('device.availability');
 
                     return MetricSeries::expression(
                         $primaryRrd,

@@ -2,9 +2,9 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
+use App\Facades\LibrenmsConfig;
 use App\Models\Device;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Port\PortGraphCatalog;
 use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphDefinitionRegistry;

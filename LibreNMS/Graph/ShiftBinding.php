@@ -38,7 +38,8 @@ class ShiftBinding implements MetricBinding
     public function __construct(
         public readonly MetricBinding $inner,
         public readonly int $offsetSeconds,
-    ) {}
+    ) {
+    }
 
     public function source(): string
     {

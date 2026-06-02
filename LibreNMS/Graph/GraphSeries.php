@@ -26,35 +26,36 @@ namespace LibreNMS\Graph;
 
 class GraphSeries
 {
-    public array $data  = [];
-    public float $min   = INF;
-    public float $max   = -INF;
-    public float $sum   = 0.0;
+    public array $data = [];
+    public float $min = INF;
+    public float $max = -INF;
+    public float $sum = 0.0;
     public int   $count = 0;
     private array $extraStats = [];
 
     public function __construct(
-        public readonly string  $name,
-        public readonly string  $key,
-        public readonly string  $unit,
-        public readonly string  $type        = 'line',
-        public readonly bool    $area        = false,
-        public readonly ?string $stack       = null,
-        public readonly string  $color       = '663399',
-        public readonly ?string $lineColor   = null,
-        public readonly float   $areaOpacity = 1.0,
-        public readonly float   $lineOpacity = 1.0,
-        public readonly float   $lineWidth   = 1.25,
-        public readonly bool    $negate      = false,
-        public readonly int     $yAxisIndex  = 0,
-    ) {}
+        public readonly string $name,
+        public readonly string $key,
+        public readonly string $unit,
+        public readonly string $type = 'line',
+        public readonly bool $area = false,
+        public readonly ?string $stack = null,
+        public readonly string $color = '663399',
+        public readonly ?string $lineColor = null,
+        public readonly float $areaOpacity = 1.0,
+        public readonly float $lineOpacity = 1.0,
+        public readonly float $lineWidth = 1.25,
+        public readonly bool $negate = false,
+        public readonly int $yAxisIndex = 0,
+    ) {
+    }
 
     public function addPoint(int $timestampMs, float $value): void
     {
-        $this->data[]  = [$timestampMs, $value];
-        $this->min     = min($this->min, $value);
-        $this->max     = max($this->max, $value);
-        $this->sum    += $value;
+        $this->data[] = [$timestampMs, $value];
+        $this->min = min($this->min, $value);
+        $this->max = max($this->max, $value);
+        $this->sum += $value;
         $this->count++;
     }
 

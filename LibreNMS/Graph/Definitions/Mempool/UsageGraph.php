@@ -74,5 +74,4 @@ class UsageGraph extends EntityGraph
 
         return "100 * {$usedSelector} / ({$usedSelector} + {$freeSelector})";
     }
-
 }

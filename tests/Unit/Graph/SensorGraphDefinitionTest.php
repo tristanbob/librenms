@@ -160,8 +160,8 @@ final class SensorGraphDefinitionTest extends DBTestCase
 
     public function testSensorSeriesUsesThemeInkColorNoAreaFillAndTwoPxLine(): void
     {
-        $graph  = new SensorGraph(SensorClass::Temperature);
-        $query  = $this->sensorQuery('sensor_temperature', 'temperature');
+        $graph = new SensorGraph(SensorClass::Temperature);
+        $query = $this->sensorQuery('sensor_temperature', 'temperature');
         $series = $graph->series($this->context($query))[0];
 
         $this->assertSame('theme-ink', $series->color);
@@ -181,18 +181,18 @@ final class SensorGraphDefinitionTest extends DBTestCase
         $markers = $graph->markers($this->context($query));
 
         $severities = array_column($markers, 'severity');
-        $this->assertContains('low_critical',  $severities);
-        $this->assertContains('low_warning',   $severities);
-        $this->assertContains('high_warning',  $severities);
+        $this->assertContains('low_critical', $severities);
+        $this->assertContains('low_warning', $severities);
+        $this->assertContains('high_warning', $severities);
         $this->assertContains('high_critical', $severities);
         $this->assertNotContains('critical', $severities);
-        $this->assertNotContains('warning',  $severities);
+        $this->assertNotContains('warning', $severities);
     }
 
     public function testWirelessSeriesUsesBlueColorAndOneAndHalfPxLine(): void
     {
-        $graph  = new WirelessSensorGraph(WirelessSensorType::Rssi);
-        $query  = $this->sensorQuery('wireless_rssi', 'rssi');
+        $graph = new WirelessSensorGraph(WirelessSensorType::Rssi);
+        $query = $this->sensorQuery('wireless_rssi', 'rssi');
         $series = $graph->series($this->context($query))[0];
 
         $this->assertSame('0000cc', $series->color);
@@ -203,8 +203,8 @@ final class SensorGraphDefinitionTest extends DBTestCase
     #[DataProvider('wirelessAreaFillProvider')]
     public function testWirelessAreaFillMatchesScaleMinimumBehavior(WirelessSensorType $type, bool $expectedArea): void
     {
-        $graph  = new WirelessSensorGraph($type);
-        $query  = $this->sensorQuery('wireless_' . $type->value, $type->value);
+        $graph = new WirelessSensorGraph($type);
+        $query = $this->sensorQuery('wireless_' . $type->value, $type->value);
         $series = $graph->series($this->context($query))[0];
 
         $this->assertSame($expectedArea, $series->area, "Unexpected area fill for {$type->value}");
@@ -271,7 +271,7 @@ final class SensorGraphDefinitionTest extends DBTestCase
             $this->assertSame('limit', $marker['severity']);
         }
         $names = array_column($markers, 'name');
-        $this->assertContains('Low limit',  $names);
+        $this->assertContains('Low limit', $names);
         $this->assertContains('High limit', $names);
     }
 

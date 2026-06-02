@@ -48,15 +48,15 @@ class StorageGraph extends GraphTemplate
     public function series(GraphContext $context): array
     {
         $device = $context;
-        $storages  = Storage::where('device_id', $device['device_id'])
+        $storages = Storage::where('device_id', $device['device_id'])
             ->orderBy('storage_descr')
             ->get();
         $usedEntry = VictoriaMetricsMetricCatalog::get('storage.used');
         $freeEntry = VictoriaMetricsMetricCatalog::get('storage.free');
 
         return $storages->values()->map(function (Storage $storage, int $i) use ($usedEntry, $freeEntry) {
-            $color        = self::COLORS[$i % count(self::COLORS)];
-            $storageType  = $storage->type;
+            $color = self::COLORS[$i % count(self::COLORS)];
+            $storageType = $storage->type;
             $storageDescr = $storage->storage_descr;
 
             return new GraphSeriesDefinition(
@@ -90,5 +90,4 @@ class StorageGraph extends GraphTemplate
             );
         })->all();
     }
-
 }

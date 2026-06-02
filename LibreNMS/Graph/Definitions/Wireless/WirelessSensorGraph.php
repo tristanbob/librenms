@@ -33,11 +33,19 @@ use LibreNMS\Graph\RrdMetricBinding;
 
 class WirelessSensorGraph extends SensorBaseGraph
 {
-    public function __construct(private readonly WirelessSensorType $sensorClass) {}
+    public function __construct(private readonly WirelessSensorType $sensorClass)
+    {
+    }
 
-    public function graphType(): string { return 'wireless_' . $this->sensorClass->value; }
+    public function graphType(): string
+    {
+        return 'wireless_' . $this->sensorClass->value;
+    }
 
-    public function entityType(): string { return 'wireless_sensor'; }
+    public function entityType(): string
+    {
+        return 'wireless_sensor';
+    }
 
     public function unit(GraphContext $context): string
     {
@@ -51,9 +59,9 @@ class WirelessSensorGraph extends SensorBaseGraph
 
     public function series(GraphContext $context): array
     {
-        $e       = $context->query->entities;
+        $e = $context->query->entities;
         $rrdName = ['wireless-sensor', $this->sensorClass->value, $e['sensor_type'] ?? '', $e['sensor_index'] ?? ''];
-        $unit    = $this->unit($context);
+        $unit = $this->unit($context);
 
         return [new GraphSeriesDefinition(
             name:        $e['sensor_descr'] ?? 'wireless',
@@ -69,7 +77,7 @@ class WirelessSensorGraph extends SensorBaseGraph
 
     public function markers(GraphContext $context): array
     {
-        $e       = $context->query->entities;
+        $e = $context->query->entities;
         $markers = [];
 
         if (isset($e['sensor_limit_low'])) {

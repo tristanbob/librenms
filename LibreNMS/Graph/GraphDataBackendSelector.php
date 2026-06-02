@@ -24,8 +24,8 @@
 
 namespace LibreNMS\Graph;
 
+use App\Facades\LibrenmsConfig;
 use Illuminate\Support\Facades\Log;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Graph\Exception\NoVmBindingException;
 
 /**
@@ -37,7 +37,8 @@ class GraphDataBackendSelector implements GraphDataProvider
     public function __construct(
         private readonly GraphDataProvider $rrd,
         private readonly GraphDataProvider $vm,
-    ) {}
+    ) {
+    }
 
     public function query(GraphQuery $query): GraphDataResult
     {

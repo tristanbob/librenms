@@ -55,7 +55,7 @@ class MempoolGraph extends GraphTemplate
             'swap' => 5,
             'virtual' => 6,
         ];
-        $colors    = (array) LibrenmsConfig::get('graph_colours.varied', []);
+        $colors = (array) LibrenmsConfig::get('graph_colours.varied', []);
         $usedEntry = VictoriaMetricsMetricCatalog::get('mempool.used');
         $freeEntry = VictoriaMetricsMetricCatalog::get('mempool.free');
 
@@ -98,5 +98,4 @@ class MempoolGraph extends GraphTemplate
             })
             ->all();
     }
-
 }

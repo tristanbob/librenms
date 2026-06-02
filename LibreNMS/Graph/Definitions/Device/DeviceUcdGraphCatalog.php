@@ -39,27 +39,30 @@ class DeviceUcdGraphCatalog implements ProvidesGraphDefinitions
     public static function definitions(): array
     {
         $blocksToBits = fn ($value) => $value * 4096;
-        $load         = fn ($value) => $value / 100;
+        $load = fn ($value) => $value / 100;
 
         $cpuPercent = fn (string $ds): \Closure => static function (array $values) use ($ds): ?float {
             $total = array_sum($values);
+
             return $total > 0 ? $values[$ds] / $total * 100 : null;
         };
 
         // Pre-load CPU entries once; closures capture by reference to avoid repeated catalog lookups.
-        $userEntry   = VictoriaMetricsMetricCatalog::get('ucd.cpu.user');
-        $niceEntry   = VictoriaMetricsMetricCatalog::get('ucd.cpu.nice');
+        $userEntry = VictoriaMetricsMetricCatalog::get('ucd.cpu.user');
+        $niceEntry = VictoriaMetricsMetricCatalog::get('ucd.cpu.nice');
         $systemEntry = VictoriaMetricsMetricCatalog::get('ucd.cpu.system');
-        $idleEntry   = VictoriaMetricsMetricCatalog::get('ucd.cpu.idle');
+        $idleEntry = VictoriaMetricsMetricCatalog::get('ucd.cpu.idle');
 
         // Builds the MetricsQL percentage expression for one CPU component.
         $cpuExpr = function (string $ds) use ($userEntry, $niceEntry, $systemEntry, $idleEntry): \Closure {
             $entry = VictoriaMetricsMetricCatalog::get("ucd.cpu.$ds");
+
             return function (array $entities) use ($entry, $userEntry, $niceEntry, $systemEntry, $idleEntry): string {
                 $rate = fn ($e) => 'rate(' . VictoriaMetricsGraphDataProvider::buildSelector(
                     $e->definition->name, $e->identityLabels, $entities,
                 ) . '[5m])';
                 $total = "{$rate($userEntry)} + {$rate($niceEntry)} + {$rate($systemEntry)} + {$rate($idleEntry)}";
+
                 return "100 * {$rate($entry)} / ({$total})";
             };
         };

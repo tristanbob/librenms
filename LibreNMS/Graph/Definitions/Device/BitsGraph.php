@@ -47,20 +47,20 @@ class BitsGraph extends GraphTemplate
 
     public function series(GraphContext $context): array
     {
-        $device         = $context;
-        $toBits         = fn ($value) => $value * 8;
-        $inSeries       = [];
-        $outSeries      = [];
+        $device = $context;
+        $toBits = fn ($value) => $value * 8;
+        $inSeries = [];
+        $outSeries = [];
         $mirrorOutbound = $this->stackedMultiplier() === 1;
-        $opacity        = $mirrorOutbound ? 0x88 / 0xff : 1.0;
-        $ports          = $this->includedPorts($device);
+        $opacity = $mirrorOutbound ? 0x88 / 0xff : 1.0;
+        $ports = $this->includedPorts($device);
 
         foreach ($ports as $i => $port) {
-            $portId   = (int) $port['port_id'];
-            $label    = Rewrite::shortenIfName($port['label']);
-            $rrdName  = "port-id$portId";
-            $ifIndex  = (string) $port['ifIndex'];
-            $inColor  = $this->paletteColor(self::IN_PALETTE, $i, '91B13C');
+            $portId = (int) $port['port_id'];
+            $label = Rewrite::shortenIfName($port['label']);
+            $rrdName = "port-id$portId";
+            $ifIndex = (string) $port['ifIndex'];
+            $inColor = $this->paletteColor(self::IN_PALETTE, $i, '91B13C');
             $outColor = $this->paletteColor(self::OUT_PALETTE, $i, '8080BD');
 
             $inSeries[] = new GraphSeriesDefinition(
@@ -108,6 +108,8 @@ class BitsGraph extends GraphTemplate
      */
     private function includedPorts(GraphContext $device): array
     {
+        $deviceAttributes = $device->device->toArray();
+
         return Port::query()
             ->where('device_id', $device['device_id'])
             ->where('disabled', 0)
@@ -116,7 +118,7 @@ class BitsGraph extends GraphTemplate
             ->get()
             ->map(fn (Port $port) => $port->toArray())
             ->filter(fn (array $port) => ! $this->isIgnoredPort($device, $port))
-            ->map(fn (array $port) => cleanPort($port, $device))
+            ->map(fn (array $port) => cleanPort($port, $deviceAttributes))
             ->values()
             ->all();
     }
@@ -146,5 +148,4 @@ class BitsGraph extends GraphTemplate
 
         return false;
     }
-
 }

@@ -40,32 +40,48 @@ abstract class EntityGraph implements GraphDefinition
         protected readonly string $entityIdKey,
         protected readonly string $entityDescrKey,
         protected readonly array $display = [],
-    ) {}
+    ) {
+    }
 
-    public function graphType(): string { return $this->graphType; }
+    public function graphType(): string
+    {
+        return $this->graphType;
+    }
 
     public function id(GraphContext $context): string
     {
         return $this->graphType . ':' . ($context->query->entities[$this->entityIdKey] ?? '');
     }
 
-    public function title(GraphContext $context): string { return $this->title; }
+    public function title(GraphContext $context): string
+    {
+        return $this->title;
+    }
 
     public function subtitle(GraphContext $context): string
     {
         return ($context['hostname'] ?? '') . ' - ' . ($context->query->entities[$this->entityDescrKey] ?? '');
     }
 
-    public function unit(GraphContext $context): string { return $this->unit; }
+    public function unit(GraphContext $context): string
+    {
+        return $this->unit;
+    }
 
-    public function entityType(): string { return $this->entityType; }
+    public function entityType(): string
+    {
+        return $this->entityType;
+    }
 
     public function display(): array
     {
         return $this->display + ['kind' => 'line', 'stacked' => false, 'area' => true];
     }
 
-    public function markers(GraphContext $context): array { return []; }
+    public function markers(GraphContext $context): array
+    {
+        return [];
+    }
 
     abstract public function series(GraphContext $context): array;
 }

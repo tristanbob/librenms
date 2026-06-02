@@ -52,8 +52,7 @@ class GraphServiceProvider extends ServiceProvider
             $app->make(GraphDefinitionRegistry::class),
         ));
 
-        $this->app->singleton(VictoriaMetricsGraphDataProvider::class, fn (Application $app) =>
-            new VictoriaMetricsGraphDataProvider($app->make(GraphDefinitionRegistry::class))
+        $this->app->singleton(VictoriaMetricsGraphDataProvider::class, fn (Application $app) => new VictoriaMetricsGraphDataProvider($app->make(GraphDefinitionRegistry::class))
         );
 
         $this->app->singleton(GraphDataProvider::class, fn (Application $app) => new GraphDataBackendSelector(

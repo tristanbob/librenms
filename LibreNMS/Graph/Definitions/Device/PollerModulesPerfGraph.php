@@ -25,7 +25,7 @@
 namespace LibreNMS\Graph\Definitions\Device;
 
 use App\Facades\DeviceCache;
-use LibreNMS\Config as LibrenmsConfig;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;
@@ -52,8 +52,8 @@ class PollerModulesPerfGraph extends GraphTemplate
         ksort($modules);
 
         $deviceModel = DeviceCache::get((int) $device['device_id']);
-        $attribs     = $deviceModel->getAttribs();
-        $os          = $device['os'] ?? '';
+        $attribs = $deviceModel->getAttribs();
+        $os = $device['os'] ?? '';
 
         $enabled = [];
         foreach ($modules as $module => $defaultEnabled) {
@@ -71,7 +71,7 @@ class PollerModulesPerfGraph extends GraphTemplate
         $colors = self::generatePalette(count($enabled));
         $series = [];
         foreach ($enabled as $i => $module) {
-            $hex      = $colors[$i];
+            $hex = $colors[$i];
             $series[] = new GraphSeriesDefinition(
                 name:        $module,
                 key:         'module_' . str_replace('-', '_', $module),
@@ -102,9 +102,9 @@ class PollerModulesPerfGraph extends GraphTemplate
         }
         $colors = [];
         for ($i = 0; $i < $count; $i++) {
-            $hue      = fmod($i * 360.0 / $count, 360.0);
-            $sat      = $i % 2 === 0 ? 72 : 58;
-            $light    = 42;
+            $hue = fmod($i * 360.0 / $count, 360.0);
+            $sat = $i % 2 === 0 ? 72 : 58;
+            $light = 42;
             $colors[] = self::hslToHex($hue, $sat, $light);
         }
 
@@ -132,6 +132,7 @@ class PollerModulesPerfGraph extends GraphTemplate
         $a = $s * min($l, 1 - $l);
         $f = static function (int $n) use ($h, $l, $a): int {
             $k = fmod($n + $h / 30, 12);
+
             return (int) round(($l - $a * max(-1.0, min($k - 3, 9 - $k, 1.0))) * 255);
         };
 

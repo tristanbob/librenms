@@ -31,8 +31,8 @@ use App\Models\Device;
 use App\Models\Port;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use LibreNMS\Graph\GraphDataResult;
 use LibreNMS\Graph\GraphDataProvider;
+use LibreNMS\Graph\GraphDataResult;
 use LibreNMS\Graph\GraphQuery;
 use LibreNMS\Graph\GraphSeries;
 use LibreNMS\Tests\DBTestCase;
@@ -49,10 +49,10 @@ class PortGraphDataTest extends DBTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->adminUser  = User::factory()->admin()->create();
+        $this->adminUser = User::factory()->admin()->create();
         $this->adminToken = ApiToken::generateToken($this->adminUser);
-        $this->device     = Device::factory()->create();
-        $this->port       = Port::factory()->create(['device_id' => $this->device->device_id]);
+        $this->device = Device::factory()->create();
+        $this->port = Port::factory()->create(['device_id' => $this->device->device_id]);
 
         // Bind a stub GraphDataProvider that returns realistic port graph results without hitting rrdtool.
         $this->app->bind(GraphDataProvider::class, function () {
@@ -61,7 +61,7 @@ class PortGraphDataTest extends DBTestCase
                     'port_bits'    => ['title' => 'Traffic',  'unit' => 'bps', 'in_key' => 'bits_in',    'out_key' => 'bits_out'],
                     'port_packets' => ['title' => 'Packets',  'unit' => 'pps', 'in_key' => 'packets_in', 'out_key' => 'packets_out'],
                     'port_errors'  => ['title' => 'Errors',   'unit' => 'eps', 'in_key' => 'errors_in',  'out_key' => 'errors_out'],
-                    'port_discards'=> ['title' => 'Discards', 'unit' => 'dps', 'in_key' => 'discards_in','out_key' => 'discards_out'],
+                    'port_discards'=> ['title' => 'Discards', 'unit' => 'dps', 'in_key' => 'discards_in', 'out_key' => 'discards_out'],
                 ];
 
                 public function query(GraphQuery $query): GraphDataResult
@@ -84,7 +84,7 @@ class PortGraphDataTest extends DBTestCase
                     $result->setSource('rrd');
                     $result->setDisplay(['renderer' => 'timeseries', 'kind' => 'line', 'stacked' => false, 'area' => true, 'legend' => true, 'tooltip' => true]);
 
-                    $seriesIn  = new GraphSeries(name: 'In',  key: $meta['in_key'],  unit: $meta['unit'], area: true, stack: null, color: '006600');
+                    $seriesIn = new GraphSeries(name: 'In', key: $meta['in_key'], unit: $meta['unit'], area: true, stack: null, color: '006600');
                     $seriesOut = new GraphSeries(name: 'Out', key: $meta['out_key'], unit: $meta['unit'], area: true, stack: null, color: '000099', negate: true);
                     $ts = $query->from * 1000;
                     $seriesIn->addPoint($ts, 1000.0);
@@ -131,7 +131,7 @@ class PortGraphDataTest extends DBTestCase
 
         $data = $this->json('GET', "/api/v0/ports/{$portId}/graphs/port_bits/data", [], ['X-Auth-Token' => $this->adminToken->token_hash])->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
-        $this->assertContains('bits_in',  $seriesKeys);
+        $this->assertContains('bits_in', $seriesKeys);
         $this->assertContains('bits_out', $seriesKeys);
     }
 
@@ -189,9 +189,9 @@ class PortGraphDataTest extends DBTestCase
                 ],
             ]);
 
-        $data       = $response->json();
+        $data = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
-        $this->assertContains('packets_in',  $seriesKeys);
+        $this->assertContains('packets_in', $seriesKeys);
         $this->assertContains('packets_out', $seriesKeys);
     }
 
@@ -216,9 +216,9 @@ class PortGraphDataTest extends DBTestCase
                 ],
             ]);
 
-        $data       = $response->json();
+        $data = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
-        $this->assertContains('errors_in',  $seriesKeys);
+        $this->assertContains('errors_in', $seriesKeys);
         $this->assertContains('errors_out', $seriesKeys);
     }
 
@@ -243,9 +243,9 @@ class PortGraphDataTest extends DBTestCase
                 ],
             ]);
 
-        $data       = $response->json();
+        $data = $response->json();
         $seriesKeys = array_column($data['graph']['series'], 'key');
-        $this->assertContains('discards_in',  $seriesKeys);
+        $this->assertContains('discards_in', $seriesKeys);
         $this->assertContains('discards_out', $seriesKeys);
     }
 }

@@ -3,11 +3,11 @@
 namespace App\Console\Commands\VictoriaMetrics;
 
 use App\Console\LnmsCommand;
+use App\Facades\LibrenmsConfig;
 use App\Facades\Rrd;
 use App\Models\Device;
 use App\Models\Port;
 use Illuminate\Http\Client\ConnectionException;
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Data\Store\VictoriaMetrics as VmStore;
 use LibreNMS\Data\Store\VictoriaMetrics\LabelExtractor;
 use LibreNMS\Data\Store\VictoriaMetrics\PrometheusTextFormatter;
@@ -21,39 +21,39 @@ class MigrateRrd extends LnmsCommand
 {
     protected $name = 'victoriametrics:migrate-rrd';
 
-    private array  $batch        = [];
-    private int    $batchSize    = 10000;
+    private array  $batch = [];
+    private int    $batchSize = 10000;
     private int    $totalSamples = 0;
-    private int    $batchesSent  = 0;
+    private int    $batchesSent = 0;
     private int    $failedBatches = 0;
-    private string $writeUrl     = '';
-    private float  $timeout      = 30.0;
-    private int    $resolution   = 300;
-    private ?string $start       = null;
-    private ?string $end         = null;
+    private string $writeUrl = '';
+    private float  $timeout = 30.0;
+    private int    $resolution = 300;
+    private ?string $start = null;
+    private ?string $end = null;
 
     public function __construct()
     {
         parent::__construct();
 
-        $this->addOption('device',     null, InputOption::VALUE_OPTIONAL, '', 'all');
-        $this->addOption('start',      null, InputOption::VALUE_OPTIONAL);
-        $this->addOption('end',        null, InputOption::VALUE_OPTIONAL);
+        $this->addOption('device', null, InputOption::VALUE_OPTIONAL, '', 'all');
+        $this->addOption('start', null, InputOption::VALUE_OPTIONAL);
+        $this->addOption('end', null, InputOption::VALUE_OPTIONAL);
         $this->addOption('resolution', null, InputOption::VALUE_OPTIONAL, '', '300');
-        $this->addOption('counters',   null, InputOption::VALUE_NONE);
-        $this->addOption('url',        null, InputOption::VALUE_OPTIONAL);
+        $this->addOption('counters', null, InputOption::VALUE_NONE);
+        $this->addOption('url', null, InputOption::VALUE_OPTIONAL);
         $this->addOption('batch-size', null, InputOption::VALUE_OPTIONAL, '', '10000');
-        $this->addOption('timeout',    null, InputOption::VALUE_OPTIONAL, '', '30');
-        $this->addOption('dry-run',    null, InputOption::VALUE_NONE);
+        $this->addOption('timeout', null, InputOption::VALUE_OPTIONAL, '', '30');
+        $this->addOption('dry-run', null, InputOption::VALUE_NONE);
     }
 
     public function handle(): int
     {
-        $this->batchSize  = max(1, (int) $this->option('batch-size'));
-        $this->timeout    = max(1.0, (float) $this->option('timeout'));
+        $this->batchSize = max(1, (int) $this->option('batch-size'));
+        $this->timeout = max(1.0, (float) $this->option('timeout'));
         $this->resolution = max(1, (int) $this->option('resolution'));
-        $this->start      = $this->option('start') ?: null;
-        $this->end        = $this->option('end') ?: null;
+        $this->start = $this->option('start') ?: null;
+        $this->end = $this->option('end') ?: null;
 
         $this->writeUrl = $this->option('url') ?: VmStore::resolveWriteUrl(
             'direct',
@@ -107,7 +107,7 @@ class MigrateRrd extends LnmsCommand
         }
 
         $allData = $this->fetchRrd($rrdFile);
-        $ds      = RrdMigrationMapper::pollerPerfDs();
+        $ds = RrdMigrationMapper::pollerPerfDs();
         $samples = $allData[$ds] ?? [];
 
         if (empty($samples)) {
@@ -144,7 +144,7 @@ class MigrateRrd extends LnmsCommand
         }
 
         $allData = $this->fetchRrd($rrdFile);
-        $labels  = LabelExtractor::extract($device, 'ports', [
+        $labels = LabelExtractor::extract($device, 'ports', [
             'ifIndex' => $port->ifIndex,
             'ifName'  => $port->ifName,
         ]);
@@ -160,7 +160,7 @@ class MigrateRrd extends LnmsCommand
         }
 
         if ($this->option('counters')) {
-            foreach (RrdMigrationMapper::counterMappings() as $ds => [$metric, ]) {
+            foreach (RrdMigrationMapper::counterMappings() as $ds => [$metric]) {
                 $synthetic = RrdMigrationMapper::synthesizeCounter($allData[$ds] ?? [], $this->resolution);
 
                 foreach ($synthetic as [$tsMs, $cumulative]) {
@@ -209,7 +209,7 @@ class MigrateRrd extends LnmsCommand
 
         $command = Rrd::buildCommand('fetch', $rrdFile, $fetchOptions);
         $rrdtool = LibrenmsConfig::get('rrdtool', 'rrdtool');
-        $rrdDir  = LibrenmsConfig::get('rrd_dir', LibrenmsConfig::get('install_dir') . '/rrd');
+        $rrdDir = LibrenmsConfig::get('rrd_dir', LibrenmsConfig::get('install_dir') . '/rrd');
 
         $proc = new Process(array_merge([$rrdtool], $command), $rrdDir);
         $proc->setTimeout(300);
@@ -250,7 +250,7 @@ class MigrateRrd extends LnmsCommand
             return;
         }
 
-        $body        = implode("\n", $this->batch) . "\n";
+        $body = implode("\n", $this->batch) . "\n";
         $this->batch = [];
 
         try {

@@ -117,9 +117,9 @@ final class EntityGraphVmBindingTest extends DBTestCase
         $base = ['sensor_id' => 1, 'sensor_type' => 'dummy', 'sensor_index' => 1, 'sensor_descr' => 'test'];
 
         return [
-            'wireless_rssi'    => ['wireless_rssi',    ['sensor_class' => 'rssi']    + $base],
+            'wireless_rssi'    => ['wireless_rssi',    ['sensor_class' => 'rssi'] + $base],
             'wireless_clients' => ['wireless_clients', ['sensor_class' => 'clients'] + $base],
-            'wireless_snr'     => ['wireless_snr',     ['sensor_class' => 'snr']     + $base],
+            'wireless_snr'     => ['wireless_snr',     ['sensor_class' => 'snr'] + $base],
         ];
     }
 }

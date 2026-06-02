@@ -85,6 +85,7 @@ class GraphDefinitionRegistry
                 return true;
             }
         }
+
         return false;
     }
 }

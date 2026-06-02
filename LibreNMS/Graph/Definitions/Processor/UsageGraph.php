@@ -58,5 +58,4 @@ class UsageGraph extends EntityGraph
             ],
         )];
     }
-
 }

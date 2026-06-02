@@ -3,13 +3,13 @@
 namespace LibreNMS\Tests\Unit\Graph;
 
 use LibreNMS\Graph\Definitions\Device\BitsGraph;
-use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
 use LibreNMS\Graph\Definitions\Device\DeviceGraphCatalog;
+use LibreNMS\Graph\Definitions\Device\IcmpPerfGraph;
 use LibreNMS\Graph\Definitions\Device\MempoolGraph as DeviceMempoolGraph;
+use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Device\ProcessorGraph as DeviceProcessorGraph;
 use LibreNMS\Graph\Definitions\Device\WirelessGraphDefinitionResolver as DeviceWirelessGraphDefinitionResolver;
 use LibreNMS\Graph\Definitions\Device\WirelessSensorGraph as DeviceWirelessSensorGraph;
-use LibreNMS\Graph\Definitions\Device\PollerPerfGraph;
 use LibreNMS\Graph\Definitions\Mempool\UsageGraph as MempoolUsageGraph;
 use LibreNMS\Graph\Definitions\Processor\UsageGraph as ProcessorUsageGraph;
 use LibreNMS\Graph\Definitions\Sensor\SensorGraph;

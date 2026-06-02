@@ -24,7 +24,7 @@
 
 namespace LibreNMS\Graph\Definitions\Device;
 
-use LibreNMS\Config as LibrenmsConfig;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\Definitions\Templates\GraphTemplate;
 use LibreNMS\Graph\GraphContext;
 use LibreNMS\Graph\GraphSeriesDefinition;

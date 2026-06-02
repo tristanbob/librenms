@@ -2,7 +2,7 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
-use LibreNMS\Config as LibrenmsConfig;
+use App\Facades\LibrenmsConfig;
 use LibreNMS\Graph\GraphDataBackendSelector;
 use LibreNMS\Graph\GraphDataProvider;
 use LibreNMS\Graph\GraphDataResult;
@@ -27,11 +27,11 @@ final class GraphDataBackendSelectorTest extends TestCase
         LibrenmsConfig::set('victoriametrics.query_enabled', false);
 
         $rrdResult = $this->makeResult('rrd');
-        $rrd       = $this->makeProvider($rrdResult);
-        $vm        = $this->makeSpy(); // must NOT be called
+        $rrd = $this->makeProvider($rrdResult);
+        $vm = $this->makeSpy(); // must NOT be called
 
         $selector = new GraphDataBackendSelector($rrd, $vm);
-        $result   = $selector->query($this->query);
+        $result = $selector->query($this->query);
 
         $this->assertSame($rrdResult, $result);
         $this->assertFalse($vm->wasCalled(), 'VM provider must not be called when query_enabled is false');
@@ -42,11 +42,11 @@ final class GraphDataBackendSelectorTest extends TestCase
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
 
         $vmResult = $this->makeResult('victoriametrics');
-        $rrd      = $this->makeProvider($this->makeResult('rrd'));
-        $vm       = $this->makeProvider($vmResult);
+        $rrd = $this->makeProvider($this->makeResult('rrd'));
+        $vm = $this->makeProvider($vmResult);
 
         $selector = new GraphDataBackendSelector($rrd, $vm);
-        $result   = $selector->query($this->query);
+        $result = $selector->query($this->query);
 
         $this->assertSame($vmResult, $result);
     }
@@ -56,11 +56,11 @@ final class GraphDataBackendSelectorTest extends TestCase
         LibrenmsConfig::set('victoriametrics.query_enabled', true);
 
         $rrdResult = $this->makeResult('rrd');
-        $rrd       = $this->makeProvider($rrdResult);
-        $vm        = $this->makeProvider(null, new \RuntimeException('VM unavailable'));
+        $rrd = $this->makeProvider($rrdResult);
+        $vm = $this->makeProvider(null, new \RuntimeException('VM unavailable'));
 
         $selector = new GraphDataBackendSelector($rrd, $vm);
-        $result   = $selector->query($this->query);
+        $result = $selector->query($this->query);
 
         $this->assertSame($rrdResult, $result);
 
@@ -83,7 +83,8 @@ final class GraphDataBackendSelectorTest extends TestCase
             public function __construct(
                 private readonly ?GraphDataResult $result,
                 private readonly ?\RuntimeException $throws,
-            ) {}
+            ) {
+            }
 
             public function query(GraphQuery $query): GraphDataResult
             {

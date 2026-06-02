@@ -45,7 +45,9 @@ final class RrdGraphDataProviderTest extends TestCase
         );
 
         $provider = new class extends RrdGraphDataProvider {
-            public function __construct() {}
+            public function __construct()
+            {
+            }
 
             public function expose(array $allData, \LibreNMS\Graph\RrdMetricBinding $binding): array
             {
@@ -100,7 +102,7 @@ final class RrdGraphDataProviderTest extends TestCase
 
     public function testFetchRrdDataMemoizesIdenticalFetches(): void
     {
-        $query = new GraphQuery('device', 'device_poller_perf', 1000, 1600, 1200, 300, ['device_id' => 1]);
+        $query = new GraphQuery('device', 'device_poller_perf', 1000, 1600, 1200, 300, ['device_id' => 1], step: 300);
         $command = ['fetch', 'router1/poller-perf.rrd', 'AVERAGE', '--start', '1000', '--end', '1600', '--resolution', '300'];
 
         $rrd = Mockery::mock(Rrd::class);

@@ -33,7 +33,8 @@ class GraphMarkerDefinition
         public readonly ?string $severity = null,
         public readonly ?string $color = null,
         public readonly string $lineStyle = 'solid',
-    ) {}
+    ) {
+    }
 
     public static function percentile(string $name, MetricBinding $inner, float $percentile, ?string $color = null): self
     {

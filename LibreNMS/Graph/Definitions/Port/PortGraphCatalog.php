@@ -46,12 +46,12 @@ class PortGraphCatalog implements ProvidesGraphDefinitions
                 if ($percentile <= 0 || $percentile > 100) {
                     return [];
                 }
-                $portId  = $context->query->entities['port_id'];
+                $portId = $context->query->entities['port_id'];
                 $rrdName = "port-id$portId";
-                $label   = rtrim(rtrim((string) $percentile, '0'), '.');
+                $label = rtrim(rtrim((string) $percentile, '0'), '.');
 
                 return [
-                    ...GraphMarkerDefinition::dualPercentile("{$label}th percentile in",  new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS',  transform: fn ($v) => $v * 8),  'port.if_in_bits_rate',  $percentile, 'aa0000'),
+                    ...GraphMarkerDefinition::dualPercentile("{$label}th percentile in", new RrdMetricBinding(rrdName: $rrdName, ds: 'INOCTETS', transform: fn ($v) => $v * 8), 'port.if_in_bits_rate', $percentile, 'aa0000'),
                     ...GraphMarkerDefinition::dualPercentile("{$label}th percentile out", new RrdMetricBinding(rrdName: $rrdName, ds: 'OUTOCTETS', transform: fn ($v) => $v * -8), 'port.if_out_bits_rate', $percentile, 'aa0000', fn ($v) => $v * -1),
                 ];
             }),
@@ -70,7 +70,7 @@ class PortGraphCatalog implements ProvidesGraphDefinitions
                 ['name' => 'Errors In',    'key' => 'errors_in',    'ds' => 'INERRORS',   'metric' => 'port.if_in_errors',   'color' => 'FF3300', 'lineColor' => 'CC2200', 'stack' => 'in'],
                 ['name' => 'Errors Out',   'key' => 'errors_out',   'ds' => 'OUTERRORS',  'metric' => 'port.if_out_errors',  'color' => 'FF6633', 'lineColor' => 'CC4411', 'stack' => 'out', 'negate' => true],
                 ['name' => 'Discards In',  'key' => 'discards_in',  'ds' => 'INDISCARDS', 'metric' => 'port.if_in_discards', 'color' => '805080', 'lineColor' => '603060', 'stack' => 'in'],
-                ['name' => 'Discards Out', 'key' => 'discards_out', 'ds' => 'OUTDISCARDS','metric' => 'port.if_out_discards','color' => 'C0A060', 'lineColor' => '907030', 'stack' => 'out', 'negate' => true],
+                ['name' => 'Discards Out', 'key' => 'discards_out', 'ds' => 'OUTDISCARDS', 'metric' => 'port.if_out_discards', 'color' => 'C0A060', 'lineColor' => '907030', 'stack' => 'out', 'negate' => true],
             ]),
         ];
     }

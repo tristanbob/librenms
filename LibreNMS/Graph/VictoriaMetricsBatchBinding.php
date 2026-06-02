@@ -50,7 +50,8 @@ final readonly class VictoriaMetricsBatchBinding implements MetricBinding
         public readonly array $demuxValues,
         public readonly array $labelKeys = ['hostname'],
         public readonly mixed $transform = null,
-    ) {}
+    ) {
+    }
 
     public function batchExpr(array $entities): string
     {

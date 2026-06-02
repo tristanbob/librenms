@@ -2,9 +2,9 @@
 
 namespace LibreNMS\Tests\Unit\Graph;
 
-use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Graph\VictoriaMetricsBatchBinding;
 use LibreNMS\Graph\VictoriaMetricsExpressionBinding;
+use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
 use LibreNMS\Graph\VictoriaMetricsMetricBinding;
 use LibreNMS\Tests\TestCase;
 
@@ -128,7 +128,7 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
     public function testBuildExprWithSingleLabel(): void
     {
         $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1']);
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1']);
 
         $this->assertSame('my_metric{hostname="router1"}', $expr);
     }
@@ -136,7 +136,7 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
     public function testBuildExprWithMultipleLabels(): void
     {
         $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname', 'ifIndex']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1', 'ifIndex' => '2']);
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'router1', 'ifIndex' => '2']);
 
         $this->assertSame('my_metric{hostname="router1",ifIndex="2"}', $expr);
     }
@@ -152,7 +152,7 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
     public function testBuildExprWithNoLabels(): void
     {
         $binding = new VictoriaMetricsMetricBinding('my_metric', []);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, []);
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, []);
 
         $this->assertSame('my_metric', $expr);
     }
@@ -160,7 +160,7 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
     public function testBuildExprEscapesSpecialCharacters(): void
     {
         $binding = new VictoriaMetricsMetricBinding('my_metric', ['hostname']);
-        $expr    = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'host"with\\slash']);
+        $expr = VictoriaMetricsGraphDataProvider::buildExpr($binding, ['hostname' => 'host"with\\slash']);
 
         $this->assertSame('my_metric{hostname="host\\"with\\\\slash"}', $expr);
     }
@@ -271,8 +271,8 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
 
     public function testAggregateProducesBatchBindingWithHostnameOnlyBatchExpr(): void
     {
-        $rrd     = new \LibreNMS\Graph\RrdMetricBinding('port-id1', 'INOCTETS', transform: fn ($v) => $v * 8);
-        $result  = \LibreNMS\Graph\MetricSeries::aggregate('port.if_in_bits_rate', $rrd, ['ifIndex' => '3']);
+        $rrd = new \LibreNMS\Graph\RrdMetricBinding('port-id1', 'INOCTETS', transform: fn ($v) => $v * 8);
+        $result = \LibreNMS\Graph\MetricSeries::aggregate('port.if_in_bits_rate', $rrd, ['ifIndex' => '3']);
 
         $this->assertCount(2, $result);
         $this->assertInstanceOf(\LibreNMS\Graph\RrdMetricBinding::class, $result[0]);
@@ -289,12 +289,12 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
 
     public function testAggregateAppliesRateForCounterMetric(): void
     {
-        $rrd    = new \LibreNMS\Graph\RrdMetricBinding(['ucd_diskio', 'sda'], 'reads');
+        $rrd = new \LibreNMS\Graph\RrdMetricBinding(['ucd_diskio', 'sda'], 'reads');
         $result = \LibreNMS\Graph\MetricSeries::aggregate('diskio.reads', $rrd, ['descr' => 'sda']);
 
         /** @var VictoriaMetricsBatchBinding $batch */
         $batch = $result[1];
-        $expr  = $batch->batchExpr(['hostname' => 'router1']);
+        $expr = $batch->batchExpr(['hostname' => 'router1']);
 
         $this->assertStringStartsWith('rate(', $expr);
         $this->assertStringContainsString('librenms_diskio_reads_total', $expr);
@@ -303,7 +303,7 @@ final class VictoriaMetricsGraphDataProviderTest extends TestCase
 
     public function testAggregateMultiLabelDemuxOmitsAllDemuxLabelsFromBatchExpr(): void
     {
-        $rrd    = new \LibreNMS\Graph\RrdMetricBinding(['processor', 'intel', '0'], 'usage');
+        $rrd = new \LibreNMS\Graph\RrdMetricBinding(['processor', 'intel', '0'], 'usage');
         $result = \LibreNMS\Graph\MetricSeries::aggregate(
             'processor.usage',
             $rrd,

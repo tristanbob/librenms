@@ -37,5 +37,6 @@ class PercentileBinding
     public function __construct(
         public readonly MetricBinding $inner,
         public readonly float $percentile,
-    ) {}
+    ) {
+    }
 }
