@@ -73,6 +73,9 @@ final class RrdtoolTest extends TestCase
         $cmd = $this->buildCommandProxy('update', '/opt/librenms/rrd/f', ['o']);
         $this->assertEquals(['update', 'f', '--daemon', 'server:42217', 'o'], $cmd);
 
+        $cmd = $this->buildCommandProxy('fetch', '/opt/librenms/rrd/f', ['AVERAGE', '--start', '1000', '--end', '1600', '--resolution', '300']);
+        $this->assertEquals(['fetch', 'f', '--daemon', 'server:42217', 'AVERAGE', '--start', '1000', '--end', '1600', '--resolution', '300'], $cmd);
+
         LibrenmsConfig::set('rrdtool_version', '1.6');
 
         $cmd = $this->buildCommandProxy('create', '/opt/librenms/rrd/f', ['o']);

@@ -24,14 +24,15 @@
 
 namespace LibreNMS\Graph;
 
-use LibreNMS\Config as LibrenmsConfig;
 use LibreNMS\Data\Store\Rrd;
-use Symfony\Component\Process\Process;
+use LibreNMS\Exceptions\RrdException;
+use LibreNMS\RRD\RrdProcess;
 
 class RrdGraphDataProvider extends AbstractGraphDataProvider
 {
     public function __construct(
         private readonly Rrd $rrd,
+        private readonly RrdProcess $rrdProcess,
         GraphDefinitionRegistry $registry,
     ) {
         parent::__construct($registry);
@@ -194,6 +195,9 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
         $cacheKey = implode('|', ['rrd', $rrdFile, $query->from, $query->to, $query->step, $consolidation]);
 
         return $this->memoizeFetch($cacheKey, function () use ($rrdFile, $query, $consolidation): array {
+            // Keep RRD reads as explicit fetches so RRD and VictoriaMetrics receive the
+            // same range/step contract. xport/graphv remain options for future graphs
+            // that need RRDtool-side CDEF/VDEF parity rather than backend-neutral points.
             $command = $this->rrd->buildCommand('fetch', $rrdFile, [
                 $consolidation,
                 '--start', (string) $query->from,
@@ -207,17 +211,22 @@ class RrdGraphDataProvider extends AbstractGraphDataProvider
 
     private function executeRrdFetch(array $command): string
     {
-        $rrdtool = LibrenmsConfig::get('rrdtool', 'rrdtool');
-        $rrdDir  = LibrenmsConfig::get('rrd_dir', LibrenmsConfig::get('install_dir') . '/rrd');
-
-        $proc = new Process(array_merge([$rrdtool], $command), $rrdDir);
-        $proc->run();
-
-        if (! $proc->isSuccessful()) {
-            throw new \RuntimeException('rrdtool fetch failed: ' . $proc->getErrorOutput());
+        try {
+            return $this->rrdProcess->run($this->formatRrdCommand($command));
+        } catch (RrdException $e) {
+            throw new \RuntimeException('rrdtool fetch failed: ' . $e->getMessage(), 0, $e);
         }
+    }
 
-        return $proc->getOutput();
+    /**
+     * @param string[] $command
+     */
+    private function formatRrdCommand(array $command): string
+    {
+        return implode(' ', array_map(
+            fn (string $arg) => '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $arg) . '"',
+            $command
+        ));
     }
 
     /**

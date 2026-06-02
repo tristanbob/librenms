@@ -33,6 +33,7 @@ use LibreNMS\Graph\GraphDefinitionDiscovery;
 use LibreNMS\Graph\GraphDefinitionRegistry;
 use LibreNMS\Graph\RrdGraphDataProvider;
 use LibreNMS\Graph\VictoriaMetricsGraphDataProvider;
+use LibreNMS\RRD\RrdProcess;
 
 class GraphServiceProvider extends ServiceProvider
 {
@@ -47,6 +48,7 @@ class GraphServiceProvider extends ServiceProvider
 
         $this->app->singleton(RrdGraphDataProvider::class, fn (Application $app) => new RrdGraphDataProvider(
             $app->make(Rrd::class),
+            $app->make(RrdProcess::class),
             $app->make(GraphDefinitionRegistry::class),
         ));
 
