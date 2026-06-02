@@ -7,8 +7,8 @@ function seriesStats(s) {
     if (!vals.length) return { last: null, min: null, max: null, avg: null };
     return {
         last: vals[vals.length - 1],
-        min:  Math.min(...vals),
-        max:  Math.max(...vals),
+        min:  vals.reduce((a, b) => a < b ? a : b),
+        max:  vals.reduce((a, b) => a > b ? a : b),
         avg:  vals.reduce((a, b) => a + b, 0) / vals.length,
     };
 }
